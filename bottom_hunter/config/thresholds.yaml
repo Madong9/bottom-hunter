@@ -1,0 +1,46 @@
+defaults:
+  history_days: 420
+  min_history_bars: 65
+  oversold:
+    severe_drawdown_20: -0.15
+    severe_drawdown_60: -0.20
+    severe_rsi: 32
+    severe_ma20_distance: -0.08
+    moderate_drawdown_20: -0.08
+    moderate_rsi: 40
+    moderate_ma20_distance: -0.04
+  capitulation:
+    volume_ratio_strong: 1.50
+    volume_ratio_weak: 1.20
+    range_atr_strong: 1.20
+    range_atr_weak: 1.00
+    close_position_strong: 0.67
+    close_position_weak: 0.50
+    lower_shadow_ratio: 0.35
+    intraday_drop: -0.03
+  rejection:
+    lookback_days: 5
+    slight_break_tolerance: 0.01
+    failure_break: 0.02
+  breadth:
+    up_ratio: 0.60
+    strong_up_return: 0.02
+  timing:
+    month_end_sessions: 5
+    month_start_sessions: 3
+    quarter_end_sessions: 10
+    quarter_start_sessions: 5
+  report:
+    high_score: 7
+    chart_score: 7
+    chart_lookback: 120
+  data:
+    request_timeout_seconds: 8
+    circuit_breaker_failures: 3
+    eastmoney_max_concurrency: 3
+    minimum_latest_coverage: 0.70
+    maximum_staleness_sessions: 1
+  state:
+    failure_break: 0.02
+
+sector_overrides: {}

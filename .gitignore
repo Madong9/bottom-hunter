@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Test/cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+
+# Temporary files
+tmp/
+
+# Runtime/cache data
+bottom_hunter/state/research_cache/
+bottom_hunter/state/chart_drawings.json
+
+# IDE
+.idea/
+.vscode/
+.continue/
+
+# OS
+.DS_Store
+
+# Personal watchlist exports
+同花顺自选_重新提取_139项.xlsx
+币安自选整理.xlsx

@@ -1,0 +1,2 @@
+# 在界面中修改股票行业后，系统会按 canonical_id 写入此处。
+overrides: {}

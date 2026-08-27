@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bottom-hunter"
+version = "0.1.0"
+description = "A股、港股和美股每日板块超跌反弹狩猎系统"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0",
+  "pandas>=2.2",
+  "openpyxl>=3.1",
+  "xlrd>=2.0",
+  "PyYAML>=6.0",
+  "matplotlib>=3.9",
+  "exchange-calendars>=4.8",
+  "requests>=2.32",
+  "PySide6>=6.8,<7",
+  "keyring>=25.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.8"]
+longbridge = ["longbridge>=0.2.74,<0.3 ; python_version < '3.13'"]
+
+[project.scripts]
+bottom-hunter = "bottom_hunter.src.scanner:main"
+bottom-hunter-backtest = "bottom_hunter.src.backtest:main"
+bottom-hunter-gui = "bottom_hunter.src.gui_launcher:main"
+bottom-hunter-watchlists = "bottom_hunter.src.watchlist_cli:main"
+
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["bottom_hunter*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

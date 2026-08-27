@@ -1,0 +1,2 @@
+date,symbol,score,reason,source
+# 仅填写有可靠来源且在 date 当日已经公开的信息；score 只能是 0、1、2。

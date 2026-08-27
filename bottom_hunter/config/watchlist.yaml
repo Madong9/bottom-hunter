@@ -1,0 +1,2380 @@
+schema_version: 2
+mode: account_watchlists
+generated_at: '2026-08-27T12:06:27.662993+00:00'
+description: 由同花顺、币安和欧易账号自选快照生成；不含内置公司列表。
+markets:
+  CN:
+    name: A股
+    category: cn_equity
+    calendar: XSHG
+    timezone: Asia/Shanghai
+    close_time: '15:00'
+    benchmark: 000001.SS
+  HK:
+    name: 港股
+    category: global_equity
+    calendar: XHKG
+    timezone: Asia/Hong_Kong
+    close_time: '16:00'
+    benchmark: ^HSI
+  US:
+    name: 美股
+    category: global_equity
+    calendar: XNYS
+    timezone: America/New_York
+    close_time: '16:00'
+    benchmark: ^GSPC
+  CRYPTO:
+    name: 加密货币
+    category: crypto
+    calendar: 24/7
+    timezone: UTC
+    close_time: 00:00
+    benchmark: BTC-USDT
+    benchmark_source_symbols:
+      binance: BTCUSDT
+      okx: BTC-USDT
+sectors:
+  cn_industry_5633f6063d:
+    name: A股 · 专用设备
+    category: cn_equity
+    industry: 专用设备
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002691.SZ
+      name: '*ST冀凯'
+      market: CN
+      industry: 专用设备
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 002691
+      volume_optional: false
+  cn_industry_ec243105b6:
+    name: A股 · 中药Ⅱ
+    category: cn_equity
+    industry: 中药Ⅱ
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600332.SS
+      name: 白云山
+      market: CN
+      industry: 中药Ⅱ
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600332'
+      volume_optional: false
+  cn_industry_c3f49413ef:
+    name: A股 · 休闲食品
+    category: cn_equity
+    industry: 休闲食品
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002847.SZ
+      name: 盐津铺子
+      market: CN
+      industry: 休闲食品
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 002847
+      volume_optional: false
+  cn_industry_1cf60ff60a:
+    name: A股 · 传媒娱乐
+    category: cn_equity
+    industry: 传媒娱乐
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002027.SZ
+      name: 分众传媒
+      market: CN
+      industry: 传媒娱乐
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002027'
+      volume_optional: false
+  cn_industry_5b8e524f09:
+    name: A股 · 保险Ⅱ
+    category: cn_equity
+    industry: 保险Ⅱ
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 601318.SS
+      name: 中国平安
+      market: CN
+      industry: 保险Ⅱ
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601318'
+      volume_optional: false
+    - symbol: 601319.SS
+      name: 中国人保
+      market: CN
+      industry: 保险Ⅱ
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601319'
+      volume_optional: false
+  cn_industry_bc634e6ab0:
+    name: A股 · 光学光电子
+    category: cn_equity
+    industry: 光学光电子
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000100.SZ
+      name: TCL科技
+      market: CN
+      industry: 光学光电子
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '000100'
+      volume_optional: false
+    - symbol: 000725.SZ
+      name: 京东方A
+      market: CN
+      industry: 光学光电子
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '000725'
+      volume_optional: false
+  cn_industry_4d9db5bf11:
+    name: A股 · 农产品加工
+    category: cn_equity
+    industry: 农产品加工
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 300999.SZ
+      name: 金龙鱼
+      market: CN
+      industry: 农产品加工
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '300999'
+      volume_optional: false
+  cn_industry_8c38afd75d:
+    name: A股 · 医药生物
+    category: cn_equity
+    industry: 医药生物
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 159883.SZ
+      name: 医疗器械ETF永赢
+      market: CN
+      industry: 医药生物
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159883'
+      volume_optional: false
+    - symbol: 159898.SZ
+      name: 医疗器械ETF招商
+      market: CN
+      industry: 医药生物
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159898'
+      volume_optional: false
+    - symbol: 512010.SS
+      name: 医药ETF易方达
+      market: CN
+      industry: 医药生物
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '512010'
+      volume_optional: false
+    - symbol: 512170.SS
+      name: 医疗ETF华宝
+      market: CN
+      industry: 医药生物
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '512170'
+      volume_optional: false
+    - symbol: 600276.SS
+      name: 恒瑞医药
+      market: CN
+      industry: 医药生物
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600276'
+      volume_optional: false
+  cn_industry_a1a0ce113a:
+    name: A股 · 半导体
+    category: cn_equity
+    industry: 半导体
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 688981.SS
+      name: 中芯国际
+      market: CN
+      industry: 半导体
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '688981'
+      volume_optional: false
+  cn_industry_cd995d412e:
+    name: A股 · 厨卫电器
+    category: cn_equity
+    industry: 厨卫电器
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002508.SZ
+      name: 老板电器
+      market: CN
+      industry: 厨卫电器
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 002508
+      volume_optional: false
+  cn_industry_df37e1008e:
+    name: A股 · 基础建设
+    category: cn_equity
+    industry: 基础建设
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600502.SS
+      name: 安徽建工
+      market: CN
+      industry: 基础建设
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600502'
+      volume_optional: false
+    - symbol: 601186.SS
+      name: 中国铁建
+      market: CN
+      industry: 基础建设
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601186'
+      volume_optional: false
+  cn_industry_2640ae9e8c:
+    name: A股 · 家居用品
+    category: cn_equity
+    industry: 家居用品
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 603008.SS
+      name: ST喜临门
+      market: CN
+      industry: 家居用品
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '603008'
+      volume_optional: false
+    - symbol: 603816.SS
+      name: 顾家家居
+      market: CN
+      industry: 家居用品
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '603816'
+      volume_optional: false
+  cn_industry_1f576fc608:
+    name: A股 · 小家电
+    category: cn_equity
+    industry: 小家电
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002705.SZ
+      name: 新宝股份
+      market: CN
+      industry: 小家电
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002705'
+      volume_optional: false
+  cn_industry_0fd38c306e:
+    name: A股 · 工业金属
+    category: cn_equity
+    industry: 工业金属
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 601899.SS
+      name: 紫金矿业
+      market: CN
+      industry: 工业金属
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601899'
+      volume_optional: false
+  cn_industry_0888562970:
+    name: A股 · 待分类
+    category: cn_equity
+    industry: 待分类
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 003816.SZ
+      name: 中国广核
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 003816
+      volume_optional: false
+    - symbol: 159992.SZ
+      name: 创新药ETF银华
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159992'
+      volume_optional: false
+    - symbol: 300274.SZ
+      name: 阳光电源
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 300274.SZ
+      volume_optional: false
+    - symbol: 515120.SS
+      name: 创新药ETF广发
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '515120'
+      volume_optional: false
+    - symbol: 516080.SS
+      name: 创新药ETF易方达
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '516080'
+      volume_optional: false
+    - symbol: 600011.SS
+      name: 华能国际
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600011'
+      volume_optional: false
+    - symbol: 600064.SS
+      name: 南京高科
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600064'
+      volume_optional: false
+    - symbol: 600089.SS
+      name: 特变电工
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600089'
+      volume_optional: false
+    - symbol: 600098.SS
+      name: 广州发展
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600098'
+      volume_optional: false
+    - symbol: 600309.SS
+      name: 万华化学
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600309'
+      volume_optional: false
+    - symbol: 601088.SS
+      name: 中国神华
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601088'
+      volume_optional: false
+    - symbol: 603986.SS
+      name: 兆易创新
+      market: CN
+      industry: 待分类
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '603986'
+      volume_optional: false
+  cn_industry_75a5e1bc51:
+    name: A股 · 房地产
+    category: cn_equity
+    industry: 房地产
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 159707.SZ
+      name: 地产ETF华宝
+      market: CN
+      industry: 房地产
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159707'
+      volume_optional: false
+  cn_industry_70040637ff:
+    name: A股 · 房地产开发
+    category: cn_equity
+    industry: 房地产开发
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000002.SZ
+      name: 万科A
+      market: CN
+      industry: 房地产开发
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '000002'
+      volume_optional: false
+    - symbol: 000718.SZ
+      name: 苏宁环球
+      market: CN
+      industry: 房地产开发
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 000718
+      volume_optional: false
+    - symbol: 001979.SZ
+      name: 招商蛇口
+      market: CN
+      industry: 房地产开发
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 001979
+      volume_optional: false
+    - symbol: 600007.SS
+      name: 中国国贸
+      market: CN
+      industry: 房地产开发
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600007'
+      volume_optional: false
+    - symbol: 600048.SS
+      name: 保利发展
+      market: CN
+      industry: 房地产开发
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600048'
+      volume_optional: false
+    - symbol: 600503.SS
+      name: 华丽家族
+      market: CN
+      industry: 房地产开发
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600503'
+      volume_optional: false
+    - symbol: 601155.SS
+      name: 新城控股
+      market: CN
+      industry: 房地产开发
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601155'
+      volume_optional: false
+  cn_industry_6747c881f5:
+    name: A股 · 教育
+    category: cn_equity
+    industry: 教育
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002607.SZ
+      name: 中公教育
+      market: CN
+      industry: 教育
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002607'
+      volume_optional: false
+  cn_industry_2ab62d32cc:
+    name: A股 · 旅游与服务
+    category: cn_equity
+    industry: 旅游与服务
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 159766.SZ
+      name: 旅游ETF富国
+      market: CN
+      industry: 旅游与服务
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159766'
+      volume_optional: false
+  cn_industry_87e8fa6f95:
+    name: A股 · 旅游零售Ⅱ
+    category: cn_equity
+    industry: 旅游零售Ⅱ
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600185.SS
+      name: 珠免集团
+      market: CN
+      industry: 旅游零售Ⅱ
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600185'
+      volume_optional: false
+  cn_industry_a064f34de2:
+    name: A股 · 普钢
+    category: cn_equity
+    industry: 普钢
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600010.SS
+      name: 包钢股份
+      market: CN
+      industry: 普钢
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600010'
+      volume_optional: false
+  cn_industry_b9e23f3433:
+    name: A股 · 服装家纺
+    category: cn_equity
+    industry: 服装家纺
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600398.SS
+      name: 海澜之家
+      market: CN
+      industry: 服装家纺
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600398'
+      volume_optional: false
+  cn_industry_a444d85c8f:
+    name: A股 · 机器人与自动化
+    category: cn_equity
+    industry: 机器人与自动化
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 300024.SZ
+      name: 机器人
+      market: CN
+      industry: 机器人与自动化
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '300024'
+      volume_optional: false
+    - symbol: 562500.SS
+      name: 机器人ETF华夏
+      market: CN
+      industry: 机器人与自动化
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '562500'
+      volume_optional: false
+  cn_industry_ce60171d74:
+    name: A股 · 材料
+    category: cn_equity
+    industry: 材料
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 159870.SZ
+      name: 化工ETF鹏华
+      market: CN
+      industry: 材料
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159870'
+      volume_optional: false
+  cn_industry_23404f5b84:
+    name: A股 · 汽车零部件
+    category: cn_equity
+    industry: 汽车零部件
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 300926.SZ
+      name: 博俊科技
+      market: CN
+      industry: 汽车零部件
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '300926'
+      volume_optional: false
+  cn_industry_2187087222:
+    name: A股 · 油服工程
+    category: cn_equity
+    industry: 油服工程
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600339.SS
+      name: 中油工程
+      market: CN
+      industry: 油服工程
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600339'
+      volume_optional: false
+    - symbol: 600968.SS
+      name: 海油发展
+      market: CN
+      industry: 油服工程
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600968'
+      volume_optional: false
+  cn_industry_0b2d803eee:
+    name: A股 · 海外指数
+    category: cn_equity
+    industry: 海外指数
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 513100.SS
+      name: 纳指ETF国泰
+      market: CN
+      industry: 海外指数
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '513100'
+      volume_optional: false
+    - symbol: 513500.SS
+      name: 标普500ETF博时
+      market: CN
+      industry: 海外指数
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '513500'
+      volume_optional: false
+    - symbol: 513800.SS
+      name: 日本东证指数ETF南方
+      market: CN
+      industry: 海外指数
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '513800'
+      volume_optional: false
+    - symbol: 513880.SS
+      name: 日经225ETF华安
+      market: CN
+      industry: 海外指数
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '513880'
+      volume_optional: false
+  cn_industry_71d6df4130:
+    name: A股 · 消费
+    category: cn_equity
+    industry: 消费
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 159928.SZ
+      name: 消费ETF汇添富
+      market: CN
+      industry: 消费
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159928'
+      volume_optional: false
+    - symbol: 516130.SS
+      name: 消费龙头ETF...
+      market: CN
+      industry: 消费
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '516130'
+      volume_optional: false
+  cn_industry_85b90fd5b6:
+    name: A股 · 消费电子
+    category: cn_equity
+    industry: 消费电子
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002475.SZ
+      name: 立讯精密
+      market: CN
+      industry: 消费电子
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002475'
+      volume_optional: false
+  cn_industry_9985cc9d01:
+    name: A股 · 炼化及贸易
+    category: cn_equity
+    industry: 炼化及贸易
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000301.SZ
+      name: 东方盛虹
+      market: CN
+      industry: 炼化及贸易
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '000301'
+      volume_optional: false
+    - symbol: 600688.SS
+      name: 上海石化
+      market: CN
+      industry: 炼化及贸易
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600688'
+      volume_optional: false
+    - symbol: 601857.SS
+      name: 中国石油
+      market: CN
+      industry: 炼化及贸易
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601857'
+      volume_optional: false
+  cn_industry_5381c557d5:
+    name: A股 · 煤炭开采
+    category: cn_equity
+    industry: 煤炭开采
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600348.SS
+      name: 华阳股份
+      market: CN
+      industry: 煤炭开采
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600348'
+      volume_optional: false
+  cn_industry_c81cfde5a6:
+    name: A股 · 物流
+    category: cn_equity
+    industry: 物流
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002352.SZ
+      name: 顺丰控股
+      market: CN
+      industry: 物流
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002352'
+      volume_optional: false
+  cn_industry_c7ba96f7f2:
+    name: A股 · 环境治理
+    category: cn_equity
+    industry: 环境治理
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 601368.SS
+      name: 绿城水务
+      market: CN
+      industry: 环境治理
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601368'
+      volume_optional: false
+  cn_industry_67d34e424d:
+    name: A股 · 电力
+    category: cn_equity
+    industry: 电力
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000958.SZ
+      name: 电投产融
+      market: CN
+      industry: 电力
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 000958
+      volume_optional: false
+    - symbol: 600027.SS
+      name: 华电国际
+      market: CN
+      industry: 电力
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600027'
+      volume_optional: false
+    - symbol: 601985.SS
+      name: 中国核电
+      market: CN
+      industry: 电力
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601985'
+      volume_optional: false
+  cn_industry_274c159a7a:
+    name: A股 · 电力与公用事业
+    category: cn_equity
+    industry: 电力与公用事业
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 159158.SZ
+      name: 电力ETF景顺
+      market: CN
+      industry: 电力与公用事业
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159158'
+      volume_optional: false
+    - symbol: 159611.SZ
+      name: 电力ETF广发
+      market: CN
+      industry: 电力与公用事业
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159611'
+      volume_optional: false
+    - symbol: 600023.SS
+      name: 浙能电力
+      market: CN
+      industry: 电力与公用事业
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600023'
+      volume_optional: false
+    - symbol: 600256.SS
+      name: 广汇能源
+      market: CN
+      industry: 电力与公用事业
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600256'
+      volume_optional: false
+    - symbol: 600795.SS
+      name: 国电电力
+      market: CN
+      industry: 电力与公用事业
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600795'
+      volume_optional: false
+    - symbol: 600900.SS
+      name: 长江电力
+      market: CN
+      industry: 电力与公用事业
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600900'
+      volume_optional: false
+  cn_industry_9b104c65f9:
+    name: A股 · 电网设备
+    category: cn_equity
+    industry: 电网设备
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002452.SZ
+      name: 长高电气
+      market: CN
+      industry: 电网设备
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002452'
+      volume_optional: false
+    - symbol: 600406.SS
+      name: 国电南瑞
+      market: CN
+      industry: 电网设备
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600406'
+      volume_optional: false
+  cn_industry_d9a589c6c7:
+    name: A股 · 白色家电
+    category: cn_equity
+    industry: 白色家电
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000333.SZ
+      name: 美的集团
+      market: CN
+      industry: 白色家电
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '000333'
+      volume_optional: false
+    - symbol: 000651.SZ
+      name: 格力电器
+      market: CN
+      industry: 白色家电
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '000651'
+      volume_optional: false
+    - symbol: 000921.SZ
+      name: 海信家电
+      market: CN
+      industry: 白色家电
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 000921
+      volume_optional: false
+    - symbol: 600690.SS
+      name: 海尔智家
+      market: CN
+      industry: 白色家电
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600690'
+      volume_optional: false
+  cn_industry_f7f266ea6a:
+    name: A股 · 种植业
+    category: cn_equity
+    industry: 种植业
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600313.SS
+      name: 农发种业
+      market: CN
+      industry: 种植业
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600313'
+      volume_optional: false
+  cn_industry_805590fe0d:
+    name: A股 · 红利与价值策略
+    category: cn_equity
+    industry: 红利与价值策略
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 159399.SZ
+      name: 现金流ETF国泰
+      market: CN
+      industry: 红利与价值策略
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159399'
+      volume_optional: false
+    - symbol: 515180.SS
+      name: 红利ETF易方达
+      market: CN
+      industry: 红利与价值策略
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '515180'
+      volume_optional: false
+  cn_industry_48c9a16ae4:
+    name: A股 · 航空机场
+    category: cn_equity
+    industry: 航空机场
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000089.SZ
+      name: 深圳机场
+      market: CN
+      industry: 航空机场
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 000089
+      volume_optional: false
+    - symbol: 600009.SS
+      name: 上海机场
+      market: CN
+      industry: 航空机场
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600009'
+      volume_optional: false
+    - symbol: 600115.SS
+      name: 中国东航
+      market: CN
+      industry: 航空机场
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600115'
+      volume_optional: false
+    - symbol: 600515.SS
+      name: 海南机场
+      market: CN
+      industry: 航空机场
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600515'
+      volume_optional: false
+  cn_industry_df6e499ed1:
+    name: A股 · 航空航天与国防
+    category: cn_equity
+    industry: 航空航天与国防
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000547.SZ
+      name: 航天发展
+      market: CN
+      industry: 航空航天与国防
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '000547'
+      volume_optional: false
+  cn_industry_8af2fa10af:
+    name: A股 · 航运港口
+    category: cn_equity
+    industry: 航运港口
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 601919.SS
+      name: 中远海控
+      market: CN
+      industry: 航运港口
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601919'
+      volume_optional: false
+    - symbol: 603565.SS
+      name: 中谷物流
+      market: CN
+      industry: 航运港口
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '603565'
+      volume_optional: false
+  cn_industry_24e3343b11:
+    name: A股 · 装修建材
+    category: cn_equity
+    industry: 装修建材
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000786.SZ
+      name: 北新建材
+      market: CN
+      industry: 装修建材
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 000786
+      volume_optional: false
+    - symbol: 002271.SZ
+      name: 东方雨虹
+      market: CN
+      industry: 装修建材
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002271'
+      volume_optional: false
+  cn_industry_8c65c61695:
+    name: A股 · 计算机设备
+    category: cn_equity
+    industry: 计算机设备
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 002415.SZ
+      name: 海康威视
+      market: CN
+      industry: 计算机设备
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002415'
+      volume_optional: false
+    - symbol: 688475.SS
+      name: 萤石网络
+      market: CN
+      industry: 计算机设备
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '688475'
+      volume_optional: false
+  cn_industry_fc09816083:
+    name: A股 · 证券
+    category: cn_equity
+    industry: 证券
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 512880.SS
+      name: 证券ETF国泰
+      market: CN
+      industry: 证券
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '512880'
+      volume_optional: false
+    - symbol: 601555.SS
+      name: 东吴证券
+      market: CN
+      industry: 证券
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601555'
+      volume_optional: false
+  cn_industry_d7e3157418:
+    name: A股 · 贵金属
+    category: cn_equity
+    industry: 贵金属
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 518880.SS
+      name: 黄金ETF华安
+      market: CN
+      industry: 贵金属
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '518880'
+      volume_optional: false
+  cn_industry_ebe127a946:
+    name: A股 · 轨交设备Ⅱ
+    category: cn_equity
+    industry: 轨交设备Ⅱ
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 300594.SZ
+      name: ST朗进
+      market: CN
+      industry: 轨交设备Ⅱ
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '300594'
+      volume_optional: false
+  cn_industry_424d150253:
+    name: A股 · 软件与互联网
+    category: cn_equity
+    industry: 软件与互联网
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 159792.SZ
+      name: 港股通互联网ETF富国
+      market: CN
+      industry: 软件与互联网
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '159792'
+      volume_optional: false
+    - symbol: 513050.SS
+      name: 中概互联网ETF易方达
+      market: CN
+      industry: 软件与互联网
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '513050'
+      volume_optional: false
+  cn_industry_5df231ced1:
+    name: A股 · 通信服务
+    category: cn_equity
+    industry: 通信服务
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 601728.SS
+      name: 中国电信
+      market: CN
+      industry: 通信服务
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601728'
+      volume_optional: false
+  cn_industry_2bd0950932:
+    name: A股 · 铁路公路
+    category: cn_equity
+    industry: 铁路公路
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600377.SS
+      name: 宁沪高速
+      market: CN
+      industry: 铁路公路
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600377'
+      volume_optional: false
+  cn_industry_cb8a39d9d1:
+    name: A股 · 银行
+    category: cn_equity
+    industry: 银行
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000001.SZ
+      name: 平安银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '000001'
+      volume_optional: false
+    - symbol: 002142.SZ
+      name: 宁波银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '002142'
+      volume_optional: false
+    - symbol: 600015.SS
+      name: 华夏银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600015'
+      volume_optional: false
+    - symbol: 601166.SS
+      name: 兴业银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601166'
+      volume_optional: false
+    - symbol: 601169.SS
+      name: 北京银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601169'
+      volume_optional: false
+    - symbol: 601229.SS
+      name: 上海银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601229'
+      volume_optional: false
+    - symbol: 601288.SS
+      name: 农业银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601288'
+      volume_optional: false
+    - symbol: 601328.SS
+      name: 交通银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601328'
+      volume_optional: false
+    - symbol: 601398.SS
+      name: 工商银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601398'
+      volume_optional: false
+    - symbol: 601818.SS
+      name: 光大银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601818'
+      volume_optional: false
+    - symbol: 601838.SS
+      name: 成都银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601838'
+      volume_optional: false
+    - symbol: 601998.SS
+      name: 中信银行
+      market: CN
+      industry: 银行
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601998'
+      volume_optional: false
+  cn_industry_51d06d1099:
+    name: A股 · 食品加工
+    category: cn_equity
+    industry: 食品加工
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 000895.SZ
+      name: 双汇发展
+      market: CN
+      industry: 食品加工
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 000895
+      volume_optional: false
+  cn_industry_765d72d1e4:
+    name: A股 · 食品饮料
+    category: cn_equity
+    industry: 食品饮料
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 512690.SS
+      name: 酒ETF鹏华
+      market: CN
+      industry: 食品饮料
+      category: cn_equity
+      asset_type: etf
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '512690'
+      volume_optional: false
+  cn_industry_286606565d:
+    name: A股 · 饮料乳品
+    category: cn_equity
+    industry: 饮料乳品
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 600887.SS
+      name: 伊利股份
+      market: CN
+      industry: 饮料乳品
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600887'
+      volume_optional: false
+  crypto_all:
+    name: 加密货币
+    category: crypto
+    industry: 加密货币
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: ADA-USDT
+      name: Cardano
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: ADAUSDT
+      volume_optional: false
+    - symbol: AEVO-USDT
+      name: AEVO
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: AEVOUSDT
+      volume_optional: false
+    - symbol: APT-USDT
+      name: Aptos
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: APTUSDT
+      volume_optional: false
+    - symbol: ASTER-USDT
+      name: Aster
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: ASTERUSDT
+      volume_optional: false
+    - symbol: AVAX-USDT
+      name: Avalanche
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: AVAXUSDT
+      volume_optional: false
+    - symbol: BONK-USDT
+      name: Bonk
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: BONKUSDT
+      volume_optional: false
+    - symbol: CAKE-USDT
+      name: PancakeSwap
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: CAKEUSDT
+      volume_optional: false
+    - symbol: DOGE-USDT
+      name: Dogecoin
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: DOGEUSDT
+      volume_optional: false
+    - symbol: DOT-USDT
+      name: Polkadot
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: DOTUSDT
+      volume_optional: false
+    - symbol: FIL-USDT
+      name: Filecoin
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: FILUSDT
+      volume_optional: false
+    - symbol: OP-USDT
+      name: Optimism
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: OPUSDT
+      volume_optional: false
+    - symbol: PENGU-USDT
+      name: Pudgy Penguins
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: PENGUUSDT
+      volume_optional: false
+    - symbol: PEPE-USDT
+      name: Pepe
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: PEPEUSDT
+      volume_optional: false
+    - symbol: POL-USDT
+      name: Polygon Ecosyst...
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: POLUSDT
+      volume_optional: false
+    - symbol: SHIB-USDT
+      name: SHIBA INU
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: SHIBUSDT
+      volume_optional: false
+    - symbol: SOL-USDT
+      name: Solana
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: SOLUSDT
+      volume_optional: false
+    - symbol: SUI-USDT
+      name: Sui
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: SUIUSDT
+      volume_optional: false
+    - symbol: TRUMP-USDT
+      name: OFFICIAL TRUMP
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: TRUMPUSDT
+      volume_optional: false
+    - symbol: UNI-USDT
+      name: Uniswap
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: UNIUSDT
+      volume_optional: false
+    - symbol: WLFI-USDT
+      name: World Liberty Fin...
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: WLFIUSDT
+      volume_optional: false
+    - symbol: WOO-USDT
+      name: WOO
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: WOOUSDT
+      volume_optional: false
+    - symbol: XLM-USDT
+      name: Stellar Lumens
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: XLMUSDT
+      volume_optional: false
+    - symbol: XPL-USDT
+      name: Plasma
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: XPLUSDT
+      volume_optional: false
+    - symbol: XVS-USDT
+      name: Venus
+      market: CRYPTO
+      industry: 加密货币
+      category: crypto
+      asset_type: crypto
+      tokenized_stock: false
+      sources:
+      - binance
+      source_symbols:
+        binance: XVSUSDT
+      volume_optional: false
+  global_industry_215b5c7bdf:
+    name: 美港股 · 专业零售
+    category: global_equity
+    industry: 专业零售
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 3690.HK
+      name: 美团-W
+      market: HK
+      industry: 专业零售
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: HK3690
+      volume_optional: false
+  global_industry_5e8d86fe4b:
+    name: 美港股 · 信息技术
+    category: global_equity
+    industry: 信息技术
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: ADBE
+      name: 奥多比
+      market: US
+      industry: 信息技术
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: ADBE
+      volume_optional: false
+    - symbol: PLTR
+      name: Palantir
+      market: US
+      industry: 信息技术
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: PLTR
+      volume_optional: false
+  global_industry_96b876e3a9:
+    name: 美港股 · 工业
+    category: global_equity
+    industry: 工业
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: RKLB
+      name: Rocket Lab
+      market: US
+      industry: 工业
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: RKLB
+      volume_optional: false
+  global_industry_0888562970:
+    name: 美港股 · 待分类
+    category: global_equity
+    industry: 待分类
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 1810.HK
+      name: 小米集团-W
+      market: HK
+      industry: 待分类
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: HK1810
+      volume_optional: false
+    - symbol: 2319.HK
+      name: 蒙牛乳业
+      market: HK
+      industry: 待分类
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: HK2319
+      volume_optional: false
+    - symbol: BIDG
+      name: 2倍做多BIDU ETF-Leve...
+      market: US
+      industry: 待分类
+      category: global_equity
+      asset_type: tokenized_stock
+      tokenized_stock: true
+      sources:
+      - binance
+      source_symbols:
+        binance: BIDG
+      volume_optional: false
+    - symbol: GOOGL
+      name: 谷歌A
+      market: US
+      industry: 待分类
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: GOOGL
+      volume_optional: false
+    - symbol: MPNGF
+      name: 美团
+      market: US
+      industry: 待分类
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: MPNGF
+      volume_optional: false
+    - symbol: MU
+      name: 美光科技
+      market: US
+      industry: 待分类
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: MU
+      volume_optional: false
+    - symbol: NFLX
+      name: 奈飞
+      market: US
+      industry: 待分类
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: NFLX
+      volume_optional: false
+    - symbol: PDDL
+      name: 2倍做多PDD ETF-Gra...
+      market: US
+      industry: 待分类
+      category: global_equity
+      asset_type: tokenized_stock
+      tokenized_stock: true
+      sources:
+      - binance
+      source_symbols:
+        binance: PDDL
+      volume_optional: false
+    - symbol: QCOM
+      name: 高通
+      market: US
+      industry: 待分类
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: QCOM
+      volume_optional: false
+    - symbol: WDC
+      name: 西部数据
+      market: US
+      industry: 待分类
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: WDC
+      volume_optional: false
+  global_industry_75a5e1bc51:
+    name: 美港股 · 房地产
+    category: global_equity
+    industry: 房地产
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: BEKE
+      name: 贝壳
+      market: US
+      industry: 房地产
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: BEKE
+      volume_optional: false
+  global_industry_b5827538ec:
+    name: 美港股 · 通讯服务
+    category: global_equity
+    industry: 通讯服务
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: TMUS
+      name: T-Mobile US
+      market: US
+      industry: 通讯服务
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: TMUS
+      volume_optional: false
+  global_industry_bb534d06ff:
+    name: 美港股 · 非日常生活消费品
+    category: global_equity
+    industry: 非日常生活消费品
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: PDD
+      name: 拼多多
+      market: US
+      industry: 非日常生活消费品
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: PDD
+      volume_optional: false
+risk_appetite: []

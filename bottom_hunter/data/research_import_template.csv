@@ -1,0 +1,2 @@
+kind,tier,symbol,market,title,source,url,author,published_at,summary,sentiment,confidence
+community_opinion,community,600519.SS,CN,示例：社区观点,雪球,https://xueqiu.com/,示例作者,2026-08-27T09:30:00+08:00,只填写短摘要并保留原文链接,neutral,0.5
