@@ -1,11 +1,13 @@
-"""Push notifications for high-value alerts (ServerChan / Telegram).
+"""Push notifications for high-value alerts (ServerChan / WeCom / Telegram).
 
 Configuration lives in config/notify.yaml:
 
     enabled: true
     channels:
-      serverchan:
+      serverchan:            # Server酱：推送到微信「方糖」服务号
         sendkey: SCTxxxxxxxx
+      wecom:                 # 企业微信群机器人：免费、无条数限制
+        webhook: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx
       telegram:
         bot_token: "123456:ABC"
         chat_id: "10086"
@@ -35,13 +37,18 @@ DEFAULT_ALERT_TYPES = ("A_SCORE_JUMP", "B_ENTRY_STAGE", "C_SECTOR_SURGE", "E_SIG
 class NotifyConfig:
     enabled: bool = False
     serverchan_sendkey: str = ""
+    wecom_webhook: str = ""
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     alert_types: tuple[str, ...] = DEFAULT_ALERT_TYPES
 
     @property
     def has_channel(self) -> bool:
-        return bool(self.serverchan_sendkey or (self.telegram_bot_token and self.telegram_chat_id))
+        return bool(
+            self.serverchan_sendkey
+            or self.wecom_webhook
+            or (self.telegram_bot_token and self.telegram_chat_id)
+        )
 
 
 def load_notify_config(config_dir: Path | None = None) -> NotifyConfig:
@@ -60,6 +67,7 @@ def load_notify_config(config_dir: Path | None = None) -> NotifyConfig:
     return NotifyConfig(
         enabled=bool(payload.get("enabled")),
         serverchan_sendkey=str(channels.get("serverchan", {}).get("sendkey") or ""),
+        wecom_webhook=str(channels.get("wecom", {}).get("webhook") or ""),
         telegram_bot_token=str(channels.get("telegram", {}).get("bot_token") or ""),
         telegram_chat_id=str(channels.get("telegram", {}).get("chat_id") or ""),
         alert_types=tuple(str(item) for item in alert_types),
@@ -78,6 +86,27 @@ def _serverchan(sendkey: str, title: str, body: str, timeout: int) -> str | None
     code = payload.get("code")
     if code not in (0, None):
         return f"ServerChan code={code}: {payload.get('message', '')}"
+    return None
+
+
+def _wecom(webhook: str, title: str, body: str, timeout: int) -> str | None:
+    """WeCom group robot webhook; markdown body is capped at 4096 bytes."""
+    content = f"**{title}**\n{body}"
+    while content and len(content.encode("utf-8")) > 4000:
+        content = content[: len(content) - 200]
+    response = requests.post(
+        webhook,
+        json={"msgtype": "markdown", "markdown": {"content": content}},
+        timeout=timeout,
+    )
+    if response.status_code != 200:
+        return f"企业微信 HTTP {response.status_code}"
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        return f"企业微信响应不是有效 JSON: {exc}"
+    if int(payload.get("errcode", -1)) != 0:
+        return f"企业微信 errcode={payload.get('errcode')}: {payload.get('errmsg', '')}"
     return None
 
 
@@ -134,6 +163,13 @@ def push(
                 errors.append(error)
         except (requests.RequestException, ValueError) as exc:
             errors.append(f"ServerChan: {exc}")
+    if config.wecom_webhook:
+        try:
+            error = _wecom(config.wecom_webhook, title, body, timeout)
+            if error:
+                errors.append(error)
+        except (requests.RequestException, ValueError) as exc:
+            errors.append(f"企业微信: {exc}")
     if config.telegram_bot_token and config.telegram_chat_id:
         try:
             error = _telegram(

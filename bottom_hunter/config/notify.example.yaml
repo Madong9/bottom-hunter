@@ -1,11 +1,19 @@
 # 推送告警配置：复制本文件为 notify.yaml 并填入真实凭据。
 # enabled=false 或缺少凭据时推送静默关闭；推送失败只记日志，不影响扫描。
+#
+# 到达微信的两条路：
+# 1) serverchan —— Server酱（https://sct.ftqq.com/），消息经「方糖」服务号发到你的微信；
+#    免费版每天限 5 条，适合低频高价值提醒。
+# 2) wecom —— 企业微信群机器人 webhook，免费、无条数限制（每分钟 20 条）；
+#    在任意企业微信群 → 群设置 → 群机器人 → 添加，复制 Webhook 地址。
+#    手机装企业微信 App 即可接收；也可在微信插件中关注后用微信查看。
 enabled: false
 
 channels:
   serverchan:
-    # Server酱 SendKey：https://sct.ftqq.com/
     sendkey: ""
+  wecom:
+    webhook: ""
   telegram:
     # 通过 @BotFather 创建机器人；chat_id 可用 @userinfobot 查询。
     bot_token: ""

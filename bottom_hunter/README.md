@@ -288,7 +288,7 @@ date,open,high,low,close,volume
 
 信号发出后，每次扫描会自动回填历史信号的**真实后续收益**（3/5/10/20 日），形成滚动胜率（`signal_outcomes` 表）；日报和 GUI 总览显示近 30/90 天 5 日持有胜率，用于检验参数调整是否真的有效。
 
-可选推送：复制 `config/notify.example.yaml` 为 `notify.yaml`，填入 Server酱 SendKey 或 Telegram bot 凭据并设 `enabled: true`。A/B/C/E 类提醒和高分信号会合并为一条摘要推送；推送失败只记日志，绝不影响扫描。
+可选推送：复制 `config/notify.example.yaml` 为 `notify.yaml`，填入凭据并设 `enabled: true`。到达微信的两条路：**Server酱**（消息经「方糖」服务号发到微信，免费版每天限 5 条）或**企业微信群机器人**（免费、无条数限制，任意企业微信群添加群机器人后复制 Webhook 地址即可，手机装企业微信 App 接收）。A/B/C/E 类提醒和高分信号会合并为一条摘要推送；推送失败只记日志，绝不影响扫描。
 
 ## 模拟组合
 
