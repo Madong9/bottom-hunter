@@ -31,7 +31,7 @@ from .data_provider import (
 )
 from .indicators import enrich_bars
 from .models import BottomState, DataResult, Instrument, SignalLevel, StockSignal
-from .notify import load_notify_config, push
+from .notify import format_digest, load_notify_config, push
 from .paper import record_stage_fills, update_valuations
 from .report import generate_reports
 from .research import CachedResearchFundamentalProvider
@@ -424,6 +424,9 @@ def run_scan(
             int(config.defaults["report"]["chart_score"]),
             int(config.defaults["report"]["chart_lookback"]),
         )
+        digest_title, digest_body = format_digest(new_alerts, signals)
+        digest_path = reports_dir / f"digest_{report_date:%Y%m%d}.txt"
+        digest_path.write_text(f"{digest_title}\n\n{digest_body}", encoding="utf-8")
         store.finish_run(run_id, "partial" if errors else "success", errors)
         return ScanOutput(report_date, markdown_path, json_path, signals, errors)
     except KeyboardInterrupt:

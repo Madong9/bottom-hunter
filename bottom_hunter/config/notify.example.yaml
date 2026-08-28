@@ -1,12 +1,21 @@
 # 推送告警配置：复制本文件为 notify.yaml 并填入真实凭据。
 # enabled=false 或缺少凭据时推送静默关闭；推送失败只记日志，不影响扫描。
 #
-# 到达微信的两条路：
+# 到达微信的路径：
 # 1) serverchan —— Server酱（https://sct.ftqq.com/），消息经「方糖」服务号发到你的微信；
 #    免费版每天限 5 条，适合低频高价值提醒。
-# 2) wecom —— 企业微信群机器人 webhook，免费、无条数限制（每分钟 20 条）；
-#    在任意企业微信群 → 群设置 → 群机器人 → 添加，复制 Webhook 地址。
-#    手机装企业微信 App 即可接收；也可在微信插件中关注后用微信查看。
+# 2) wecom —— 企业微信群机器人 webhook，仅内部群可用（客户群/外部群不支持），
+#    免费、无条数限制；手机装企业微信 App 接收。
+# 3) wecom_app —— 企业微信自建应用：创建应用后（管理后台 → 应用管理 → 创建应用），
+#    填入企业ID(corpid)/应用Secret/AgentId；再到「我的企业 → 微信插件」用个人微信
+#    扫码关注，之后应用消息会同步到微信「企业微信通知」，免费、无条数限制。
+# 4) wxpusher —— WxPusher（https://wxpusher.zjiecode.com/），关注公众号即收消息，
+#    免费且无每日条数限制。
+#
+# ⚠️ 客户群/外部群：微信与腾讯的政策均不允许全自动推送到客户群（防骚扰合规）。
+#    「客户群群发」API 只能创建任务并由员工手动确认发送。
+#    需要发给客户时，可直接转发 reports/digest_YYYYMMDD.txt 精简文本，
+#    或使用企业微信「群发助手」生成任务后手动确认。
 enabled: false
 
 channels:
@@ -14,8 +23,15 @@ channels:
     sendkey: ""
   wecom:
     webhook: ""
+  wecom_app:
+    corpid: ""
+    corpsecret: ""
+    agentid: ""
+    touser: "@all"
+  wxpusher:
+    app_token: ""
+    uid: ""
   telegram:
-    # 通过 @BotFather 创建机器人；chat_id 可用 @userinfobot 查询。
     bot_token: ""
     chat_id: ""
 

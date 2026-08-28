@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from datetime import date
 
+from bottom_hunter.src import notify as bottom_hunter_notify
 from bottom_hunter.src.models import Alert
 from bottom_hunter.src.notify import (
     NotifyConfig,
     _wecom,
+    _wecom_app_token,
     load_notify_config,
     push,
 )
@@ -85,3 +87,62 @@ def test_load_notify_config_reads_wecom(tmp_path) -> None:
     assert config.enabled is True
     assert config.wecom_webhook == "https://qy.example/hook"
     assert config.has_channel is True
+
+
+def test_push_wecom_app_reaches_personal_wechat(monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_get(url, params=None, timeout=8, **_kwargs):
+        captured["get_url"] = url
+        captured["get_params"] = params or {}
+        return _FakeResponse(200, {"access_token": "TOK", "expires_in": 7200})
+
+    def fake_post(url, json=None, params=None, timeout=8, **_kwargs):
+        captured["post_url"] = url
+        captured["post_json"] = json
+        return _FakeResponse(200, {"errcode": 0, "errmsg": "ok"})
+
+    monkeypatch.setattr("bottom_hunter.src.notify.requests.get", fake_get)
+    monkeypatch.setattr("bottom_hunter.src.notify.requests.post", fake_post)
+    config = NotifyConfig(
+        enabled=True,
+        wecom_corpid="ww1",
+        wecom_corpsecret="sec",
+        wecom_agentid="1000002",
+        wecom_touser="@all",
+    )
+    assert push([_alert()], [], config) == []
+    assert captured["get_url"].endswith("/gettoken")
+    assert captured["post_json"]["msgtype"] == "markdown"
+    assert captured["post_json"]["agentid"] == 1000002
+    assert captured["post_json"]["touser"] == "@all"
+
+
+def test_wecom_app_token_is_cached(monkeypatch) -> None:
+    calls: list = []
+
+    def fake_get(url, params=None, timeout=8, **_kwargs):
+        calls.append(params)
+        return _FakeResponse(200, {"access_token": "TOK", "expires_in": 7200})
+
+    monkeypatch.setattr("bottom_hunter.src.notify.requests.get", fake_get)
+    bottom_hunter_notify._WECOM_TOKEN.clear()
+    _wecom_app_token("corp", "secret", 5)
+    _wecom_app_token("corp", "secret", 5)
+    assert len(calls) == 1
+
+
+def test_push_sends_to_wxpusher(monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_post(url, json=None, timeout=8, **_kwargs):
+        captured["url"] = url
+        captured["json"] = json
+        return _FakeResponse(200, {"success": True})
+
+    monkeypatch.setattr("bottom_hunter.src.notify.requests.post", fake_post)
+    config = NotifyConfig(enabled=True, wxpusher_app_token="AT_x", wxpusher_uid="UID_1")
+    errors = push([_alert()], [], config)
+    assert errors == []
+    assert captured["json"]["uids"] == ["UID_1"]
+    assert captured["json"]["contentType"] == 3
