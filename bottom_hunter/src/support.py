@@ -19,6 +19,7 @@ DEFAULT_SETTINGS = {
     "touch_band": 0.02,
     "max_above": 0.05,
     "min_history": 40,
+    "cap_band": 0.03,
 }
 
 
@@ -45,6 +46,27 @@ def find_support_levels(
     if not ma200.empty:
         levels.add(round(float(ma200.iloc[-1]), 6))
     return sorted(levels)
+
+
+def find_resistance_levels(
+    enriched: pd.DataFrame,
+    target: date,
+    settings: dict | None = None,
+) -> list[float]:
+    """Swing highs from history before the target; never uses future bars."""
+    merged = {**DEFAULT_SETTINGS, **(settings or {})}
+    stamp = pd.Timestamp(target)
+    history = enriched.loc[:stamp]
+    if len(history) > 1:
+        history = history.iloc[:-1]
+    history = history.tail(int(merged["lookback_days"]))
+    if history.empty:
+        return []
+    window = max(1, int(merged["swing_window"]))
+    highs = history["high"]
+    rolling_max = highs.rolling(2 * window + 1, center=True, min_periods=window + 1).max()
+    swing = highs[highs == rolling_max].dropna()
+    return sorted({round(float(value), 6) for value in swing})
 
 
 def evaluate_support(
@@ -100,3 +122,57 @@ def evaluate_support(
         [f"收盘位于支撑位 {nearest:.2f} {side} {abs(distance):.1%}，未形成支撑确认"],
         metrics,
     )
+
+
+def evaluate_resistance(
+    enriched: pd.DataFrame,
+    target: date,
+    settings: dict | None = None,
+) -> tuple[float | None, float | None, bool, list[str], dict]:
+    """Grade the target day against the nearest resistance level above.
+
+    Returns (nearest level, distance, breakout flag, reasons, metrics).
+    Resistance is contextual only — it never changes the point total.
+    """
+    merged = {**DEFAULT_SETTINGS, **(settings or {})}
+    stamp = pd.Timestamp(target)
+    empty = {"resistance_level": None, "resistance_distance": None, "resistance_breakout": False}
+    if stamp not in enriched.index:
+        return None, None, False, [], empty
+    close = float(enriched.at[stamp, "close"])
+    all_levels = find_resistance_levels(enriched, target, merged)
+    above = [level for level in all_levels if level >= close]
+    broken = [
+        level
+        for level in all_levels
+        if level < close and level >= close * (1 - float(merged["touch_band"]))
+    ]
+    metrics = {
+        "resistance_level": None,
+        "resistance_distance": None,
+        "resistance_breakout": False,
+    }
+    if above:
+        nearest = min(above)
+        distance = nearest / close - 1
+        metrics = {
+            "resistance_level": nearest,
+            "resistance_distance": float(distance),
+            "resistance_breakout": False,
+        }
+        if distance <= float(merged["cap_band"]):
+            reasons = [f"上方压力位 {nearest:.2f} 仅距 {distance:.1%}，反弹空间受限"]
+        else:
+            reasons = [f"上方压力位 {nearest:.2f}，距离 {distance:.1%}"]
+        return nearest, float(distance), False, reasons, metrics
+    if broken:
+        nearest = max(broken)
+        distance = nearest / close - 1
+        metrics = {
+            "resistance_level": nearest,
+            "resistance_distance": float(distance),
+            "resistance_breakout": True,
+        }
+        reasons = [f"收盘已突破近期压力位 {nearest:.2f}，压力转为支撑参考"]
+        return nearest, float(distance), True, reasons, metrics
+    return None, None, False, ["上方无明显历史压力位"], metrics

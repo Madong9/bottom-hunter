@@ -9,7 +9,7 @@ import pandas as pd
 
 from .indicators import aligned_returns, enrich_bars
 from .models import BreadthResult, FundamentalResult, ScoreBreakdown, SignalLevel
-from .support import evaluate_support
+from .support import evaluate_resistance, evaluate_support
 from .trading_calendar import TimingWindow
 
 
@@ -230,6 +230,9 @@ def score_stock(
         thresholds.get("support"),
         extra_levels=[event.low] if event is not None else [],
     )
+    _resistance, _resistance_distance, _breakout, resistance_reasons, resistance_metrics = (
+        evaluate_resistance(enriched, target, thresholds.get("support"))
+    )
     breakdown = ScoreBreakdown(
         oversold=oversold,
         capitulation=(
@@ -289,6 +292,7 @@ def score_stock(
         }
     )
     metrics.update(support_metrics)
+    metrics.update(resistance_metrics)
     relative_turn = bool(
         relative_turn
         or (
@@ -304,6 +308,7 @@ def score_stock(
         )
     reasons.extend(rejection_reasons)
     reasons.extend(support_reasons)
+    reasons.extend(resistance_reasons)
     reasons.append(
         f"板块上涨 {breadth.up_ratio:.0%}，宽度{'改善' if breadth.improving else '未确认'}"
     )
@@ -323,6 +328,15 @@ def score_stock(
         )
     if _support_level is not None:
         risks.append(f"若收盘明显跌破支撑位 {_support_level:.2f}，支撑确认作废")
+    if (
+        resistance_metrics.get("resistance_level") is not None
+        and not resistance_metrics.get("resistance_breakout")
+        and (resistance_metrics.get("resistance_distance") or 1) <= 0.03
+    ):
+        risks.append(
+            f"上方压力位 {resistance_metrics['resistance_level']:.2f} 临近，"
+            "突破前反弹空间有限"
+        )
     if fundamental.score is None:
         risks.append("基本面未验证，禁止据此直接交易")
     return ScoreResult(
