@@ -20,7 +20,6 @@ from .data_provider import (
     EastmoneyProvider,
     LocalCsvProvider,
     MarketDataProvider,
-    StooqProvider,
     YahooChartProvider,
 )
 from .indicators import atr, rsi
@@ -192,7 +191,6 @@ class MarketChartService:
             [
                 EastmoneyProvider(timeout=self.timeout),
                 YahooChartProvider(timeout=self.timeout),
-                StooqProvider(timeout=self.timeout),
             ]
         )
         return CachedMarketDataProvider(LocalCsvProvider(data_dir), remote)

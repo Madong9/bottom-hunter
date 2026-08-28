@@ -25,7 +25,6 @@ from .data_provider import (
     LongbridgeProvider,
     MarketDataProvider,
     OkxCandleProvider,
-    StooqProvider,
     TencentProvider,
     YahooChartProvider,
     fetch_many,
@@ -75,7 +74,6 @@ def _provider(config: AppConfig, data_dir: Path, offline: bool) -> MarketDataPro
                 breaker_failures,
             ),
             CircuitBreakerProvider(YahooChartProvider(timeout=timeout), breaker_failures),
-            CircuitBreakerProvider(StooqProvider(timeout=timeout), breaker_failures),
         ]
     )
     return CachedMarketDataProvider(local, remote)

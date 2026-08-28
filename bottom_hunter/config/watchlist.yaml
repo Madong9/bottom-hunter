@@ -1,6 +1,6 @@
 schema_version: 2
 mode: account_watchlists
-generated_at: '2026-08-27T12:06:27.662993+00:00'
+generated_at: '2026-08-28T02:51:17.068130+00:00'
 description: 由同花顺、币安和欧易账号自选快照生成；不含内置公司列表。
 markets:
   CN:
@@ -266,6 +266,18 @@ sectors:
     dynamic: true
     etfs: []
     assets:
+    - symbol: 603986.SS
+      name: 兆易创新
+      market: CN
+      industry: 半导体
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '603986'
+      volume_optional: false
     - symbol: 688981.SS
       name: 中芯国际
       market: CN
@@ -404,18 +416,6 @@ sectors:
     dynamic: true
     etfs: []
     assets:
-    - symbol: 003816.SZ
-      name: 中国广核
-      market: CN
-      industry: 待分类
-      category: cn_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: 003816
-      volume_optional: false
     - symbol: 159992.SZ
       name: 创新药ETF银华
       market: CN
@@ -476,18 +476,6 @@ sectors:
       source_symbols:
         tonghuashun: '600011'
       volume_optional: false
-    - symbol: 600064.SS
-      name: 南京高科
-      market: CN
-      industry: 待分类
-      category: cn_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: '600064'
-      volume_optional: false
     - symbol: 600089.SS
       name: 特变电工
       market: CN
@@ -500,18 +488,6 @@ sectors:
       source_symbols:
         tonghuashun: '600089'
       volume_optional: false
-    - symbol: 600098.SS
-      name: 广州发展
-      market: CN
-      industry: 待分类
-      category: cn_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: '600098'
-      volume_optional: false
     - symbol: 600309.SS
       name: 万华化学
       market: CN
@@ -523,30 +499,6 @@ sectors:
       - tonghuashun
       source_symbols:
         tonghuashun: '600309'
-      volume_optional: false
-    - symbol: 601088.SS
-      name: 中国神华
-      market: CN
-      industry: 待分类
-      category: cn_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: '601088'
-      volume_optional: false
-    - symbol: 603986.SS
-      name: 兆易创新
-      market: CN
-      industry: 待分类
-      category: cn_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: '603986'
       volume_optional: false
   cn_industry_75a5e1bc51:
     name: A股 · 房地产
@@ -633,6 +585,18 @@ sectors:
       - tonghuashun
       source_symbols:
         tonghuashun: '600048'
+      volume_optional: false
+    - symbol: 600064.SS
+      name: 南京高科
+      market: CN
+      industry: 房地产开发
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600064'
       volume_optional: false
     - symbol: 600503.SS
       name: 华丽家族
@@ -928,7 +892,7 @@ sectors:
         tonghuashun: '159928'
       volume_optional: false
     - symbol: 516130.SS
-      name: 消费龙头ETF...
+      name: 消费龙头ETF华宝
       market: CN
       industry: 消费
       category: cn_equity
@@ -1020,6 +984,18 @@ sectors:
       source_symbols:
         tonghuashun: '600348'
       volume_optional: false
+    - symbol: 601088.SS
+      name: 中国神华
+      market: CN
+      industry: 煤炭开采
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '601088'
+      volume_optional: false
   cn_industry_c81cfde5a6:
     name: A股 · 物流
     category: cn_equity
@@ -1077,6 +1053,18 @@ sectors:
       source_symbols:
         tonghuashun: 000958
       volume_optional: false
+    - symbol: 003816.SZ
+      name: 中国广核
+      market: CN
+      industry: 电力
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: 003816
+      volume_optional: false
     - symbol: 600027.SS
       name: 华电国际
       market: CN
@@ -1088,6 +1076,18 @@ sectors:
       - tonghuashun
       source_symbols:
         tonghuashun: '600027'
+      volume_optional: false
+    - symbol: 600098.SS
+      name: 广州发展
+      market: CN
+      industry: 电力
+      category: cn_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: '600098'
       volume_optional: false
     - symbol: 601985.SS
       name: 中国核电
@@ -2174,6 +2174,30 @@ sectors:
       source_symbols:
         tonghuashun: PLTR
       volume_optional: false
+    - symbol: QCOM
+      name: 高通
+      market: US
+      industry: 信息技术
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: QCOM
+      volume_optional: false
+    - symbol: WDC
+      name: 西部数据
+      market: US
+      industry: 信息技术
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: WDC
+      volume_optional: false
   global_industry_96b876e3a9:
     name: 美港股 · 工业
     category: global_equity
@@ -2200,18 +2224,6 @@ sectors:
     dynamic: true
     etfs: []
     assets:
-    - symbol: 1810.HK
-      name: 小米集团-W
-      market: HK
-      industry: 待分类
-      category: global_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: HK1810
-      volume_optional: false
     - symbol: 2319.HK
       name: 蒙牛乳业
       market: HK
@@ -2272,18 +2284,6 @@ sectors:
       source_symbols:
         tonghuashun: MU
       volume_optional: false
-    - symbol: NFLX
-      name: 奈飞
-      market: US
-      industry: 待分类
-      category: global_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: NFLX
-      volume_optional: false
     - symbol: PDDL
       name: 2倍做多PDD ETF-Gra...
       market: US
@@ -2295,30 +2295,6 @@ sectors:
       - binance
       source_symbols:
         binance: PDDL
-      volume_optional: false
-    - symbol: QCOM
-      name: 高通
-      market: US
-      industry: 待分类
-      category: global_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: QCOM
-      volume_optional: false
-    - symbol: WDC
-      name: 西部数据
-      market: US
-      industry: 待分类
-      category: global_equity
-      asset_type: equity
-      tokenized_stock: false
-      sources:
-      - tonghuashun
-      source_symbols:
-        tonghuashun: WDC
       volume_optional: false
   global_industry_75a5e1bc51:
     name: 美港股 · 房地产
@@ -2338,6 +2314,25 @@ sectors:
       - tonghuashun
       source_symbols:
         tonghuashun: BEKE
+      volume_optional: false
+  global_industry_91915bdd85:
+    name: 美港股 · 资讯科技器材
+    category: global_equity
+    industry: 资讯科技器材
+    dynamic: true
+    etfs: []
+    assets:
+    - symbol: 1810.HK
+      name: 小米集团-W
+      market: HK
+      industry: 资讯科技器材
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: HK1810
       volume_optional: false
   global_industry_b5827538ec:
     name: 美港股 · 通讯服务
@@ -2365,6 +2360,18 @@ sectors:
     dynamic: true
     etfs: []
     assets:
+    - symbol: NFLX
+      name: 奈飞
+      market: US
+      industry: 非日常生活消费品
+      category: global_equity
+      asset_type: equity
+      tokenized_stock: false
+      sources:
+      - tonghuashun
+      source_symbols:
+        tonghuashun: NFLX
+      volume_optional: false
     - symbol: PDD
       name: 拼多多
       market: US
