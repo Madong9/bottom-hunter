@@ -3,13 +3,13 @@ from __future__ import annotations
 import os
 import sys
 import threading
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date
 from types import SimpleNamespace
-from typing import Any, Callable, Mapping
+from typing import Any
 
 import pandas as pd
-
 
 DEFAULT_HTTP_URL = "https://openapi.longbridge.cn"
 DEFAULT_QUOTE_WS_URL = "wss://openapi-quote.longbridge.cn/v2"

@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
 import shutil
+from datetime import UTC, date, datetime
 
 import numpy as np
 import pandas as pd
-
-from bottom_hunter.src.data_provider import MarketDataProvider
+from bottom_hunter.src import scanner as scanner_module
 from bottom_hunter.src.account_watchlist import AccountWatchlistRepository
 from bottom_hunter.src.config import PROJECT_DIR
+from bottom_hunter.src.data_provider import MarketDataProvider
 from bottom_hunter.src.models import DataResult, Instrument
 from bottom_hunter.src.scanner import run_scan
-from bottom_hunter.src import scanner as scanner_module
 
 
 class FakeProvider(MarketDataProvider):
@@ -31,7 +30,7 @@ class FakeProvider(MarketDataProvider):
             index=dates,
         )
         return DataResult(
-            instrument.symbol, frame, self.name, datetime.now(timezone.utc), "complete"
+            instrument.symbol, frame, self.name, datetime.now(UTC), "complete"
         )
 
 

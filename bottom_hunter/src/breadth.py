@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date
-from typing import Mapping
 
 import numpy as np
 import pandas as pd
@@ -96,12 +96,10 @@ def calculate_breadth(
         enriched_etf = etf_frame if "return_1d" in etf_frame else enrich_bars(etf_frame)
         etf_return = _value(enriched_etf, target, "return_1d")
         etf_up = bool(etf_return > 0) if pd.notna(etf_return) else None
-    breadth_score = int(
-        coverage >= 0.60
-        and up >= thresholds["up_ratio"]
-        and improving
-        and etf_up is True
+    breadth_ready = bool(
+        coverage >= 0.60 and up >= thresholds["up_ratio"] and improving
     )
+    breadth_score = int(breadth_ready and etf_up is True)
     return BreadthResult(
         date=target,
         sector_id=sector_id,
@@ -119,4 +117,5 @@ def calculate_breadth(
         etf_up=etf_up,
         coverage=float(coverage),
         worsening=worsening,
+        breadth_ready=breadth_ready,
     )

@@ -3,10 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Iterable, Iterator
 
 from .research_models import (
     FinancialFact,
@@ -16,7 +16,6 @@ from .research_models import (
     ResearchSnapshot,
     SourceTier,
 )
-
 
 RESEARCH_SCHEMA = """
 PRAGMA journal_mode=WAL;
@@ -98,9 +97,9 @@ CREATE TABLE IF NOT EXISTS research_refreshes (
 
 def _parse_datetime(value: str | None) -> datetime:
     if not value:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 class ResearchStore:
@@ -155,7 +154,7 @@ class ResearchStore:
         rows = list(facts)
         if not rows:
             return 0
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         with self.connect() as connection:
             connection.executemany(
                 """
@@ -195,7 +194,7 @@ class ResearchStore:
         rows = list(items)
         if not rows:
             return 0
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         inserted = 0
         with self.connect() as connection:
             for item in rows:
@@ -248,7 +247,7 @@ class ResearchStore:
         rows = list(observations)
         if not rows:
             return 0
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         with self.connect() as connection:
             connection.executemany(
                 """
@@ -299,7 +298,7 @@ class ResearchStore:
                 """,
                 (
                     scope,
-                    datetime.now(timezone.utc).isoformat(),
+                    datetime.now(UTC).isoformat(),
                     status,
                     json.dumps(errors or {}, ensure_ascii=False),
                 ),
@@ -446,5 +445,5 @@ class ResearchStore:
         return {
             "assets": result,
             "macro": [item.to_dict() for item in macro],
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }

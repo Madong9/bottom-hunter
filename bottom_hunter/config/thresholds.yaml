@@ -31,7 +31,6 @@ defaults:
     quarter_end_sessions: 10
     quarter_start_sessions: 5
   report:
-    high_score: 7
     chart_score: 7
     chart_lookback: 120
   data:
@@ -39,8 +38,5 @@ defaults:
     circuit_breaker_failures: 3
     eastmoney_max_concurrency: 3
     minimum_latest_coverage: 0.70
-    maximum_staleness_sessions: 1
-  state:
-    failure_break: 0.02
 
 sector_overrides: {}

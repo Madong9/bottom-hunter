@@ -10,8 +10,9 @@ def build_alerts(
     signals: list[StockSignal], sectors: list[SectorResult], store: StateStore
 ) -> list[Alert]:
     alerts: list[Alert] = []
+    previous_signals = store.previous_signals_map(signals)
     for signal in signals:
-        previous = store.previous_signal(signal.symbol, signal.sector_id, signal.date)
+        previous = previous_signals.get((signal.symbol, signal.sector_id))
         previous_score = int(previous["score"]) if previous else None
         previous_stage = previous["entry_stage"] if previous else None
         previous_state = previous["state"] if previous else None
@@ -72,18 +73,23 @@ def build_alerts(
                     f"{signal.symbol} 之前的反转结构已失败，底部确认状态已重置。",
                 )
             )
+    previous_sectors = store.previous_sectors_map(sectors)
     for sector in sectors:
-        previous = store.previous_sector(sector.sector_id, sector.market, sector.date)
+        previous = previous_sectors.get((sector.sector_id, sector.market))
         if previous:
             increase = sector.score - int(previous["score"])
             if increase > 15 and int(previous["score"]) <= 75 and sector.score > 75:
                 entity = f"{sector.sector_id}:{sector.market}"
+                message = (
+                    f"{sector.sector_name}({sector.market}) 板块分数单日上升 {increase} 分"
+                    f"并突破 75，当前 {sector.score}/100。"
+                )
                 alerts.append(
                     Alert(
                         sector.date,
                         "C_SECTOR_SURGE",
                         entity,
-                        f"{sector.sector_name}({sector.market}) 板块分数单日上升 {increase} 分并突破 75，当前 {sector.score}/100。",
+                        message,
                     )
                 )
     return alerts

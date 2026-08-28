@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import argparse
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Mapping
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -14,8 +14,8 @@ from .alerts import build_alerts
 from .breadth import calculate_breadth
 from .config import AppConfig
 from .data_provider import (
-    CachedMarketDataProvider,
     BinanceKlineProvider,
+    CachedMarketDataProvider,
     CboeVixProvider,
     CircuitBreakerProvider,
     CompositeMarketDataProvider,
@@ -274,13 +274,17 @@ def run_scan(
                     for item in configured_leaders
                     if item.symbol in asset_frames
                 ]
-                leaders_confirmed = bool(
-                    configured_leaders
-                    and len(available_leaders) / len(configured_leaders) >= minimum_coverage
-                    and sum(not bool(row["new_low_20"]) for row in available_leaders)
-                    / len(available_leaders)
-                    >= 0.60
-                )
+                if configured_leaders:
+                    leaders_confirmed = bool(
+                        len(available_leaders) / len(configured_leaders) >= minimum_coverage
+                        and sum(not bool(row["new_low_20"]) for row in available_leaders)
+                        / len(available_leaders)
+                        >= 0.60
+                    )
+                else:
+                    # 动态自选未配置龙头股时，以板块宽度确认代替龙头确认，
+                    # 否则 ENTRY_STAGE_3 对动态板块永远不可达。
+                    leaders_confirmed = bool(breadth.breadth_score == 1 or breadth.breadth_ready)
                 for instrument in assets:
                     frame = asset_frames.get(instrument.symbol)
                     result = fetched.get(instrument.symbol)

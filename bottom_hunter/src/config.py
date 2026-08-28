@@ -9,7 +9,6 @@ import yaml
 
 from .models import Instrument
 
-
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 
 
@@ -31,7 +30,7 @@ class AppConfig:
     thresholds: dict[str, Any]
 
     @classmethod
-    def load(cls, config_dir: str | Path | None = None) -> "AppConfig":
+    def load(cls, config_dir: str | Path | None = None) -> AppConfig:
         directory = Path(config_dir) if config_dir else PROJECT_DIR / "config"
         directory = directory.resolve()
         watchlist_path = directory / "watchlist.yaml"

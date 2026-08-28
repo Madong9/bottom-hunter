@@ -15,7 +15,6 @@ import yaml
 
 from .config import AppConfig
 
-
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 WORKSPACE_DIR = PACKAGE_DIR.parent
 
@@ -163,7 +162,7 @@ def recent_scan_runs(
 ) -> list[dict[str, Any]]:
     if not database.exists():
         return []
-    with sqlite3.connect(database) as connection:
+    with sqlite3.connect(database, timeout=20) as connection:
         connection.row_factory = sqlite3.Row
         rows = connection.execute(
             """
@@ -256,9 +255,17 @@ def health_check() -> list[tuple[str, bool, str]]:
 
         research_store = ResearchStore(database)
         with research_store.connect() as connection:
-            item_count = int(connection.execute("SELECT COUNT(*) FROM research_items").fetchone()[0])
-            fact_count = int(connection.execute("SELECT COUNT(*) FROM financial_facts").fetchone()[0])
-            macro_count = int(connection.execute("SELECT COUNT(DISTINCT series_id) FROM macro_observations").fetchone()[0])
+            item_count = int(
+                connection.execute("SELECT COUNT(*) FROM research_items").fetchone()[0]
+            )
+            fact_count = int(
+                connection.execute("SELECT COUNT(*) FROM financial_facts").fetchone()[0]
+            )
+            macro_count = int(
+                connection.execute(
+                    "SELECT COUNT(DISTINCT series_id) FROM macro_observations"
+                ).fetchone()[0]
+            )
         results.append(
             ("研究中心", True, f"财务 {fact_count} 项 · 资讯 {item_count} 条 · 宏观 {macro_count} 组")
         )

@@ -8,9 +8,11 @@ import re
 import threading
 import time
 from abc import ABC, abstractmethod
-from datetime import date, datetime, time as dt_time, timedelta, timezone
+from collections.abc import Iterable
+from datetime import UTC, date, datetime, timedelta
+from datetime import time as dt_time
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -19,6 +21,7 @@ import numpy as np
 import pandas as pd
 import requests
 
+from .io_utils import EASTMONEY_SEARCH_TOKEN
 from .longbridge_adapter import (
     LongbridgeClient,
     LongbridgeError,
@@ -27,7 +30,7 @@ from .longbridge_adapter import (
     LongbridgeSymbolUnsupported,
 )
 from .models import DataResult, FundamentalResult, Instrument
-from .network_config import apply_urllib, apply_requests_session
+from .network_config import apply_requests_session, apply_urllib
 
 # Disable system proxy (Clash, etc.) for all data-provider requests.
 apply_urllib()
@@ -150,7 +153,7 @@ class LocalCsvProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=frame,
             provider=self.name,
-            data_timestamp=datetime.fromtimestamp(path.stat().st_mtime, timezone.utc),
+            data_timestamp=datetime.fromtimestamp(path.stat().st_mtime, UTC),
         )
 
 
@@ -180,9 +183,9 @@ class BinanceKlineProvider(MarketDataProvider):
         params = {
             "symbol": symbol,
             "interval": "1d",
-            "startTime": int(datetime.combine(start, dt_time.min, timezone.utc).timestamp() * 1000),
+            "startTime": int(datetime.combine(start, dt_time.min, UTC).timestamp() * 1000),
             "endTime": int(
-                datetime.combine(end + timedelta(days=1), dt_time.min, timezone.utc).timestamp()
+                datetime.combine(end + timedelta(days=1), dt_time.min, UTC).timestamp()
                 * 1000
                 - 1
             ),
@@ -228,7 +231,7 @@ class BinanceKlineProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=bars,
             provider=self.name,
-            data_timestamp=datetime.now(timezone.utc),
+            data_timestamp=datetime.now(UTC),
             warnings=[f"交易所原始交易对：{source_symbol}"],
         )
 
@@ -256,7 +259,7 @@ class OkxCandleProvider(MarketDataProvider):
             source_symbol = f"{parts[0]}-{parts[1]}"
         cursor: str | None = None
         collected: dict[int, list[Any]] = {}
-        start_ms = int(datetime.combine(start, dt_time.min, timezone.utc).timestamp() * 1000)
+        start_ms = int(datetime.combine(start, dt_time.min, UTC).timestamp() * 1000)
         for _page in range(5):
             params = {"instId": source_symbol.upper(), "bar": "1Dutc", "limit": "300"}
             if cursor:
@@ -281,7 +284,12 @@ class OkxCandleProvider(MarketDataProvider):
                 if len(item) >= 9 and str(item[8]) != "1":
                     continue
                 collected[int(item[0])] = item
-            oldest = min(int(item[0]) for item in rows if isinstance(item, list) and item)
+            valid_rows = [
+                int(item[0]) for item in rows if isinstance(item, list) and len(item) >= 6
+            ]
+            if not valid_rows:
+                break
+            oldest = min(valid_rows)
             if oldest <= start_ms or cursor == str(oldest):
                 break
             cursor = str(oldest)
@@ -304,7 +312,7 @@ class OkxCandleProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=bars,
             provider=self.name,
-            data_timestamp=datetime.now(timezone.utc),
+            data_timestamp=datetime.now(UTC),
             warnings=warnings,
         )
 
@@ -345,7 +353,7 @@ class LongbridgeProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=bars,
             provider=self.name,
-            data_timestamp=datetime.now(timezone.utc),
+            data_timestamp=datetime.now(UTC),
             warnings=[f"长桥行情等级：{result.quote_level or '未知'}；前复权"],
         )
 
@@ -360,9 +368,9 @@ class YahooChartProvider(MarketDataProvider):
         self, instrument: Instrument, start: date, end: date
     ) -> DataResult:
         symbol = instrument.provider_symbol or instrument.symbol
-        period1 = int(datetime.combine(start, dt_time.min, timezone.utc).timestamp())
+        period1 = int(datetime.combine(start, dt_time.min, UTC).timestamp())
         period2 = int(
-            datetime.combine(end + timedelta(days=1), dt_time.min, timezone.utc).timestamp()
+            datetime.combine(end + timedelta(days=1), dt_time.min, UTC).timestamp()
         )
         query = urlencode(
             {
@@ -411,7 +419,7 @@ class YahooChartProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=bars,
             provider=self.name,
-            data_timestamp=datetime.now(timezone.utc),
+            data_timestamp=datetime.now(UTC),
         )
 
 
@@ -458,7 +466,7 @@ class StooqProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=bars,
             provider=self.name,
-            data_timestamp=datetime.now(timezone.utc),
+            data_timestamp=datetime.now(UTC),
             warnings=["Stooq 数据通常为调整后行情，请与交易所数据复核。"],
         )
 
@@ -496,7 +504,7 @@ class CboeVixProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=bars,
             provider=self.name,
-            data_timestamp=datetime.now(timezone.utc),
+            data_timestamp=datetime.now(UTC),
             warnings=["VIX 行情来自 Cboe 官方历史 CSV；成交量字段不适用。"],
         )
 
@@ -621,7 +629,7 @@ class TencentProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=bars,
             provider=self.name,
-            data_timestamp=datetime.now(timezone.utc),
+            data_timestamp=datetime.now(UTC),
             warnings=["腾讯为公共行情接口，生产使用前请与授权行情复核。"],
         )
 
@@ -632,7 +640,7 @@ class EastmoneyProvider(MarketDataProvider):
     name = "eastmoney"
     SEARCH_URL = "https://searchapi.eastmoney.com/api/suggest/get"
     KLINE_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
-    SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8"
+    SEARCH_TOKEN = EASTMONEY_SEARCH_TOKEN
     INDEX_IDS = {
         "^GSPC": "100.SPX",
         "^HSI": "100.HSI",
@@ -773,7 +781,7 @@ class EastmoneyProvider(MarketDataProvider):
             symbol=instrument.symbol,
             bars=bars,
             provider=self.name,
-            data_timestamp=datetime.now(timezone.utc),
+            data_timestamp=datetime.now(UTC),
             warnings=["东方财富为公共行情接口，生产使用前请与授权行情复核。"],
         )
 
@@ -872,7 +880,12 @@ class CachedMarketDataProvider(MarketDataProvider):
             remote = self.remote.get_daily_bars(instrument, start, end)
             path = self.cache.data_dir / f"{self.cache.safe_name(instrument.symbol)}.csv"
             path.parent.mkdir(parents=True, exist_ok=True)
-            remote.bars.rename_axis("date").to_csv(path)
+            tmp_path = path.with_suffix(path.suffix + ".tmp")
+            try:
+                remote.bars.rename_axis("date").to_csv(tmp_path)
+                tmp_path.replace(path)
+            finally:
+                tmp_path.unlink(missing_ok=True)
             return remote
         except DataProviderError as exc:
             if cached is not None and self.allow_stale_fallback:
@@ -887,25 +900,39 @@ class CsvFundamentalProvider:
 
     def __init__(self, path: str | Path):
         self.path = Path(path)
+        self._frame: pd.DataFrame | None = None
+
+    def _load_frame(self) -> pd.DataFrame | None:
+        """Load and index the CSV once; the same file is read for every call."""
+        if self._frame is not None:
+            return self._frame
+        if not self.path.exists():
+            self._frame = pd.DataFrame()
+            return self._frame
+        try:
+            frame = pd.read_csv(self.path, comment="#")
+        except (pd.errors.EmptyDataError, OSError):
+            self._frame = pd.DataFrame()
+            return self._frame
+        required = {"date", "symbol", "score", "reason", "source"}
+        if frame.empty or not required.issubset(frame.columns):
+            self._frame = pd.DataFrame()
+            return self._frame
+        frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.date
+        frame = frame[frame["date"].notna()]
+        self._frame = frame.sort_values("date") if not frame.empty else frame
+        return self._frame
 
     def get_fundamental_data(
         self, instrument: Instrument, as_of: date
     ) -> FundamentalResult:
-        if not self.path.exists():
+        frame = self._load_frame()
+        if frame.empty:
             return self._missing()
-        try:
-            frame = pd.read_csv(self.path, comment="#")
-        except (pd.errors.EmptyDataError, OSError):
-            return self._missing()
-        required = {"date", "symbol", "score", "reason", "source"}
-        if frame.empty or not required.issubset(frame.columns):
-            return self._missing()
-        frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.date
         candidates = frame.loc[
-            (frame["symbol"].astype(str) == instrument.symbol)
-            & frame["date"].notna()
-            & (frame["date"] <= as_of)
-        ].sort_values("date")
+            frame["symbol"].astype(str) == instrument.symbol,
+        ]
+        candidates = candidates[candidates["date"] <= as_of]
         if candidates.empty:
             return self._missing()
         row = candidates.iloc[-1]

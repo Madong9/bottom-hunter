@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import pandas as pd
 import requests
@@ -22,6 +23,8 @@ from .data_provider import (
     StooqProvider,
     YahooChartProvider,
 )
+from .indicators import atr, rsi
+from .io_utils import atomic_json as _atomic_json
 from .longbridge_adapter import (
     LongbridgeClient,
     LongbridgeError,
@@ -29,9 +32,8 @@ from .longbridge_adapter import (
     LongbridgeSdkUnavailable,
     LongbridgeSymbolUnsupported,
 )
-from .indicators import atr, rsi
 from .models import Instrument
-from .network_config import apply_urllib, apply_requests_session
+from .network_config import apply_requests_session, apply_urllib
 
 # Disable system proxy (Clash, etc.) for all chart-service requests.
 apply_urllib()
@@ -106,16 +108,6 @@ def calculate_chart_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     result["volume_ma5"] = volume.rolling(5, min_periods=5).mean()
     result["volume_ma10"] = volume.rolling(10, min_periods=10).mean()
     return result
-
-
-def _atomic_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
-    temporary.replace(path)
 
 
 class ChartAnnotationStore:
@@ -228,7 +220,7 @@ class MarketChartService:
             timeframe=timeframe,
             bars=bars,
             provider=provider,
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
             note=note,
         )
 

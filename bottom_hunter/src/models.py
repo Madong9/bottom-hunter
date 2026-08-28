@@ -150,6 +150,7 @@ class BreadthResult:
     etf_up: bool | None
     coverage: float
     worsening: bool = False
+    breadth_ready: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)

@@ -44,7 +44,7 @@ def decide_state(
         sessions_after = max(0, len(bars.loc[event_stamp:stamp]) - 1)
         if (
             result.score.rejection == 2
-            and breadth.breadth_score == 1
+            and (breadth.breadth_score == 1 or breadth.breadth_ready)
             and risk_environment == "Risk-On"
             and leaders_confirmed
         ):

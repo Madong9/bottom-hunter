@@ -2,7 +2,6 @@ from __future__ import annotations
 
 # Qt must be preloaded before the PySide imports below on some Linux/Conda setups.
 # ruff: noqa: E402
-
 import argparse
 import ctypes
 import os
@@ -10,6 +9,7 @@ import re
 import shutil
 import signal
 import sys
+import threading
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -59,8 +59,8 @@ from PySide6.QtCore import (
     Slot,
 )
 from PySide6.QtGui import (
-    QColor,
     QCloseEvent,
+    QColor,
     QDesktopServices,
     QFont,
     QFontDatabase,
@@ -76,13 +76,13 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
     QMessageBox,
-    QInputDialog,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
@@ -98,6 +98,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .account_connectors import AccountConnectionService, ConnectionResult
+from .account_watchlist import (
+    CATEGORY_LABELS,
+    SOURCE_LABELS,
+    UNKNOWN_INDUSTRY,
+    AccountWatchlistRepository,
+    ImportResult,
+    search_equities,
+)
+from .chart_widget import ChartWorkspace
+from .charting import MarketChartService
 from .gui_core import (
     PACKAGE_DIR,
     CommandSpec,
@@ -110,25 +121,13 @@ from .gui_core import (
     recent_scan_runs,
     save_editor_content,
 )
-from .account_connectors import AccountConnectionService, ConnectionResult
-from .charting import MarketChartService
-from .chart_widget import ChartWorkspace
-from .research_widget import ResearchWorkspace
 from .longbridge_adapter import (
     DEFAULT_HTTP_URL,
     DEFAULT_QUOTE_WS_URL,
     LONG_BRIDGE_ENV_KEYS,
     LongbridgeClient,
 )
-from .account_watchlist import (
-    AccountWatchlistRepository,
-    CATEGORY_LABELS,
-    ImportResult,
-    SOURCE_LABELS,
-    UNKNOWN_INDUSTRY,
-    search_equities,
-)
-
+from .research_widget import ResearchWorkspace
 
 ACCOUNT_SOURCE_LABELS = {**SOURCE_LABELS, "longbridge": "长桥行情"}
 
@@ -499,6 +498,17 @@ QToolTip {
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
+def _app_version() -> str:
+    try:
+        import tomllib
+
+        with open(PACKAGE_DIR / "pyproject.toml", "rb") as handle:
+            data = tomllib.load(handle)
+        return f"v{data['project']['version']}"
+    except (OSError, KeyError, tomllib.TOMLDecodeError):
+        return ""
+
+
 def _font_family() -> str:
     families = set(QFontDatabase.families())
     for candidate in (
@@ -720,6 +730,10 @@ class BottomHunterWindow(QMainWindow):
         self.pending_task_after_sync: CommandSpec | None = None
 
         self._build_shell()
+        # 后台预热长桥凭据缓存，避免首次启动任务时在 UI 线程触发 keyring I/O
+        threading.Thread(
+            target=self.account_service.vault.load, args=("longbridge",), daemon=True
+        ).start()
         self.statusBar().showMessage("系统就绪 · 所有结果仅供观察和量化研究", 6000)
         QTimer.singleShot(80, self.refresh_all)
 
@@ -789,7 +803,7 @@ class BottomHunterWindow(QMainWindow):
         pulse.setStyleSheet("color: #07c160; font-size: 11px;")
         pulse.setToolTip("系统可用")
         layout.addWidget(pulse)
-        caption = QLabel("v0.1")
+        caption = QLabel(_app_version() or "Bottom Hunter")
         caption.setObjectName("RailCaption")
         caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(caption)
@@ -2340,7 +2354,11 @@ class BottomHunterWindow(QMainWindow):
         self.backtest_button.setEnabled(asset_count > 0 and not busy)
 
         report_path = latest_json_report()
-        watchlist_mtime = self.watchlist_repo.active_watchlist_path.stat().st_mtime
+        try:
+            watchlist_mtime = self.watchlist_repo.active_watchlist_path.stat().st_mtime
+        except OSError:
+            # watchlist.yaml 尚未生成（首次安装未导入自选）时按最早时间处理
+            watchlist_mtime = 0.0
         if not report_path or report_path.stat().st_mtime < watchlist_mtime:
             self.signal_table.setRowCount(0)
             self.sector_table.setRowCount(0)

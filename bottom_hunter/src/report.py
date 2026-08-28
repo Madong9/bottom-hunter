@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timezone
+from collections.abc import Mapping
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import matplotlib
 
@@ -16,16 +17,13 @@ import pandas as pd
 from matplotlib.patches import Rectangle
 
 from .indicators import enrich_bars, normalized_relative_curve
+from .io_utils import CJK_FONT_FAMILIES
 from .models import Alert, SectorResult, StockSignal
-from .storage import StateStore
 from .research_storage import ResearchStore
+from .storage import StateStore
 
 LOGGER = logging.getLogger(__name__)
-plt.rcParams["font.sans-serif"] = [
-    "Noto Sans CJK JP",
-    "Droid Sans Fallback",
-    "DejaVu Sans",
-]
+plt.rcParams["font.sans-serif"] = list(CJK_FONT_FAMILIES)
 plt.rcParams["axes.unicode_minus"] = False
 
 
@@ -65,7 +63,7 @@ def report_payload(
     return _json_safe(
         {
             "report_date": report_date,
-            "generated_at": datetime.now(timezone.utc),
+            "generated_at": datetime.now(UTC),
             "disclaimer": "仅用于观察和信号研究，不构成投资建议，不自动下单。",
             "market_sessions": dict(market_sessions),
             "market_environment": dict(risk_environment),

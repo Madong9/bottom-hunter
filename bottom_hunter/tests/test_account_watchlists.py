@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import io
 import json
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pandas as pd
 import pytest
-
 from bottom_hunter.src import account_watchlist as watchlist_module
 from bottom_hunter.src.account_connectors import (
     AccountConnectionService,
@@ -15,9 +14,9 @@ from bottom_hunter.src.account_connectors import (
     UnsafeApiPermission,
 )
 from bottom_hunter.src.account_watchlist import (
+    UNKNOWN_INDUSTRY,
     AccountWatchlistRepository,
     IndustryResolver,
-    UNKNOWN_INDUSTRY,
     normalize_import_row,
     parse_watchlist_file,
 )
@@ -441,7 +440,7 @@ def test_continuous_calendar_uses_last_completed_utc_day() -> None:
             }
         }
     )
-    now = datetime(2026, 8, 14, 12, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 14, 12, tzinfo=UTC)
     session, reliable = service.latest_completed_session("CRYPTO", now=now)
     assert reliable is True
     assert session == date(2026, 8, 13)

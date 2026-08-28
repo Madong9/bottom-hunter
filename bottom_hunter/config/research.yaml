@@ -1,6 +1,6 @@
 refresh:
-  financial_hours: 12
-  filings_minutes: 30
+  # 资产研究（新闻/财报/公告）与宏观各自按以下间隔刷新。
+  # 当前实现中财报与公告随资产刷新一起执行，故生效间隔为 news_minutes。
   news_minutes: 15
   macro_minutes: 30
 

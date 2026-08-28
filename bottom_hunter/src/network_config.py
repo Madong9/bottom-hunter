@@ -19,13 +19,6 @@ USE_SYSTEM_PROXY = os.getenv("BOTTOM_HUNTER_USE_PROXY") == "1"
 # In requests, trust_env=False disables proxy detection from environment.
 REQUESTS_TRUST_ENV = USE_SYSTEM_PROXY
 
-# For urllib, we pass an empty ProxyHandler when proxies are disabled.
-# An explicit "no_proxy" handling is not required; urllib uses the
-# environment by default, so we disable it when BOTTOM_HUNTER_USE_PROXY
-# is unset.
-URLLIB_PROXY_HANDLER = (
-    None if USE_SYSTEM_PROXY else {}
-)
 
 def apply_requests_session(session: Any) -> None:
     """Apply project network settings to a requests.Session."""

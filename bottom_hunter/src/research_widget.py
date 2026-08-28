@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import html
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from PySide6.QtCore import QObject, Qt, QThread, QUrl, Signal, Slot
 from PySide6.QtGui import QColor, QDesktopServices
@@ -12,9 +13,9 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -23,7 +24,6 @@ from PySide6.QtWidgets import (
 from .config import PROJECT_DIR
 from .research import ResearchService, macro_regime, official_portal_url
 from .research_models import FinancialFact, MacroObservation, ResearchItem, ResearchSnapshot
-
 
 SENTIMENT_LABELS = {"bullish": "偏多", "bearish": "偏空", "neutral": "中性"}
 TIER_LABELS = {"official": "官方", "professional": "媒体", "community": "社区"}
@@ -353,7 +353,9 @@ class ResearchWorkspace(QWidget):
         pressured = "、".join(impact.get("pressured") or []) or "暂无明显倾向"
         self.tabs.setTabText(self.tabs.indexOf(self.macro_table), f"宏观经济 · {label}")
         if self.mode == "macro":
-            self._set_status(self.status, f"{label} {float(regime.get('score', 0)):+.2f}", "warning" if errors else "idle")
+            tone = "warning" if errors else "idle"
+            score = f"{float(regime.get('score', 0)):+.2f}"
+            self._set_status(self.status, f"{label} {score}", tone)
             self.overview.setHtml(
                 f"<h2>宏观环境：{html.escape(label)}</h2>"
                 f"<p>{html.escape(details or '尚无可用数据')}</p>"

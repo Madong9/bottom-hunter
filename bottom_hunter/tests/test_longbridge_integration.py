@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 
 import pandas as pd
-
 from bottom_hunter.src.account_connectors import AccountConnectionService
 from bottom_hunter.src.charting import MarketChartService
 from bottom_hunter.src.data_provider import LongbridgeProvider
@@ -260,4 +259,4 @@ def test_chart_prefers_longbridge_for_equity_timeframes() -> None:
 
     assert result.provider == "长桥 OpenAPI"
     assert len(result.bars) == 40
-    assert result.updated_at <= datetime.now(timezone.utc)
+    assert result.updated_at <= datetime.now(UTC)

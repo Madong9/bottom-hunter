@@ -6,12 +6,13 @@ import io
 import json
 import re
 import threading
+from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 from urllib.parse import quote_plus
 from xml.etree import ElementTree
 
@@ -21,6 +22,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .config import PROJECT_DIR
+from .models import FundamentalResult, Instrument
 from .network_config import apply_requests_session
 from .research_models import (
     FinancialFact,
@@ -31,8 +33,6 @@ from .research_models import (
     SourceTier,
 )
 from .research_storage import ResearchStore
-from .models import FundamentalResult, Instrument
-
 
 USER_AGENT = "BottomHunter/0.1 research client (local desktop application)"
 POSITIVE_WORDS = (
@@ -46,11 +46,11 @@ NEGATIVE_WORDS = (
 
 
 def _aware(value: datetime) -> datetime:
-    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 def _parse_datetime(value: Any, fallback: datetime | None = None) -> datetime:
-    fallback = fallback or datetime.now(timezone.utc)
+    fallback = fallback or datetime.now(UTC)
     if isinstance(value, datetime):
         return _aware(value)
     cleaned = str(value or "").strip()
@@ -126,7 +126,7 @@ class ResearchConfig:
     refresh: Mapping[str, int]
 
     @classmethod
-    def load(cls, path: str | Path | None = None) -> "ResearchConfig":
+    def load(cls, path: str | Path | None = None) -> ResearchConfig:
         config_path = Path(path) if path else PROJECT_DIR / "config" / "research.yaml"
         payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
         network = payload.get("network") or {}
@@ -375,7 +375,8 @@ class SecEdgarProvider:
         response.raise_for_status()
         recent = (response.json().get("filings") or {}).get("recent") or {}
         keys = ("accessionNumber", "filingDate", "reportDate", "form", "primaryDocument", "primaryDocDescription")
-        records = [dict(zip(keys, values, strict=True)) for values in zip(*(recent.get(key) or [] for key in keys))]
+        columns = list(zip(*(recent.get(key) or [] for key in keys), strict=True))
+        records = [dict(zip(keys, values, strict=True)) for values in columns]
         result: list[ResearchItem] = []
         for record in records[:60]:
             accession = str(record["accessionNumber"])
@@ -513,7 +514,7 @@ class FredMacroProvider:
             magnitude = 2 if abs(change_pct) >= 0.02 else (1 if abs(change_pct) >= 0.002 else 0)
             direction = 1 if change_pct > 0 else (-1 if change_pct < 0 else 0)
             signal = magnitude * direction * definition.favorable_direction
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return MacroObservation(
             series_id=definition.series_id, name=definition.name,
             dimension=definition.dimension, observation_date=observation_date,
@@ -591,7 +592,7 @@ class ResearchService:
             minutes = int(self.config.refresh.get("macro_minutes", 30))
         else:
             minutes = int(self.config.refresh.get("news_minutes", 15))
-        return datetime.now(timezone.utc) - refreshed_at >= timedelta(minutes=max(1, minutes))
+        return datetime.now(UTC) - refreshed_at >= timedelta(minutes=max(1, minutes))
 
     def refresh_asset(self, asset: Mapping[str, Any]) -> ResearchSnapshot:
         symbol = str(asset["symbol"])

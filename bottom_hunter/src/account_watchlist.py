@@ -4,13 +4,15 @@ import csv
 import hashlib
 import io
 import json
+import logging
 import re
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
-from typing import Any, Mapping
+from typing import Any
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
@@ -18,10 +20,14 @@ import pandas as pd
 import yaml
 
 from .config import PROJECT_DIR
+from .io_utils import EASTMONEY_SEARCH_TOKEN
+from .io_utils import atomic_json as _atomic_json
 from .network_config import apply_urllib
 
 # Disable system proxy for watchlist search/index requests.
 apply_urllib()
+
+LOGGER = logging.getLogger(__name__)
 
 
 SUPPORTED_SOURCES = ("tonghuashun", "binance", "okx")
@@ -77,22 +83,12 @@ NAME_FIELD_NAMES = (
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _file_signature(path: Path) -> dict[str, int]:
     stat = path.stat()
     return {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
-
-
-def _atomic_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
-    temporary.replace(path)
 
 
 def _atomic_yaml(path: Path, payload: Any) -> None:
@@ -243,7 +239,7 @@ def _keyword_industry(name: str) -> str:
     return UNKNOWN_INDUSTRY
 
 
-def _is_placeholder_name(asset: "WatchAsset") -> bool:
+def _is_placeholder_name(asset: WatchAsset) -> bool:
     name = asset.name.strip().casefold()
     candidates = {
         asset.symbol.strip().casefold(),
@@ -299,7 +295,7 @@ class WatchAsset:
         return payload
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "WatchAsset":
+    def from_dict(cls, payload: Mapping[str, Any]) -> WatchAsset:
         return cls(
             source=_clean(payload.get("source")),
             source_symbol=_clean(payload.get("source_symbol")),
@@ -593,7 +589,7 @@ def search_equities(query: str, market_hint: str = "", timeout: int = 8) -> list
     params = {
         "input": cleaned_query,
         "type": "14",
-        "token": "D43BF722C8E33BDC906FB84D85E326E8",
+        "token": EASTMONEY_SEARCH_TOKEN,
         "count": "20",
     }
     request = Request(
@@ -896,7 +892,8 @@ class IndustryResolver:
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 payload = json.load(response)
-        except Exception:
+        except Exception as exc:
+            LOGGER.warning("东财资料获取失败 (%s)：%s", asset.symbol, exc)
             return {}
         data = payload.get("data") if isinstance(payload, dict) else None
         if not isinstance(data, dict):
@@ -916,7 +913,8 @@ class IndustryResolver:
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 payload = json.load(response)
-        except Exception:
+        except Exception as exc:
+            LOGGER.warning("Yahoo 行业资料获取失败 (%s)：%s", asset.symbol, exc)
             return ""
         results = payload.get("quoteSummary", {}).get("result") or []
         if not results:
@@ -948,6 +946,7 @@ class AccountWatchlistRepository:
         self.industry_cache_path = self.state_dir / "industry_cache.json"
         self.override_path = self.config_dir / "industry_overrides.yaml"
         self.active_watchlist_path = self.config_dir / "watchlist.yaml"
+        self._summary_cache: tuple[int, int, dict[str, Any]] | None = None
 
     def source_snapshot_path(self, source: str) -> Path:
         return self.snapshot_dir / f"{_normalize_source(source)}.json"
@@ -1393,10 +1392,17 @@ class AccountWatchlistRepository:
             ],
         }
         _atomic_json(self.summary_path, summary)
+        self._summary_cache = None
         return summary
 
     def summary(self) -> dict[str, Any]:
         try:
-            return json.loads(self.summary_path.read_text(encoding="utf-8"))
+            stat = self.summary_path.stat()
+            cached = self._summary_cache
+            if cached is not None and cached[0] == stat.st_mtime_ns and cached[1] == stat.st_size:
+                return cached[2]
+            data = json.loads(self.summary_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return self.rebuild_active_watchlist()
+        self._summary_cache = (stat.st_mtime_ns, stat.st_size, data)
+        return data

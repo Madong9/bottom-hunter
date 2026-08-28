@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pandas as pd
-
 from bottom_hunter.src.alerts import build_alerts
 from bottom_hunter.src.data_provider import CsvFundamentalProvider, normalize_bars
 from bottom_hunter.src.models import (
@@ -68,7 +67,7 @@ def _signal(target: date, score: int, stage=None, failed=False) -> StockSignal:
         10.0,
         "complete",
         "test",
-        datetime.now(timezone.utc),
+        datetime.now(UTC),
     )
 
 

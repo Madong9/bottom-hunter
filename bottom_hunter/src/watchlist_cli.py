@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .account_watchlist import AccountWatchlistRepository, SOURCE_LABELS
+from .account_watchlist import SOURCE_LABELS, AccountWatchlistRepository
 
 
 def build_parser() -> argparse.ArgumentParser:

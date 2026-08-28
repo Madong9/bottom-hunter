@@ -3,13 +3,13 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Iterator
+from typing import Any
 
 from .models import Alert, SectorResult, StockSignal
-
 
 SCHEMA = """
 PRAGMA journal_mode=WAL;
@@ -71,7 +71,7 @@ class StateStore:
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
-        connection = sqlite3.connect(self.path)
+        connection = sqlite3.connect(self.path, timeout=20)
         connection.row_factory = sqlite3.Row
         try:
             yield connection
@@ -93,13 +93,13 @@ class StateStore:
                 WHERE status='running'
                 """,
                 (
-                    datetime.now(timezone.utc).isoformat(),
+                    datetime.now(UTC).isoformat(),
                     json.dumps({"fatal": "上次进程异常退出或被中断"}, ensure_ascii=False),
                 ),
             )
             cursor = connection.execute(
                 "INSERT INTO scan_runs(report_date, started_at, status) VALUES (?, ?, ?)",
-                (report_date.isoformat(), datetime.now(timezone.utc).isoformat(), "running"),
+                (report_date.isoformat(), datetime.now(UTC).isoformat(), "running"),
             )
             return int(cursor.lastrowid)
 
@@ -108,7 +108,7 @@ class StateStore:
             connection.execute(
                 "UPDATE scan_runs SET completed_at=?, status=?, errors_json=? WHERE id=?",
                 (
-                    datetime.now(timezone.utc).isoformat(),
+                    datetime.now(UTC).isoformat(),
                     status,
                     json.dumps(errors, ensure_ascii=False),
                     run_id,
@@ -126,6 +126,24 @@ class StateStore:
                 (symbol, sector_id, before.isoformat()),
             ).fetchone()
 
+    def previous_signals_map(
+        self, signals: list[StockSignal]
+    ) -> dict[tuple[str, str], Any]:
+        """批量查询上一条信号，单连接完成，避免每个信号各开一次连接。"""
+        keys = {(signal.symbol, signal.sector_id): signal.date for signal in signals}
+        result: dict[tuple[str, str], Any] = {}
+        with self.connect() as connection:
+            for (symbol, sector_id), before in keys.items():
+                result[(symbol, sector_id)] = connection.execute(
+                    """
+                    SELECT * FROM signals
+                    WHERE symbol=? AND sector_id=? AND signal_date < ?
+                    ORDER BY signal_date DESC LIMIT 1
+                    """,
+                    (symbol, sector_id, before.isoformat()),
+                ).fetchone()
+        return result
+
     def previous_sector(self, sector_id: str, market: str, before: date):
         with self.connect() as connection:
             return connection.execute(
@@ -137,8 +155,26 @@ class StateStore:
                 (sector_id, market, before.isoformat()),
             ).fetchone()
 
+    def previous_sectors_map(
+        self, sectors: list[SectorResult]
+    ) -> dict[tuple[str, str], Any]:
+        """批量查询板块上一条评分，单连接完成。"""
+        keys = {(sector.sector_id, sector.market): sector.date for sector in sectors}
+        result: dict[tuple[str, str], Any] = {}
+        with self.connect() as connection:
+            for (sector_id, market), before in keys.items():
+                result[(sector_id, market)] = connection.execute(
+                    """
+                    SELECT * FROM sector_scores
+                    WHERE sector_id=? AND market=? AND score_date < ?
+                    ORDER BY score_date DESC LIMIT 1
+                    """,
+                    (sector_id, market, before.isoformat()),
+                ).fetchone()
+        return result
+
     def save_signals(self, signals: list[StockSignal]) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         with self.connect() as connection:
             connection.executemany(
                 """
@@ -178,7 +214,7 @@ class StateStore:
             )
 
     def save_sectors(self, sectors: list[SectorResult]) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         with self.connect() as connection:
             connection.executemany(
                 """
@@ -219,7 +255,7 @@ class StateStore:
                         alert.entity,
                         fingerprint,
                         alert.message,
-                        datetime.now(timezone.utc).isoformat(),
+                        datetime.now(UTC).isoformat(),
                     ),
                 )
                 if cursor.rowcount:

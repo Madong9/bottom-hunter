@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import pandas as pd
-
 from bottom_hunter.src.breadth import calculate_breadth
+from bottom_hunter.src.config import AppConfig
+from bottom_hunter.src.indicators import enrich_bars
 from bottom_hunter.src.models import BreadthResult, FundamentalResult
 from bottom_hunter.src.scoring import score_stock
 from bottom_hunter.src.state_machine import decide_state
-from bottom_hunter.src.config import AppConfig
-from bottom_hunter.src.indicators import enrich_bars
 
 
 def _frame(target, up: bool, was_low: bool, is_low: bool) -> pd.DataFrame:

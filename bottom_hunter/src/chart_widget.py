@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ from matplotlib import rcParams
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
-from PySide6.QtCore import QObject, QThread, QTimer, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, QUrl, Signal, Slot
 from PySide6.QtWebSockets import QWebSocket
 from PySide6.QtWidgets import (
     QApplication,
@@ -29,15 +30,15 @@ from PySide6.QtWidgets import (
 )
 
 from .charting import (
+    TIMEFRAME_LABELS,
     ChartAnnotationStore,
     ChartResult,
     MarketChartService,
-    TIMEFRAME_LABELS,
     calculate_chart_indicators,
 )
+from .io_utils import CJK_FONT_FAMILIES
 
-
-rcParams["font.sans-serif"] = ["Noto Sans CJK SC", "Noto Sans CJK JP", "DejaVu Sans"]
+rcParams["font.sans-serif"] = list(CJK_FONT_FAMILIES)
 rcParams["axes.unicode_minus"] = False
 
 OVERLAY_INDICATORS = (
@@ -153,7 +154,7 @@ def merge_live_candle(result: ChartResult, candle: Mapping[str, Any], limit: int
         timeframe=result.timeframe,
         bars=bars,
         provider=provider,
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
         note=f"交易所实时推送 · 当前未收盘 K 线{cadence}更新",
     )
 
@@ -234,6 +235,10 @@ class ChartWorkspace(QWidget):
         self._live_ping_timer = QTimer(self)
         self._live_ping_timer.setInterval(20_000)
         self._live_ping_timer.timeout.connect(self._send_live_ping)
+        self._live_render_timer = QTimer(self)
+        self._live_render_timer.setSingleShot(True)
+        self._live_render_timer.setInterval(500)
+        self._live_render_timer.timeout.connect(self._render_pending_live)
 
         self._build_ui()
         self.canvas.mpl_connect("button_press_event", self._chart_clicked)
@@ -581,13 +586,23 @@ class ChartWorkspace(QWidget):
         self._live_failed_provider = ""
         limit = int(self.limit_combo.currentData() or 250)
         self.current_result = merge_live_candle(self.current_result, candle, limit)
-        self._render_chart()
+        self._schedule_live_render(candle)
+
+    def _schedule_live_render(self, candle: dict[str, Any]) -> None:
+        """数据立即合并，重绘按 500ms 节流合并，避免 UI 线程被高频消息占满。"""
         local_time = self.current_result.updated_at.astimezone().strftime("%H:%M:%S")
         state = "已收盘" if candle.get("closed") else "更新中"
         self.status_label.setText(
             f"{self.current_result.provider} · {state} · 实时更新于 {local_time}"
         )
         self.subtitle.setText(self.current_result.note)
+        if not self._live_render_timer.isActive():
+            self._live_render_timer.start()
+
+    def _render_pending_live(self) -> None:
+        if self.current_result is None or not self.isVisible():
+            return
+        self._render_chart()
 
     @Slot()
     def _live_disconnected(self) -> None:

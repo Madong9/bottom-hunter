@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
-
 from bottom_hunter.src.backtest import BacktestEvent, _forward_metrics, summarize_events
 
 

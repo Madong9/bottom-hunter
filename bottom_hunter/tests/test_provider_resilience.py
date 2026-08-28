@@ -4,7 +4,6 @@ import json
 from datetime import date
 
 import pytest
-
 from bottom_hunter.src.data_provider import (
     BinanceKlineProvider,
     CboeVixProvider,
@@ -214,4 +213,3 @@ def test_okx_can_supply_fallback_bars_for_binance_only_pair(monkeypatch) -> None
     assert captured["instId"] == "BTC-USDT"
     assert result.provider == "okx_candles"
     assert any("备用行情" in warning for warning in result.warnings)
-    OkxCandleProvider,

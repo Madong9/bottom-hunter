@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -108,7 +108,7 @@ class MacroObservation:
 class ResearchSnapshot:
     symbol: str
     market: str
-    refreshed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    refreshed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     financial_facts: list[FinancialFact] = field(default_factory=list)
     filings: list[ResearchItem] = field(default_factory=list)
     news: list[ResearchItem] = field(default_factory=list)

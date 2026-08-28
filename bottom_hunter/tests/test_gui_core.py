@@ -3,21 +3,19 @@ from __future__ import annotations
 import json
 import shutil
 import time
-from types import SimpleNamespace
+from datetime import UTC
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
-
 from bottom_hunter.src.account_watchlist import ImportResult
-from bottom_hunter.src.charting import ChartResult
 from bottom_hunter.src.chart_widget import (
     ChartWorkspace,
     merge_live_candle,
     parse_live_candle,
 )
-from bottom_hunter.src.gui_qt import BottomHunterWindow, WatchlistImportWorker
-from bottom_hunter.src.gui_qt import main as gui_main
+from bottom_hunter.src.charting import ChartResult
 from bottom_hunter.src.gui_core import (
     PACKAGE_DIR,
     build_backtest_command,
@@ -26,6 +24,8 @@ from bottom_hunter.src.gui_core import (
     save_editor_content,
     validate_editor_content,
 )
+from bottom_hunter.src.gui_qt import BottomHunterWindow, WatchlistImportWorker
+from bottom_hunter.src.gui_qt import main as gui_main
 
 
 def test_gui_builds_safe_argument_lists() -> None:
@@ -42,7 +42,7 @@ def test_gui_builds_safe_argument_lists() -> None:
 
 
 def test_live_crypto_messages_replace_or_append_the_current_candle() -> None:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     index = pd.to_datetime(["2026-08-25T00:00:00", "2026-08-26T00:00:00"])
     result = ChartResult(
@@ -61,7 +61,7 @@ def test_live_crypto_messages_replace_or_append_the_current_candle() -> None:
             index=index,
         ),
         provider="币安公开行情",
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
     )
     message = json.dumps(
         {
@@ -273,7 +273,7 @@ def test_scan_skips_resync_when_linked_file_is_unchanged(monkeypatch) -> None:
 
 def test_chart_workspace_draws_and_persists_lines(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from PySide6.QtWidgets import QApplication
 
@@ -297,7 +297,7 @@ def test_chart_workspace_draws_and_persists_lines(monkeypatch, tmp_path) -> None
         timeframe="1d",
         bars=bars,
         provider="test",
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
     )
     workspace.current_result = result
     workspace.annotations = []
@@ -325,7 +325,7 @@ def test_chart_workspace_ctrl_wheel_changes_visible_candle_count(
     monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from PySide6.QtWidgets import QApplication
 
@@ -349,7 +349,7 @@ def test_chart_workspace_ctrl_wheel_changes_visible_candle_count(
         timeframe="1d",
         bars=bars,
         provider="test",
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
     )
     workspace.annotations = []
     workspace._render_chart()
@@ -380,7 +380,7 @@ def test_chart_workspace_can_switch_overlay_and_panel_indicators(
     monkeypatch, tmp_path
 ) -> None:
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from PySide6.QtWidgets import QApplication
 
@@ -404,7 +404,7 @@ def test_chart_workspace_can_switch_overlay_and_panel_indicators(
         timeframe="1d",
         bars=bars,
         provider="test",
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
     )
     workspace.annotations = []
 

@@ -4,11 +4,13 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urlencode
 
 import requests
@@ -20,6 +22,8 @@ from .longbridge_adapter import (
     LongbridgeClient,
     LongbridgeError,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 
 SERVICE_NAME = "bottom-hunter-account"
@@ -76,7 +80,8 @@ class CredentialVault:
         try:
             keyring.set_password(SERVICE_NAME, source, json.dumps(cleaned))
             return True
-        except Exception:
+        except Exception as exc:
+            LOGGER.warning("凭据写入系统钥匙串失败 (%s)：%s", source, exc)
             return False
 
     def load(self, source: str) -> dict[str, str]:
@@ -92,8 +97,8 @@ class CredentialVault:
                 result = {str(key): str(item) for key, item in payload.items()}
                 self._session_values[source] = result
                 return result
-        except Exception:
-            pass
+        except Exception as exc:
+            LOGGER.warning("凭据读取系统钥匙串失败 (%s)：%s", source, exc)
         return {}
 
     def delete(self, source: str) -> None:
@@ -103,8 +108,8 @@ class CredentialVault:
             return
         try:
             keyring.delete_password(SERVICE_NAME, source)
-        except Exception:
-            pass
+        except Exception as exc:
+            LOGGER.warning("凭据从系统钥匙串删除失败 (%s)：%s", source, exc)
 
 
 class AccountConnectionService:
@@ -246,7 +251,7 @@ class AccountConnectionService:
             account_id=account_id,
             account_label=account_label.strip() or f"币安 {account_id}",
             permissions="read_only",
-            verified_at=datetime.now(timezone.utc).isoformat(),
+            verified_at=datetime.now(UTC).isoformat(),
             persisted_in_keyring=persisted,
             detail=(
                 "已验证只读 API Key；官方 API 不提供 App 自选读取"
@@ -301,13 +306,13 @@ class AccountConnectionService:
             raise ValueError("欧易 API Key、Secret Key 和 Passphrase 不能为空")
         base_url = base_url.rstrip("/")
         path = "/api/v5/account/config"
-        timestamp = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace(
+        timestamp = datetime.now(UTC).isoformat(timespec="milliseconds").replace(
             "+00:00", "Z"
         )
         signature = base64.b64encode(
             hmac.new(
                 secret_key.encode("utf-8"),
-                f"{timestamp}GET{path}".encode("utf-8"),
+                f"{timestamp}GET{path}".encode(),
                 hashlib.sha256,
             ).digest()
         ).decode("ascii")
@@ -357,7 +362,7 @@ class AccountConnectionService:
             account_id=account_id,
             account_label=account_label.strip() or f"欧易 {account_id}",
             permissions="read_only",
-            verified_at=datetime.now(timezone.utc).isoformat(),
+            verified_at=datetime.now(UTC).isoformat(),
             persisted_in_keyring=persisted,
             detail=(
                 "已验证只读 API Key；官方 API 不提供 App 自选读取"
@@ -411,7 +416,7 @@ class AccountConnectionService:
             account_id=account_id,
             account_label=account_label.strip() or f"长桥 {account_id}",
             permissions="quote_only",
-            verified_at=datetime.now(timezone.utc).isoformat(),
+            verified_at=datetime.now(UTC).isoformat(),
             persisted_in_keyring=persisted,
             detail=(
                 f"已验证长桥只读行情连接；行情等级：{verification.quote_level or '未知'}"

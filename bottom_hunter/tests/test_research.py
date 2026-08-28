@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from bottom_hunter.src.models import Instrument
 from bottom_hunter.src.research import (
@@ -21,8 +21,7 @@ from bottom_hunter.src.research_models import (
 )
 from bottom_hunter.src.research_storage import ResearchStore
 
-
-NOW = datetime(2026, 8, 27, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 27, tzinfo=UTC)
 
 
 class FakeResponse:
@@ -130,7 +129,7 @@ def test_cached_fundamental_is_point_in_time_and_ignores_news(tmp_path) -> None:
     }
     facts = [
         FinancialFact(
-            "600519.SS", "CN", date(2026, 6, 30), datetime(2026, 8, 15, tzinfo=timezone.utc),
+            "600519.SS", "CN", date(2026, 6, 30), datetime(2026, 8, 15, tzinfo=UTC),
             metric, value, "%", "CNY", "财报", "https://example.com", "2026中报",
         )
         for metric, value in metrics.items()

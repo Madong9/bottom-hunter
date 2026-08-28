@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pandas as pd
-
 from bottom_hunter.src.charting import (
     ChartAnnotationStore,
     ChartDataError,
@@ -155,7 +154,7 @@ def test_equity_daily_chart_falls_back_when_tencent_is_unavailable(monkeypatch) 
                 instrument.symbol,
                 bars,
                 "local_csv",
-                datetime.now(timezone.utc),
+                datetime.now(UTC),
             )
 
     service = MarketChartService(daily_provider=DailyProvider())

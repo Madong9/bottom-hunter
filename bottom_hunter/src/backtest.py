@@ -102,7 +102,7 @@ def run_backtest(
     min_bars = int(config.defaults["min_history_bars"])
     # Signal production is chronological. Every call receives target-date slices;
     # forward bars are only touched afterwards by _forward_metrics.
-    for sector_id, sector in config.sectors.items():
+    for sector_id in config.sectors:
         settings = config.sector_thresholds(sector_id)
         markets = sorted({asset.market for asset in config.sector_assets(sector_id)})
         for market in markets:
