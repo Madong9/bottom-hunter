@@ -29,8 +29,9 @@ def test_summary_reports_required_statistics() -> None:
         8,
         10,
         "quarter_window",
-        {f"{day}d": 0.1 for day in (3, 5, 10, 20, 60)},
-        {f"{day}d": -0.03 for day in (3, 5, 10, 20, 60)},
+        near_resistance=False,
+        returns={f"{day}d": 0.1 for day in (3, 5, 10, 20, 60)},
+        drawdowns={f"{day}d": -0.03 for day in (3, 5, 10, 20, 60)},
     )
     summary = summarize_events([event])
     stats = summary["score_gte_8"]["quarter_window"]["5d"]
@@ -38,3 +39,6 @@ def test_summary_reports_required_statistics() -> None:
     assert stats["win_rate"] == 1.0
     assert stats["average_return"] == 0.1
     assert stats["max_drawdown"] == -0.03
+    experiment = summary["score_gte_8"]["resistance_experiment"]
+    assert experiment["not_near"]["sample_size"] == 1
+    assert experiment["near_resistance"]["sample_size"] == 0

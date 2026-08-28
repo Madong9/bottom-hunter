@@ -9,7 +9,7 @@ import pandas as pd
 
 from .indicators import aligned_returns, enrich_bars
 from .models import BreadthResult, FundamentalResult, ScoreBreakdown, SignalLevel
-from .support import evaluate_resistance, evaluate_support
+from .support import detect_breakout, evaluate_resistance, evaluate_support
 from .trading_calendar import TimingWindow
 
 
@@ -32,6 +32,7 @@ class ScoreResult:
     capitulation: CapitulationEvent | None
     relative_strength_turn: bool
     failure: bool
+    breakout: bool = False
 
 
 def score_oversold(row: pd.Series, settings: dict) -> tuple[int, list[str]]:
@@ -233,6 +234,9 @@ def score_stock(
     _resistance, _resistance_distance, _breakout, resistance_reasons, resistance_metrics = (
         evaluate_resistance(enriched, target, thresholds.get("support"))
     )
+    breakout, _breakout_level, breakout_reasons = detect_breakout(
+        enriched, target, thresholds.get("support")
+    )
     breakdown = ScoreBreakdown(
         oversold=oversold,
         capitulation=(
@@ -293,6 +297,7 @@ def score_stock(
     )
     metrics.update(support_metrics)
     metrics.update(resistance_metrics)
+    metrics["breakout"] = breakout
     relative_turn = bool(
         relative_turn
         or (
@@ -309,6 +314,8 @@ def score_stock(
     reasons.extend(rejection_reasons)
     reasons.extend(support_reasons)
     reasons.extend(resistance_reasons)
+    if breakout:
+        reasons.extend(breakout_reasons)
     reasons.append(
         f"板块上涨 {breadth.up_ratio:.0%}，宽度{'改善' if breadth.improving else '未确认'}"
     )
@@ -350,4 +357,5 @@ def score_stock(
         capitulation=event,
         relative_strength_turn=relative_turn,
         failure=failure,
+        breakout=breakout,
     )

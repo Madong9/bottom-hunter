@@ -124,6 +124,45 @@ def evaluate_support(
     )
 
 
+def detect_breakout(
+    enriched: pd.DataFrame,
+    target: date,
+    settings: dict | None = None,
+) -> tuple[bool, float | None, list[str]]:
+    """Second signal class: trend-following breakout above resistance.
+
+    Requires (all causal): close above the nearest prior swing high,
+    volume ratio at/above `breakout_volume`, close above MA20, and the
+    day not in an already-flagged capitulation-failure state.
+    """
+    merged = {**DEFAULT_SETTINGS, **(settings or {})}
+    stamp = pd.Timestamp(target)
+    if stamp not in enriched.index:
+        return False, None, []
+    row = enriched.loc[stamp]
+    close = float(row["close"])
+    levels = find_resistance_levels(enriched, target, merged)
+    below = [level for level in levels if level < close]
+    if not below:
+        return False, None, []
+    broken_level = max(below)
+    if close / broken_level - 1 > float(merged["touch_band"]):
+        # Too far above the level — chase risk, not a fresh breakout.
+        return False, broken_level, []
+    volume_ratio = float(row.get("volume_ratio", float("nan")))
+    ma20 = row.get("ma20")
+    reasons: list[str] = []
+    if not (pd.notna(volume_ratio) and volume_ratio >= 1.5):
+        return False, broken_level, []
+    if ma20 is None or pd.isna(ma20) or close <= float(ma20):
+        return False, broken_level, []
+    reasons.append(
+        f"突破候选：收盘 {close:.2f} 越过压力位 {broken_level:.2f}，"
+        f"量比 {volume_ratio:.2f}、站上 MA20"
+    )
+    return True, broken_level, reasons
+
+
 def evaluate_resistance(
     enriched: pd.DataFrame,
     target: date,

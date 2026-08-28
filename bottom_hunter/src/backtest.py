@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -33,8 +33,10 @@ class BacktestEvent:
     score: int
     available_max: int
     timing_group: str
-    returns: dict[str, float | None]
-    drawdowns: dict[str, float | None]
+    near_resistance: bool
+    breakout: bool = False
+    returns: dict[str, float | None] = field(default_factory=dict)
+    drawdowns: dict[str, float | None] = field(default_factory=dict)
 
 
 def _forward_metrics(
@@ -184,6 +186,12 @@ def run_backtest(
                         point_etf,
                         point_market,
                     )
+                    metrics = scored.metrics
+                    near_resistance = bool(
+                        metrics.get("resistance_level") is not None
+                        and not metrics.get("resistance_breakout")
+                        and (metrics.get("resistance_distance") or 1.0) <= 0.03
+                    )
                     location = full_frame.index.get_loc(pd.Timestamp(target))
                     if not isinstance(location, (int, np.integer)):
                         continue
@@ -197,6 +205,8 @@ def run_backtest(
                             score=scored.score.total,
                             available_max=scored.score.available_max,
                             timing_group=_timing_group(timing),
+                            near_resistance=near_resistance,
+                            breakout=bool(metrics.get("breakout")),
                             returns=returns,
                             drawdowns=drawdowns,
                         )
@@ -227,6 +237,8 @@ def run_backtest(
             "score": event.score,
             "available_max": event.available_max,
             "timing_group": event.timing_group,
+            "near_resistance": int(event.near_resistance),
+            "breakout": int(event.breakout),
         }
         row.update({f"return_{key}": value for key, value in event.returns.items()})
         row.update({f"drawdown_{key}": value for key, value in event.drawdowns.items()})
@@ -271,7 +283,34 @@ def summarize_events(events: list[BacktestEvent]) -> dict[str, Any]:
                     "profit_loss_ratio": profit_loss,
                     "sample_size": int(returns.size),
                 }
+        # Resistance-filter experiment: do signals pinned just under a
+        # resistance level (≤3%) actually perform worse than the rest?
+        capped = [event for event in candidates if event.near_resistance]
+        free = [event for event in candidates if not event.near_resistance]
+        summary[threshold_key]["resistance_experiment"] = {
+            "near_resistance": _bucket_stats(capped, "5d"),
+            "not_near": _bucket_stats(free, "5d"),
+        }
     return summary
+
+
+def _bucket_stats(events: list[BacktestEvent], horizon: str) -> dict[str, Any]:
+    pairs = [
+        (event.returns[horizon], event.drawdowns[horizon])
+        for event in events
+        if event.returns[horizon] is not None
+    ]
+    if not pairs:
+        return {"sample_size": 0}
+    returns = np.asarray([pair[0] for pair in pairs], dtype=float)
+    drawdowns = np.asarray([pair[1] for pair in pairs], dtype=float)
+    return {
+        "sample_size": int(returns.size),
+        "win_rate": float(np.mean(returns > 0)),
+        "average_return": float(returns.mean()),
+        "median_return": float(np.median(returns)),
+        "max_drawdown": float(drawdowns.min()),
+    }
 
 
 def _summary_markdown(start: date, end: date, summary: dict[str, Any]) -> str:
@@ -308,6 +347,27 @@ def _summary_markdown(start: date, end: date, summary: dict[str, Any]) -> str:
                 f"{fmt(item['median_return'], True)} | {fmt(item['max_drawdown'], True)} | "
                 f"{fmt(item['profit_loss_ratio'])} |"
             )
+    lines += [
+        "",
+        "## 压力位过滤实验（5日持有期）",
+        "",
+        "| 分数阈值 | 临近压力位(≤3%) | 样本 | 胜率 | 平均收益 | 非临近 | 样本 | 胜率 | 平均收益 |",
+        "|---:|---|---:|---:|---:|---|---:|---:|---:|",
+    ]
+    for threshold in SCORE_THRESHOLDS:
+        experiment = summary[f"score_gte_{threshold}"]["resistance_experiment"]
+        capped = experiment["near_resistance"]
+        free = experiment["not_near"]
+
+        def _cell(stats: dict[str, Any]) -> str:
+            if not stats.get("sample_size"):
+                return "N/A"
+            return f"{stats['win_rate']:.0%} / {stats['average_return']:+.2%}"
+
+        lines.append(
+            f"| ≥{threshold} | 是 | {capped.get('sample_size', 0)} | {_cell(capped)} | "
+            f"| 否 | {free.get('sample_size', 0)} | {_cell(free)} |"
+        )
     lines += [
         "",
         "完整的 3/5/10/20/60 日统计位于同名 JSON；逐事件明细位于 CSV。",

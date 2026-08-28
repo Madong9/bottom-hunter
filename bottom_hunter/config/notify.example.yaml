@@ -1,0 +1,20 @@
+# 推送告警配置：复制本文件为 notify.yaml 并填入真实凭据。
+# enabled=false 或缺少凭据时推送静默关闭；推送失败只记日志，不影响扫描。
+enabled: false
+
+channels:
+  serverchan:
+    # Server酱 SendKey：https://sct.ftqq.com/
+    sendkey: ""
+  telegram:
+    # 通过 @BotFather 创建机器人；chat_id 可用 @userinfobot 查询。
+    bot_token: ""
+    chat_id: ""
+
+# 只推送这些类型的提醒（A 分数跳升 / B 阶段变化 / C 板块暴涨 / E 结构失效）。
+# 高分信号（BUY CANDIDATE 及以上）始终包含在推送摘要里。
+alert_types:
+  - A_SCORE_JUMP
+  - B_ENTRY_STAGE
+  - C_SECTOR_SURGE
+  - E_SIGNAL_FAILED

@@ -1,0 +1,14 @@
+[Unit]
+Description=Bottom Hunter daily scan
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/idea_work/板块检测
+ExecStart=%h/idea_work/板块检测/.venv/bin/python -m bottom_hunter.src.scanner --workers 6
+# 数据看门狗内置于扫描器：缺失市场会自动重试一次，仍失败则标记 partial 并推送告警。
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=default.target

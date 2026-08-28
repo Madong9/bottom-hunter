@@ -31,6 +31,8 @@ from .data_provider import (
 )
 from .indicators import enrich_bars
 from .models import BottomState, DataResult, Instrument, SignalLevel, StockSignal
+from .notify import load_notify_config, push
+from .paper import record_stage_fills, update_valuations
 from .report import generate_reports
 from .research import CachedResearchFundamentalProvider
 from .research_storage import ResearchStore
@@ -39,6 +41,7 @@ from .sector_scoring import assess_risk_environment, calculate_sector_score
 from .state_machine import decide_state
 from .storage import StateStore
 from .trading_calendar import TradingCalendarService
+from .validate import update_outcomes
 
 LOGGER = logging.getLogger(__name__)
 
@@ -182,6 +185,39 @@ def run_scan(
         market_sessions = _select_market_sessions(
             config, calendar, requested_date, fetched, errors
         )
+        # Watchdog: one retry for markets whose benchmark data was stale/missing,
+        # so a slow provider does not forfeit the whole day for that market.
+        missing_markets = sorted(set(config.markets) - set(market_sessions))
+        if missing_markets and not offline:
+            retry_symbols = {
+                item.symbol: item
+                for market in missing_markets
+                for item in config.risk_instruments(market)
+            }
+            retry_symbols.update(
+                {
+                    item.symbol: item
+                    for market in missing_markets
+                    for item in config.market_instruments(market)
+                }
+            )
+            if retry_symbols:
+                LOGGER.warning("数据看门狗：重试 %d 个缺失市场的标的", len(retry_symbols))
+                retry_fetched, retry_errors = fetch_many(
+                    active_provider,
+                    list(retry_symbols.values()),
+                    start,
+                    end,
+                    workers=workers,
+                )
+                for symbol, message in retry_errors.items():
+                    errors.setdefault(symbol, message)
+                fetched.update(retry_fetched)
+                for market in missing_markets:
+                    errors.pop(f"market:{market}", None)
+                market_sessions = _select_market_sessions(
+                    config, calendar, requested_date, fetched, errors
+                )
         min_bars = int(config.defaults["min_history_bars"])
         enriched: dict[str, pd.DataFrame] = {}
         for instrument in config.all_instruments():
@@ -340,6 +376,7 @@ def run_scan(
                         data_quality=result.quality,
                         provider=result.provider,
                         data_timestamp=result.data_timestamp,
+                        breakout=bool(scored.breakout),
                     )
                     sector_signals.append(signal)
                     signals.append(signal)
@@ -359,6 +396,18 @@ def run_scan(
         store.save_signals(signals)
         store.save_sectors(sectors)
         new_alerts = store.save_alerts(alerts)
+        update_outcomes(store, enriched, max(market_sessions.values()))
+        record_stage_fills(store, signals, enriched, max(market_sessions.values()))
+        paper_summary = update_valuations(store, enriched, max(market_sessions.values()))
+        if paper_summary.get("positions"):
+            LOGGER.info(
+                "模拟组合：%d 个持仓，加权收益 %.2f%%",
+                paper_summary["positions"],
+                paper_summary["weighted_return"] * 100,
+            )
+        notify_errors = push(alerts, signals, load_notify_config())
+        if notify_errors:
+            errors["notify"] = "; ".join(notify_errors)
         markdown_path, json_path = generate_reports(
             report_date,
             market_sessions,

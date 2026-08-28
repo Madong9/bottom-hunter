@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from bottom_hunter.src.support import (
+    detect_breakout,
     evaluate_resistance,
     evaluate_support,
     find_resistance_levels,
@@ -158,3 +159,32 @@ def test_resistance_no_lookahead() -> None:
     future_changed = frame.copy()
     future_changed.iloc[-1, future_changed.columns.get_loc("high")] = 300.0
     assert evaluate_resistance(prefix, target) == evaluate_resistance(future_changed, target)
+
+
+def test_breakout_requires_volume_and_ma20() -> None:
+    days = 60
+    stamps = pd.bdate_range("2024-01-02", periods=days)
+    frame = pd.DataFrame(index=stamps)
+    frame["close"] = 98.0
+    frame["open"] = 98.0
+    frame["high"] = 98.2
+    frame["low"] = 97.8
+    frame["volume"] = 100.0
+    frame["ma20"] = 97.0
+    frame["volume_ratio"] = 1.0
+    frame.iloc[20, frame.columns.get_loc("high")] = 99.0
+    frame.iloc[21:26, frame.columns.get_loc("high")] = 98.5
+    target = frame.index[-1].date()
+    # Close above the level but weak volume → rejected.
+    frame.iloc[-1, frame.columns.get_loc("close")] = 99.5
+    frame.iloc[-1, frame.columns.get_loc("volume_ratio")] = 1.2
+    assert detect_breakout(frame, target)[0] is False
+    # Volume confirmed and above MA20 → breakout candidate.
+    frame.iloc[-1, frame.columns.get_loc("volume_ratio")] = 1.8
+    detected, level, reasons = detect_breakout(frame, target)
+    assert detected is True
+    assert level == 99.0
+    assert reasons and "突破候选" in reasons[0]
+    # Far above the level within a single gap → chase risk, rejected.
+    frame.iloc[-1, frame.columns.get_loc("close")] = 103.0
+    assert detect_breakout(frame, target)[0] is False

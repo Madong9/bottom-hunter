@@ -118,6 +118,7 @@ class StockSignal:
     data_quality: str
     provider: str
     data_timestamp: datetime
+    breakout: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)

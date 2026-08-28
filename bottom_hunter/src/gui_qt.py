@@ -128,6 +128,7 @@ from .longbridge_adapter import (
     LongbridgeClient,
 )
 from .research_widget import ResearchWorkspace
+from .storage import StateStore
 
 ACCOUNT_SOURCE_LABELS = {**SOURCE_LABELS, "longbridge": "长桥行情"}
 
@@ -910,6 +911,8 @@ class BottomHunterWindow(QMainWindow):
             "global_equity": MetricCard("美港股", "0", "包含链上股票", "#2d8cf0"),
             "cn_equity": MetricCard("A股", "0", "来自同花顺自选", "#ea5455"),
             "overlap": MetricCard("跨平台重合", "0", "按底层资产去重", "#8854d0"),
+            "validation": MetricCard("信号验证", "--", "近30天5日持有胜率", "#2d8cf0"),
+            "paper": MetricCard("模拟组合", "1.0000", "三阶段框架净值", "#8854d0"),
         }
         for card in self.metric_cards.values():
             metrics.addWidget(card, 1)
@@ -2335,6 +2338,48 @@ class BottomHunterWindow(QMainWindow):
             if isinstance(detail_widget, QLabel):
                 detail_widget.setText(" · ".join(details) or "尚未添加自选")
 
+    def _refresh_validation_cards(self) -> None:
+        """Load rolling win-rate and paper equity in a background thread."""
+        database = PACKAGE_DIR / "state" / "signals.db"
+        if not database.exists():
+            return
+
+        def _load():
+            try:
+                store = StateStore(database)
+                summary = store.outcome_summary(window_days=30, horizon=5)
+                paper = store.paper_history_summary()
+                return summary, paper
+            except Exception:
+                return None, None
+
+        def _worker():
+            summary, paper = _load()
+            QTimer.singleShot(
+                0,
+                lambda: self._apply_validation_cards(summary, paper),
+            )
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _apply_validation_cards(self, summary: Any, paper: Any) -> None:
+        card = self.metric_cards.get("validation")
+        if card is not None:
+            if summary and summary.get("sample_size"):
+                card.set_value(
+                    f"{summary['win_rate']:.0%}",
+                    f"{summary['sample_size']} 样本 · {summary['average_return']:+.2%}",
+                )
+            else:
+                card.set_value("--", "暂无已到期样本")
+        paper_card = self.metric_cards.get("paper")
+        if paper_card is not None and paper and paper.get("latest") is not None:
+            latest = float(paper["latest"])
+            paper_card.set_value(
+                f"{latest:.4f}",
+                f"{len(paper['points'])} 个交易日",
+            )
+
     def refresh_dashboard(self) -> None:
         watchlist = self.watchlist_repo.summary()
         category_counts = watchlist.get("category_counts") or {}
@@ -2349,6 +2394,7 @@ class BottomHunterWindow(QMainWindow):
         )
         self.metric_cards["cn_equity"].set_value(str(int(category_counts.get("cn_equity", 0))))
         self.metric_cards["overlap"].set_value(str(int(watchlist.get("overlap_count", 0))))
+        self._refresh_validation_cards()
         busy = bool(self.process and self.process.state() != QProcess.ProcessState.NotRunning)
         self.scan_button.setEnabled(asset_count > 0 and not busy)
         self.backtest_button.setEnabled(asset_count > 0 and not busy)

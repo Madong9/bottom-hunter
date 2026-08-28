@@ -95,6 +95,9 @@ def write_markdown(
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / f"daily_report_{report_date:%Y%m%d}.md"
     signals = payload["signals"]
+    validation = payload.get("validation_30d") or {}
+    validation_90 = payload.get("validation_90d") or {}
+    paper = payload.get("paper_history") or {}
     sectors = sorted(payload["sectors"], key=lambda item: item["score"], reverse=True)
     opportunities = [
         signal
@@ -124,6 +127,23 @@ def write_markdown(
     for market, environment in payload["market_environment"].items():
         session = payload["market_sessions"].get(market, "N/A")
         lines.append(f"- {market}（行情日 {session}）：{environment}")
+    lines += ["", "## 信号验证（历史信号滚动胜率）", ""]
+    if validation.get("sample_size"):
+        lines.append(
+            f"- 近30天 {validation['horizon']}日持有：胜率 {validation['win_rate']:.0%}"
+            f"（{validation['sample_size']} 样本），平均收益 {validation['average_return']:+.2%}"
+        )
+    else:
+        lines.append("- 近30天暂无已到期样本（信号发出后约 5 个交易日开始计入）。")
+    if validation_90.get("sample_size"):
+        lines.append(
+            f"- 近90天 {validation_90['horizon']}日持有：胜率 {validation_90['win_rate']:.0%}"
+            f"（{validation_90['sample_size']} 样本），平均收益 {validation_90['average_return']:+.2%}"
+        )
+    if paper.get("latest") is not None:
+        lines += ["", "## 模拟组合（三阶段框架，仅供研究）", ""]
+        lines.append(f"- 组合净值指数：{paper['latest']:.4f}（1.0000 起步）")
+        lines.append(f"- 数据点：{len(paper['points'])} 个交易日；明细见 paper_valuations 表。")
     lines += ["", "## 今日最高优先级机会", ""]
     if not opportunities:
         valid = [item for item in signals if item["signal_level"] != "FAILED"]
@@ -152,11 +172,13 @@ def write_markdown(
             "",
             f"状态：{state}",
             "",
-            f"信号：{stage}；等级 {signal['signal_level']}",
+            f"信号：{stage}；等级 {signal['signal_level']}"
+            + ("；⚡突破候选" if signal.get("breakout") else ""),
             "",
             "分项："
             f"超跌 {score['oversold']}/2、恐慌 {score['capitulation']}/2、"
             f"拒绝创新低 {score['rejection']}/2、宽度 {score['breadth']}/1、"
+            f"支撑 {score.get('support', 0)}/1、"
             f"基本面 {score['fundamental'] if score['fundamental'] is not None else 'N/A'}/2、"
             f"时间 {score['timing']}/1。",
             "",
@@ -369,6 +391,12 @@ def generate_reports(
             [signal.symbol for signal in signals if signal.score.total >= chart_score]
         ),
     )
+    try:
+        payload["validation_30d"] = store.outcome_summary(window_days=30, horizon=5)
+        payload["validation_90d"] = store.outcome_summary(window_days=90, horizon=5)
+        payload["paper_history"] = store.paper_history_summary()
+    except Exception as exc:
+        LOGGER.warning("验证/模拟组合摘要生成失败：%s", exc)
     json_path = write_json(payload, output_dir, report_date)
     markdown_path = write_markdown(payload, output_dir, report_date, chart_paths)
     return markdown_path, json_path
