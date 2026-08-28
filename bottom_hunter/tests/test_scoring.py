@@ -77,8 +77,8 @@ def test_missing_fundamentals_are_not_awarded_two_points(selloff_bars) -> None:
         TimingWindow(1, True, False, False, False, True),
     )
     assert result.score.fundamental is None
-    assert result.score.available_max == 8
-    assert result.score.total <= 8
+    assert result.score.available_max == 9
+    assert result.score.total <= 9
 
 
 def test_score_on_target_is_unchanged_by_modified_future(selloff_bars) -> None:

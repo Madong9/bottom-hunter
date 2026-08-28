@@ -78,6 +78,7 @@ class ScoreBreakdown:
     breadth: int
     fundamental: int | None
     timing: int
+    support: int = 0
 
     @property
     def total(self) -> int:
@@ -88,11 +89,12 @@ class ScoreBreakdown:
             + self.breadth
             + (self.fundamental or 0)
             + self.timing
+            + self.support
         )
 
     @property
     def available_max(self) -> int:
-        return 10 if self.fundamental is not None else 8
+        return 11 if self.fundamental is not None else 9
 
 
 @dataclass

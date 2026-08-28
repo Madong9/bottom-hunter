@@ -147,7 +147,7 @@ def write_markdown(
             (
                 f"Score：{score['total']}/{score['available_max']}（基本面 N/A，满分尚不完整）"
                 if score["fundamental"] is None
-                else f"Score：{score['total']}/10"
+                else f"Score：{score['total']}/11"
             ),
             "",
             f"状态：{state}",

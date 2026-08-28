@@ -22,6 +22,12 @@ defaults:
     lookback_days: 5
     slight_break_tolerance: 0.01
     failure_break: 0.02
+  support:
+    lookback_days: 120
+    swing_window: 5
+    touch_band: 0.02
+    max_above: 0.05
+    min_history: 40
   breadth:
     up_ratio: 0.60
     strong_up_return: 0.02

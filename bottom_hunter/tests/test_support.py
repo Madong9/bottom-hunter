@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+from bottom_hunter.src.support import evaluate_support, find_support_levels
+
+
+def _flat_frame(days: int = 60, close: float = 100.0) -> pd.DataFrame:
+    stamps = pd.bdate_range("2024-01-02", periods=days)
+    frame = pd.DataFrame(index=stamps)
+    frame["close"] = float(close)
+    frame["open"] = close + 0.2
+    frame["high"] = close + 1.0
+    frame["low"] = close - 0.8
+    frame["volume"] = 100.0
+    return frame
+
+
+def test_swing_lows_are_detected_from_history_only() -> None:
+    days = 80
+    stamps = pd.bdate_range("2024-01-02", periods=days)
+    close = np.linspace(110, 95, days)
+    frame = pd.DataFrame(index=stamps)
+    frame["close"] = close
+    frame["open"] = close + 0.1
+    frame["high"] = close + 0.6
+    frame["low"] = close - 0.4
+    frame["volume"] = 100.0
+    # Two clear swing lows in the past.
+    frame.iloc[30, frame.columns.get_loc("low")] = 96.0
+    frame.iloc[31:34, frame.columns.get_loc("low")] = 97.0
+    frame.iloc[60, frame.columns.get_loc("low")] = 98.0
+    frame.iloc[61:66, frame.columns.get_loc("low")] = 99.0
+    target = stamps[-1].date()
+    levels = find_support_levels(frame, target)
+    assert 96.0 in levels
+    assert 98.0 in levels
+
+
+def test_support_confirmed_on_retest_and_hold() -> None:
+    frame = _flat_frame()
+    # A past swing low at 95.0, then the target day retests it and closes above.
+    frame.iloc[20, frame.columns.get_loc("low")] = 95.0
+    frame.iloc[21:26, frame.columns.get_loc("low")] = 96.0
+    target = frame.index[-1].date()
+    frame.iloc[-1, frame.columns.get_loc("low")] = 95.3
+    frame.iloc[-1, frame.columns.get_loc("close")] = 96.5
+    score, level, reasons, metrics = evaluate_support(frame, target)
+    assert score == 1
+    assert level == 95.0
+    assert reasons and "回踩支撑位" in reasons[0]
+    assert metrics["support_level"] == 95.0
+
+
+def test_no_points_when_price_drifts_far_above_support() -> None:
+    frame = _flat_frame()
+    target = frame.index[-1].date()
+    frame.iloc[-1, frame.columns.get_loc("close")] = 120.0
+    frame.iloc[-1, frame.columns.get_loc("low")] = 118.0
+    score, _level, _reasons, _metrics = evaluate_support(frame, target)
+    assert score == 0
+
+
+def test_capitulation_low_is_used_as_anchor() -> None:
+    frame = _flat_frame()
+    target = frame.index[-1].date()
+    frame.iloc[-1, frame.columns.get_loc("low")] = 94.8
+    frame.iloc[-1, frame.columns.get_loc("close")] = 95.4
+    score, level, _reasons, _metrics = evaluate_support(
+        frame, target, extra_levels=[95.0]
+    )
+    assert score == 1
+    assert level == 95.0
+
+
+def test_no_lookahead_future_bars_do_not_change_support() -> None:
+    frame = _flat_frame()
+    target = frame.index[-2].date()
+    prefix = frame.iloc[:-1]
+    future_changed = frame.copy()
+    future_changed.iloc[-1, future_changed.columns.get_loc("low")] = 50.0
+    assert evaluate_support(prefix, target) == evaluate_support(future_changed, target)

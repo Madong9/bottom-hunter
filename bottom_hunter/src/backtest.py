@@ -21,7 +21,7 @@ from .trading_calendar import TradingCalendarService
 
 LOGGER = logging.getLogger(__name__)
 HORIZONS = (3, 5, 10, 20, 60)
-SCORE_THRESHOLDS = (6, 7, 8, 9, 10)
+SCORE_THRESHOLDS = (6, 7, 8, 9, 10, 11)
 
 
 @dataclass

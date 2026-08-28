@@ -9,6 +9,7 @@ import pandas as pd
 
 from .indicators import aligned_returns, enrich_bars
 from .models import BreadthResult, FundamentalResult, ScoreBreakdown, SignalLevel
+from .support import evaluate_support
 from .trading_calendar import TimingWindow
 
 
@@ -176,7 +177,7 @@ def score_rejection(
 
 def classify_signal(total: int, fundamental_available: bool) -> SignalLevel:
     # Missing fundamentals never blocks a technical watch signal, but it caps the
-    # action level below BUY CANDIDATE because the nominal 10-point score is incomplete.
+    # action level below BUY CANDIDATE because the nominal 11-point score is incomplete.
     if total <= 4:
         return SignalLevel.IGNORE
     if total <= 6:
@@ -185,7 +186,7 @@ def classify_signal(total: int, fundamental_available: bool) -> SignalLevel:
         return SignalLevel.EARLY_REVERSAL
     if total == 7:
         return SignalLevel.EARLY_REVERSAL
-    if total <= 9:
+    if total <= 10:
         return SignalLevel.BUY_CANDIDATE
     return SignalLevel.STRONG_REVERSAL
 
@@ -223,6 +224,12 @@ def score_stock(
     )
     if failure and previous_event is not None:
         event = previous_event
+    support_score, _support_level, support_reasons, support_metrics = evaluate_support(
+        enriched,
+        target,
+        thresholds.get("support"),
+        extra_levels=[event.low] if event is not None else [],
+    )
     breakdown = ScoreBreakdown(
         oversold=oversold,
         capitulation=(
@@ -234,6 +241,7 @@ def score_stock(
         breadth=breadth.breadth_score,
         fundamental=fundamental.score,
         timing=timing.score,
+        support=support_score,
     )
     sector_rs = (
         aligned_returns(enriched.loc[:stamp], sector_reference.loc[:stamp])
@@ -280,6 +288,7 @@ def score_stock(
             for key, value in market_rs.items()
         }
     )
+    metrics.update(support_metrics)
     relative_turn = bool(
         relative_turn
         or (
@@ -294,6 +303,7 @@ def score_stock(
             f"恐慌抛售结构：量比 {row['volume_ratio']:.2f}、收盘位置 {row['close_position']:.0%}"
         )
     reasons.extend(rejection_reasons)
+    reasons.extend(support_reasons)
     reasons.append(
         f"板块上涨 {breadth.up_ratio:.0%}，宽度{'改善' if breadth.improving else '未确认'}"
     )
@@ -311,6 +321,8 @@ def score_stock(
         risks.append(
             f"若收盘/低点明显跌破恐慌低点 {event.low:.2f}（约2%），信号失效"
         )
+    if _support_level is not None:
+        risks.append(f"若收盘明显跌破支撑位 {_support_level:.2f}，支撑确认作废")
     if fundamental.score is None:
         risks.append("基本面未验证，禁止据此直接交易")
     return ScoreResult(
