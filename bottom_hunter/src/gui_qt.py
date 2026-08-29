@@ -2976,6 +2976,21 @@ def main(argv: list[str] | None = None) -> int:
     font.setHintingPreference(QFont.HintingPreference.PreferFullHinting)
     app.setFont(font)
     app.setStyleSheet(APP_STYLE)
+
+    # 3D 水滴玻璃启动画面：主窗口构建期间展示，自动淡出
+    from .droplet_splash import DropletSplash  # noqa: PLC0415
+
+    splash = DropletSplash()
+    splash.show()
+    splash.start_progress()
+
+
+    def _close_splash() -> None:
+        splash.finish()
+        splash.deleteLater()
+
+
+    QTimer.singleShot(1600, _close_splash)
     window = BottomHunterWindow()
     window.show()
     interrupt_count = 0
