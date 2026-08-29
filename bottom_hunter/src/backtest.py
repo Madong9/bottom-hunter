@@ -44,6 +44,7 @@ class BacktestEvent:
     timing_group: str
     near_resistance: bool
     breakout: bool = False
+    support: int = 0
     signal_level: str = ""
     state: str = ""
     entry_stage: str | None = None
@@ -215,7 +216,9 @@ def run_backtest(
     enriched = {
         symbol: enrich_bars(result.bars)
         for symbol, result in fetched.items()
-        if result.quality == "complete" and len(result.bars) >= 65
+        # "stale" means the remote refresh failed but the local cache still
+        # carries the full history; for a year-long backtest that is fine.
+        if result.quality in ("complete", "stale") and len(result.bars) >= 65
     }
     calendar = TradingCalendarService(config.markets)
     fundamentals = FallbackFundamentalProvider(
@@ -380,6 +383,7 @@ def run_backtest(
                             timing_group=_timing_group(timing),
                             near_resistance=near_resistance,
                             breakout=bool(metrics.get("breakout")),
+                            support=scored.score.support,
                             signal_level=scored.signal_level.value,
                             state=decision.state.value,
                             entry_stage=(decision.entry_stage.value if decision.entry_stage else None),
@@ -440,6 +444,7 @@ def run_backtest(
             "timing_group": event.timing_group,
             "near_resistance": int(event.near_resistance),
             "breakout": int(event.breakout),
+            "support": event.support,
             "signal_level": event.signal_level,
             "state": event.state,
             "entry_stage": event.entry_stage,
