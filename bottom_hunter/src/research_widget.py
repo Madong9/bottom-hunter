@@ -67,7 +67,7 @@ class ResearchTrendChart(FigureCanvasQTAgg):
     """Compact normalized trends so unlike financial units remain comparable."""
 
     def __init__(self) -> None:
-        self.figure = Figure(figsize=(8, 4), dpi=100, facecolor="#ffffff")
+        self.figure = Figure(figsize=(8, 4), dpi=100, facecolor="#0d1017")
         super().__init__(self.figure)
         self.setMinimumHeight(320)
         self._empty("选择标的后显示财务趋势")
@@ -76,7 +76,7 @@ class ResearchTrendChart(FigureCanvasQTAgg):
         self.figure.clear()
         axis = self.figure.add_subplot(111)
         axis.axis("off")
-        axis.text(0.5, 0.5, message, ha="center", va="center", color="#8a9098")
+        axis.text(0.5, 0.5, message, ha="center", va="center", color="#6d7482")
         self.draw_idle()
 
     def plot_financial(self, facts: list[FinancialFact]) -> None:

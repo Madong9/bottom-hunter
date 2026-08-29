@@ -41,6 +41,18 @@ from .io_utils import CJK_FONT_FAMILIES
 rcParams["font.sans-serif"] = list(CJK_FONT_FAMILIES)
 rcParams["axes.unicode_minus"] = False
 
+# Dark chart theme shared by every matplotlib element in this workspace.
+CHART_BG = "#0d1017"
+CHART_GRID = "#1b212d"
+CHART_TICK = "#828a98"
+CHART_MUTED = "#6d7482"
+CHART_SPINE = "#2a3140"
+CHART_HLINES = ("#e05c5c", "#2aa882")
+UP_COLOR = "#ff5c5c"
+DOWN_COLOR = "#2bd58f"
+ACCENT_GOLD = "#f3ba2f"
+ACCENT_BLUE = "#4da3ff"
+
 OVERLAY_INDICATORS = (
     ("MA 均线", "ma"),
     ("EMA 指数均线", "ema"),
@@ -361,7 +373,7 @@ class ChartWorkspace(QWidget):
         chart_layout = QVBoxLayout(chart_frame)
         chart_layout.setContentsMargins(7, 7, 7, 7)
         chart_layout.setSpacing(2)
-        self.figure = Figure(figsize=(11, 7), dpi=100, facecolor="#ffffff")
+        self.figure = Figure(figsize=(11, 7), dpi=100, facecolor=CHART_BG)
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.setMinimumHeight(470)
         self.toolbar = NavigationToolbar2QT(self.canvas, self)
@@ -687,7 +699,7 @@ class ChartWorkspace(QWidget):
     def _render_empty(self, message: str) -> None:
         self.figure.clear()
         axis = self.figure.add_subplot(111)
-        axis.set_facecolor("#ffffff")
+        axis.set_facecolor(CHART_BG)
         axis.axis("off")
         axis.text(
             0.5,
@@ -695,7 +707,7 @@ class ChartWorkspace(QWidget):
             message,
             ha="center",
             va="center",
-            color="#8b929b",
+            color=CHART_MUTED,
             fontsize=13,
             transform=axis.transAxes,
         )
@@ -730,18 +742,18 @@ class ChartWorkspace(QWidget):
         if indicator_axis is not None:
             axes.append(indicator_axis)
         for axis in axes:
-            axis.set_facecolor("#ffffff")
-            axis.grid(True, color="#edf0f2", linewidth=0.7, alpha=0.9)
-            axis.tick_params(colors="#6e757d", labelsize=8)
+            axis.set_facecolor(CHART_BG)
+            axis.grid(True, color=CHART_GRID, linewidth=0.7, alpha=0.9)
+            axis.tick_params(colors=CHART_TICK, labelsize=8)
             axis.spines["top"].set_visible(False)
-            axis.spines["left"].set_color("#dfe3e6")
-            axis.spines["right"].set_color("#dfe3e6")
-            axis.spines["bottom"].set_color("#dfe3e6")
+            axis.spines["left"].set_color(CHART_SPINE)
+            axis.spines["right"].set_color(CHART_SPINE)
+            axis.spines["bottom"].set_color(CHART_SPINE)
 
         x_values = np.arange(len(frame), dtype=float)
         candle_width = 0.66
-        up_color = "#e74c3c"
-        down_color = "#12a182"
+        up_color = UP_COLOR
+        down_color = DOWN_COLOR
         neutral_color = "#7f8c8d"
         for position, (_timestamp, row) in enumerate(frame.iterrows()):
             open_price = float(row["open"])
@@ -774,7 +786,7 @@ class ChartWorkspace(QWidget):
 
         self._draw_price_indicator(price_axis, x_values)
         for column, color, label in (
-            ("volume_ma5", "#f39c12", "VMA5"),
+            ("volume_ma5", ACCENT_GOLD, "VMA5"),
             ("volume_ma10", "#3498db", "VMA10"),
         ):
             values = self._indicator_values[column]
@@ -796,7 +808,7 @@ class ChartWorkspace(QWidget):
         if indicator_axis is not None:
             indicator_axis.yaxis.tick_right()
             volume_axis.tick_params(labelbottom=False)
-        volume_axis.set_ylabel("VOL", fontsize=8, color="#8b929b")
+        volume_axis.set_ylabel("VOL", fontsize=8, color=CHART_TICK)
         tick_count = min(9, len(frame))
         if tick_count:
             ticks = np.unique(np.linspace(0, len(frame) - 1, tick_count, dtype=int))
@@ -824,18 +836,18 @@ class ChartWorkspace(QWidget):
         overlay = str(self.overlay_combo.currentData() or "none")
         specifications: dict[str, tuple[tuple[str, str, str, str], ...]] = {
             "ma": (
-                ("ma5", "MA5", "#f39c12", "-"),
+                ("ma5", "MA5", ACCENT_GOLD, "-"),
                 ("ma10", "MA10", "#3498db", "-"),
                 ("ma20", "MA20", "#8e44ad", "-"),
                 ("ma60", "MA60", "#7f8c8d", "-"),
             ),
             "ema": (
-                ("ema12", "EMA12", "#f39c12", "-"),
+                ("ema12", "EMA12", ACCENT_GOLD, "-"),
                 ("ema26", "EMA26", "#3498db", "-"),
             ),
             "boll": (
                 ("boll_upper", "BOLL上轨", "#8e44ad", "--"),
-                ("boll_mid", "BOLL中轨", "#f39c12", "-"),
+                ("boll_mid", "BOLL中轨", ACCENT_GOLD, "-"),
                 ("boll_lower", "BOLL下轨", "#8e44ad", "--"),
             ),
         }
@@ -872,31 +884,31 @@ class ChartWorkspace(QWidget):
         values = self._indicator_values
         if panel == "macd":
             histogram = values["macd_hist"].fillna(0)
-            colors = np.where(histogram >= 0, "#e74c3c", "#12a182")
+            colors = np.where(histogram >= 0, UP_COLOR, DOWN_COLOR)
             axis.bar(x_values, histogram, width=0.62, color=colors, alpha=0.65)
-            axis.plot(x_values, values["macd_dif"], color="#f39c12", linewidth=0.9, label="DIF")
+            axis.plot(x_values, values["macd_dif"], color=ACCENT_GOLD, linewidth=0.9, label="DIF")
             axis.plot(x_values, values["macd_dea"], color="#3498db", linewidth=0.9, label="DEA")
             axis.axhline(0, color="#b8bec5", linewidth=0.65)
-            axis.set_ylabel("MACD", fontsize=8, color="#8b929b")
+            axis.set_ylabel("MACD", fontsize=8, color=CHART_TICK)
         elif panel == "rsi":
             axis.plot(x_values, values["rsi14"], color="#8e44ad", linewidth=1.0, label="RSI14")
-            axis.axhline(70, color="#e74c3c", linewidth=0.7, linestyle="--")
-            axis.axhline(30, color="#12a182", linewidth=0.7, linestyle="--")
+            axis.axhline(70, color=CHART_HLINES[0], linewidth=0.7, linestyle="--")
+            axis.axhline(30, color=CHART_HLINES[1], linewidth=0.7, linestyle="--")
             axis.set_ylim(0, 100)
-            axis.set_ylabel("RSI", fontsize=8, color="#8b929b")
+            axis.set_ylabel("RSI", fontsize=8, color=CHART_TICK)
         elif panel == "kdj":
             for column, color, label in (
-                ("kdj_k", "#f39c12", "K"),
+                ("kdj_k", ACCENT_GOLD, "K"),
                 ("kdj_d", "#3498db", "D"),
                 ("kdj_j", "#8e44ad", "J"),
             ):
                 axis.plot(x_values, values[column], color=color, linewidth=0.9, label=label)
-            axis.axhline(80, color="#e74c3c", linewidth=0.7, linestyle="--")
-            axis.axhline(20, color="#12a182", linewidth=0.7, linestyle="--")
-            axis.set_ylabel("KDJ", fontsize=8, color="#8b929b")
+            axis.axhline(80, color=CHART_HLINES[0], linewidth=0.7, linestyle="--")
+            axis.axhline(20, color=CHART_HLINES[1], linewidth=0.7, linestyle="--")
+            axis.set_ylabel("KDJ", fontsize=8, color=CHART_TICK)
         elif panel == "atr":
             axis.plot(x_values, values["atr14"], color="#16a085", linewidth=1.0, label="ATR14")
-            axis.set_ylabel("ATR", fontsize=8, color="#8b929b")
+            axis.set_ylabel("ATR", fontsize=8, color=CHART_TICK)
         axis.legend(loc="upper left", fontsize=7.5, frameon=False, ncol=3)
 
     def _bounded_xlim(self, left: float, right: float) -> tuple[float, float]:
@@ -1016,7 +1028,7 @@ class ChartWorkspace(QWidget):
                     continue
                 self.price_axis.axhline(
                     price,
-                    color="#f39c12",
+                    color=ACCENT_GOLD,
                     linewidth=1.15,
                     linestyle="--",
                     alpha=0.9,
@@ -1036,7 +1048,7 @@ class ChartWorkspace(QWidget):
                 self.price_axis.plot(
                     positions,
                     prices,
-                    color="#f39c12",
+                    color=ACCENT_GOLD,
                     linewidth=1.45,
                     marker="o",
                     markersize=3.5,
