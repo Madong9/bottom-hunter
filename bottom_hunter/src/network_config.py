@@ -5,6 +5,7 @@ system proxy by default. System proxies (Clash, etc.) are unnecessary
 for most public market-data endpoints. If a proxy is explicitly needed,
 set BOTTOM_HUNTER_USE_PROXY=1 before starting.
 """
+
 from __future__ import annotations
 
 import os
@@ -24,9 +25,11 @@ def apply_requests_session(session: Any) -> None:
     """Apply project network settings to a requests.Session."""
     session.trust_env = REQUESTS_TRUST_ENV
 
+
 def apply_urllib() -> None:
     """Install a global urllib opener for urllib.request when proxies are off."""
     if not USE_SYSTEM_PROXY:
         import urllib.request
+
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         urllib.request.install_opener(opener)

@@ -21,6 +21,8 @@ from .storage import StateStore
 
 LOGGER = logging.getLogger(__name__)
 
+# Cumulative target allocations. StateStore reconstructs incremental fills
+# (25%, then +35%, then +40%) so old and new databases share one format.
 STAGE_WEIGHTS: dict[str, float] = {
     EntryStage.ENTRY_STAGE_1.value: 0.25,
     EntryStage.ENTRY_STAGE_2.value: 0.60,
@@ -95,15 +97,15 @@ def update_valuations(
     store.save_valuations(target, valuations)
     weighted = sum(item["weight"] * item["unrealized_return"] for item in valuations)
     total_weight = sum(item["weight"] for item in valuations)
+    scale = 1.0 / max(1.0, total_weight)
+    invested_weight = min(1.0, total_weight)
     return {
         "positions": len(valuations),
         "total_weight": total_weight,
         "weighted_return": weighted / total_weight if total_weight else 0.0,
         "equity_index": (
-            sum(
-                item["weight"] * item["last_price"] / item["entry_price"]
-                for item in valuations
-            )
+            (1.0 - invested_weight)
+            + sum(item["weight"] * scale * item["last_price"] / item["entry_price"] for item in valuations)
             if valuations
             else None
         ),

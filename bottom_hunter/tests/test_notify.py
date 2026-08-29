@@ -1,13 +1,21 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 from bottom_hunter.src import notify as bottom_hunter_notify
-from bottom_hunter.src.models import Alert
+from bottom_hunter.src.models import (
+    Alert,
+    BottomState,
+    EntryStage,
+    ScoreBreakdown,
+    SignalLevel,
+    StockSignal,
+)
 from bottom_hunter.src.notify import (
     NotifyConfig,
     _wecom,
     _wecom_app_token,
+    format_digest,
     load_notify_config,
     push,
 )
@@ -77,10 +85,7 @@ def test_load_notify_config_reads_wecom(tmp_path) -> None:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "notify.yaml").write_text(
-        "enabled: true\n"
-        "channels:\n"
-        "  wecom:\n"
-        "    webhook: https://qy.example/hook\n",
+        "enabled: true\nchannels:\n  wecom:\n    webhook: https://qy.example/hook\n",
         encoding="utf-8",
     )
     config = load_notify_config(config_dir)
@@ -146,3 +151,32 @@ def test_push_sends_to_wxpusher(monkeypatch) -> None:
     assert errors == []
     assert captured["json"]["uids"] == ["UID_1"]
     assert captured["json"]["contentType"] == 3
+
+
+def test_digest_is_chinese_mobile_summary_for_new_entity() -> None:
+    signal = StockSignal(
+        date(2026, 8, 28),
+        "TEST.US",
+        "测试公司",
+        "US",
+        "technology",
+        "信息技术",
+        ScoreBreakdown(2, 2, 2, 1, 1, 0, 1),
+        SignalLevel.BUY_CANDIDATE,
+        BottomState.NO_NEW_LOW,
+        EntryStage.ENTRY_STAGE_2,
+        {"support_level": 98.0, "resistance_level": 112.0},
+        ["RSI14 28.0", "恐慌低点后第2个交易日未明显创新低"],
+        [],
+        True,
+        date(2026, 8, 26),
+        95.0,
+        "complete",
+        "长桥",
+        datetime(2026, 8, 28, tzinfo=UTC),
+    )
+    title, body = format_digest([_alert()], [signal])
+    assert "08-28" in title
+    assert "阶段2·拒绝新低" in body
+    assert "观察位：支撑 98" in body
+    assert "A_SCORE_JUMP" not in body

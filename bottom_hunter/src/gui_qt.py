@@ -4,6 +4,7 @@ from __future__ import annotations
 # ruff: noqa: E402
 import argparse
 import ctypes
+import html
 import os
 import re
 import shutil
@@ -72,6 +73,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QDateEdit,
+    QDialog,
     QFileDialog,
     QFormLayout,
     QFrame,
@@ -117,6 +119,7 @@ from .gui_core import (
     health_check,
     latest_json_report,
     list_reports,
+    load_data_health,
     load_report_summary,
     recent_scan_runs,
     save_editor_content,
@@ -131,6 +134,27 @@ from .research_widget import ResearchWorkspace
 from .storage import StateStore
 
 ACCOUNT_SOURCE_LABELS = {**SOURCE_LABELS, "longbridge": "长桥行情"}
+
+UI_STAGE_LABELS = {
+    "ENTRY_STAGE_1": "阶段1·恐慌反转",
+    "ENTRY_STAGE_2": "阶段2·拒绝新低",
+    "ENTRY_STAGE_3": "阶段3·宽度确认",
+}
+UI_SIGNAL_LABELS = {
+    "IGNORE": "忽略",
+    "WATCH": "观察",
+    "EARLY REVERSAL": "早期反转",
+    "BUY CANDIDATE": "重点观察",
+    "STRONG REVERSAL": "强反转观察",
+    "FAILED": "结构失效",
+}
+UI_RUN_LABELS = {
+    "running": "运行中",
+    "success": "完成",
+    "partial": "部分完成",
+    "failed": "失败",
+    "aborted": "已中止",
+}
 
 
 APP_STYLE = r"""
@@ -727,14 +751,13 @@ class BottomHunterWindow(QMainWindow):
         self.account_connect_worker: AccountConnectWorker | None = None
         self.account_connect_source = ""
         self.account_connection_errors: dict[str, str] = {}
+        self.latest_signal_payloads: list[dict[str, Any]] = []
         self.sync_quiet = False
         self.pending_task_after_sync: CommandSpec | None = None
 
         self._build_shell()
         # 后台预热长桥凭据缓存，避免首次启动任务时在 UI 线程触发 keyring I/O
-        threading.Thread(
-            target=self.account_service.vault.load, args=("longbridge",), daemon=True
-        ).start()
+        threading.Thread(target=self.account_service.vault.load, args=("longbridge",), daemon=True).start()
         self.statusBar().showMessage("系统就绪 · 所有结果仅供观察和量化研究", 6000)
         QTimer.singleShot(80, self.refresh_all)
 
@@ -776,13 +799,13 @@ class BottomHunterWindow(QMainWindow):
         layout.addSpacing(13)
 
         definitions = (
-            ("⌂", "总览"),
-            ("☆", "我的自选"),
-            ("◇", "研究中心"),
-            ("▤", "报告"),
-            ("＋", "自选导入"),
-            ("◉", "系统状态"),
-            ("⌁", "K线与画线"),
+            ("总", "总览"),
+            ("选", "我的自选"),
+            ("研", "研究中心"),
+            ("报", "报告"),
+            ("导", "自选导入"),
+            ("态", "系统状态"),
+            ("线", "K线与画线"),
         )
         for index, (glyph, tooltip) in enumerate(definitions):
             button = QToolButton()
@@ -853,11 +876,7 @@ class BottomHunterWindow(QMainWindow):
         self.side_subtitle.setText(subtitle)
         self.search_box.clear()
         self._populate_context_list()
-        if (
-            index == 2
-            and self.context_list.count()
-            and not self.research_workspace.selection_initialized
-        ):
+        if index == 2 and self.context_list.count() and not self.research_workspace.selection_initialized:
             self.context_list.setCurrentRow(0)
             self._context_item_clicked(self.context_list.item(0))
         elif index == 3 and self.context_list.count() and self.current_report is None:
@@ -906,11 +925,8 @@ class BottomHunterWindow(QMainWindow):
         metrics = QHBoxLayout()
         metrics.setSpacing(10)
         self.metric_cards = {
-            "total": MetricCard("我的自选", "0", "三个来源合并后", "#07c160"),
-            "crypto": MetricCard("加密货币", "0", "不含链上股票", "#f3ba2f"),
-            "global_equity": MetricCard("美港股", "0", "包含链上股票", "#2d8cf0"),
-            "cn_equity": MetricCard("A股", "0", "来自同花顺自选", "#ea5455"),
-            "overlap": MetricCard("跨平台重合", "0", "按底层资产去重", "#8854d0"),
+            "opportunity": MetricCard("今日机会", "--", "等待最新扫描", "#07c160"),
+            "data_health": MetricCard("数据健康", "--", "行情完整度", "#f3ba2f"),
             "validation": MetricCard("信号验证", "--", "近30天5日持有胜率", "#2d8cf0"),
             "paper": MetricCard("模拟组合", "1.0000", "三阶段框架净值", "#8854d0"),
         }
@@ -1087,6 +1103,7 @@ class BottomHunterWindow(QMainWindow):
             for column, width in enumerate(widths):
                 self.signal_table.setColumnWidth(column, width)
             table = self.signal_table
+            self.signal_table.doubleClicked.connect(self.show_signal_detail)
         else:
             self.sector_table = _table(["板块", "市场", "得分", "上涨 / 覆盖"])
             self.sector_table.setColumnWidth(0, 108)
@@ -1152,9 +1169,7 @@ class BottomHunterWindow(QMainWindow):
         title_row.addWidget(self.watchlist_filter_label)
         title_row.addStretch(1)
         table_layout.addLayout(title_row)
-        self.watchlist_table = _table(
-            ["大类", "行业领域", "代码 / 资产", "名称", "自选来源", "类型"]
-        )
+        self.watchlist_table = _table(["大类", "行业领域", "代码 / 资产", "名称", "自选来源", "类型"])
         self.watchlist_table.setColumnWidth(0, 105)
         self.watchlist_table.setColumnWidth(1, 180)
         self.watchlist_table.setColumnWidth(2, 135)
@@ -1166,9 +1181,7 @@ class BottomHunterWindow(QMainWindow):
         return page
 
     def _build_chart_page(self) -> QWidget:
-        client = LongbridgeClient(
-            credentials_loader=lambda: self.account_service.vault.load("longbridge")
-        )
+        client = LongbridgeClient(credentials_loader=lambda: self.account_service.vault.load("longbridge"))
         service = MarketChartService(longbridge_client=client)
         self.chart_workspace = ChartWorkspace(
             PACKAGE_DIR / "state" / "chart_drawings.json",
@@ -1267,9 +1280,7 @@ class BottomHunterWindow(QMainWindow):
         actions.addWidget(detail, 1)
         import_button = QPushButton("导入文件")
         import_button.setProperty("kind", "primary")
-        import_button.clicked.connect(
-            lambda _checked=False, selected=source: self.import_account_watchlist(selected)
-        )
+        import_button.clicked.connect(lambda _checked=False, selected=source: self.import_account_watchlist(selected))
         fields["import_button"] = import_button
         if source == "tonghuashun":
             manual_button = QPushButton("手动添加股票")
@@ -1277,15 +1288,11 @@ class BottomHunterWindow(QMainWindow):
             actions.addWidget(manual_button)
         elif source in {"binance", "okx"}:
             manual_button = QPushButton("手动添加币种")
-            manual_button.clicked.connect(
-                lambda _checked=False, selected=source: self.manual_add_crypto(selected)
-            )
+            manual_button.clicked.connect(lambda _checked=False, selected=source: self.manual_add_crypto(selected))
             actions.addWidget(manual_button)
         clear_button = QPushButton("清空自选")
         clear_button.setProperty("kind", "danger")
-        clear_button.clicked.connect(
-            lambda _checked=False, selected=source: self.clear_account_source(selected)
-        )
+        clear_button.clicked.connect(lambda _checked=False, selected=source: self.clear_account_source(selected))
         actions.addWidget(import_button)
         actions.addWidget(clear_button)
         layout.addLayout(actions)
@@ -1347,9 +1354,7 @@ class BottomHunterWindow(QMainWindow):
         fields["detail"] = detail
         actions.addWidget(detail, 1)
         docs_button = QPushButton("开发者中心")
-        docs_button.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://open.longbridge.com/"))
-        )
+        docs_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://open.longbridge.com/")))
         verify_button = QPushButton("验证并启用行情")
         verify_button.setProperty("kind", "primary")
         verify_button.clicked.connect(lambda _checked=False: self.connect_account(source))
@@ -1484,6 +1489,20 @@ class BottomHunterWindow(QMainWindow):
         health_layout.addWidget(self.health_table)
         layout.addWidget(health_card, 1)
 
+        data_card = _card()
+        data_layout = QVBoxLayout(data_card)
+        data_layout.setContentsMargins(13, 11, 13, 13)
+        data_title = QLabel("数据源健康")
+        data_title.setProperty("role", "cardTitle")
+        data_layout.addWidget(data_title)
+        self.data_health_table = _table(["市场", "行情日", "完整信号", "异常", "实际数据源"])
+        self.data_health_table.setColumnWidth(0, 80)
+        self.data_health_table.setColumnWidth(1, 115)
+        self.data_health_table.setColumnWidth(2, 100)
+        self.data_health_table.setColumnWidth(3, 70)
+        data_layout.addWidget(self.data_health_table)
+        layout.addWidget(data_card, 1)
+
         run_card = _card()
         run_layout = QVBoxLayout(run_card)
         run_layout.setContentsMargins(13, 11, 13, 13)
@@ -1518,9 +1537,7 @@ class BottomHunterWindow(QMainWindow):
             for run in runs:
                 report_date = str(run.get("report_date") or "未完成")
                 status = str(run.get("status") or "unknown")
-                self._add_context_item(
-                    f"{report_date}", f"批次 #{run.get('id')}  ·  {status}", {"kind": "run"}
-                )
+                self._add_context_item(f"{report_date}", f"批次 #{run.get('id')}  ·  {status}", {"kind": "run"})
         elif self.current_page == 1:
             summary = self.watchlist_repo.summary()
             counts = summary.get("category_counts") or {}
@@ -1574,9 +1591,7 @@ class BottomHunterWindow(QMainWindow):
                 )
         elif self.current_page == 5:
             for name, passed, detail in health_check():
-                self._add_context_item(
-                    f"{'正常' if passed else '异常'} · {name}", detail, {"kind": "health"}
-                )
+                self._add_context_item(f"{'正常' if passed else '异常'} · {name}", detail, {"kind": "health"})
         else:
             for asset in self.watchlist_repo.summary().get("assets") or []:
                 self._add_context_item(
@@ -1631,11 +1646,7 @@ class BottomHunterWindow(QMainWindow):
             if asset:
                 self.research_workspace.select_asset(asset)
         elif kind == "watchlist_filter":
-            self.watchlist_filter = {
-                key: str(payload[key])
-                for key in ("category", "industry")
-                if payload.get(key)
-            }
+            self.watchlist_filter = {key: str(payload[key]) for key in ("category", "industry") if payload.get(key)}
             self.refresh_watchlist()
         elif kind == "account_source":
             source = str(payload.get("source") or "")
@@ -1691,9 +1702,7 @@ class BottomHunterWindow(QMainWindow):
         )
         self.watchlist_metric_cards["cn_equity"].set_value(str(int(counts.get("cn_equity", 0))))
         self.watchlist_metric_cards["overlap"].set_value(str(int(summary.get("overlap_count", 0))))
-        self.watchlist_metric_cards["unresolved"].set_value(
-            str(int(summary.get("unresolved_industry_count", 0)))
-        )
+        self.watchlist_metric_cards["unresolved"].set_value(str(int(summary.get("unresolved_industry_count", 0))))
         asset_count = int(summary.get("asset_count", 0))
         self.watchlist_count_chip.setText(f"{asset_count} 个标的")
         _set_dynamic_property(
@@ -1705,22 +1714,16 @@ class BottomHunterWindow(QMainWindow):
         category = self.watchlist_filter.get("category", "")
         industry = self.watchlist_filter.get("industry", "")
         category_text = CATEGORY_LABELS.get(category, "全部类别")
-        self.watchlist_filter_label.setText(
-            f"{category_text} · {industry or '全部行业'}"
-        )
+        self.watchlist_filter_label.setText(f"{category_text} · {industry or '全部行业'}")
         assets = [
             item
             for item in summary.get("assets") or []
-            if (not category or item.get("category") == category)
-            and (not industry or item.get("industry") == industry)
+            if (not category or item.get("category") == category) and (not industry or item.get("industry") == industry)
         ]
         self.chart_workspace.set_assets(list(summary.get("assets") or []))
         self.watchlist_table.setRowCount(len(assets))
         for row, item in enumerate(assets):
-            sources = " / ".join(
-                SOURCE_LABELS.get(str(source), str(source))
-                for source in item.get("sources") or []
-            )
+            sources = " / ".join(SOURCE_LABELS.get(str(source), str(source)) for source in item.get("sources") or [])
             if item.get("tokenized_stock"):
                 asset_type = "链上股票"
             elif item.get("category") == "crypto":
@@ -1834,15 +1837,11 @@ class BottomHunterWindow(QMainWindow):
         worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(
-            lambda selected=source: self._watchlist_import_thread_finished(selected)
-        )
+        thread.finished.connect(lambda selected=source: self._watchlist_import_thread_finished(selected))
         self.import_threads[source] = thread
         self.import_workers[source] = worker
         self._set_watchlist_import_busy(source, True)
-        self.statusBar().showMessage(
-            f"正在后台解析{SOURCE_LABELS[source]}自选，可继续使用其他页面…"
-        )
+        self.statusBar().showMessage(f"正在后台解析{SOURCE_LABELS[source]}自选，可继续使用其他页面…")
         thread.start()
 
     def _set_watchlist_import_busy(self, source: str, busy: bool) -> None:
@@ -1850,11 +1849,7 @@ class BottomHunterWindow(QMainWindow):
         button = fields.get("import_button")
         if isinstance(button, QPushButton):
             button.setEnabled(not busy)
-            button.setText(
-                "正在后台导入…"
-                if busy
-                else "导入文件"
-            )
+            button.setText("正在后台导入…" if busy else "导入文件")
         detail = fields.get("detail")
         if busy and isinstance(detail, QLabel):
             detail.setText("正在解析表格、匹配股票并补全行业，请稍候…")
@@ -1876,8 +1871,7 @@ class BottomHunterWindow(QMainWindow):
             f"{SOURCE_LABELS[source]}识别 {result.imported_count} 项；"
             f"跨平台合并后 {result.merged_count} 个标的，"
             f"生成 {result.generated_sector_count} 个检测板块。\n"
-            f"待确认行业：{result.unresolved_industry_count} 个。"
-            + skipped_detail,
+            f"待确认行业：{result.unresolved_industry_count} 个。" + skipped_detail,
         )
 
     @Slot(str, str)
@@ -1895,16 +1889,11 @@ class BottomHunterWindow(QMainWindow):
         symbols_text, accepted = QInputDialog.getMultiLineText(
             self,
             f"手动添加{SOURCE_LABELS[source]}自选",
-            "输入现货交易对，用换行、逗号或空格分隔。\n"
-            "例如：BTCUSDT  ETHUSDT  SOL/USDT",
+            "输入现货交易对，用换行、逗号或空格分隔。\n例如：BTCUSDT  ETHUSDT  SOL/USDT",
         )
         if not accepted or not symbols_text.strip():
             return
-        symbols = [
-            value.strip().upper()
-            for value in re.split(r"[\s,，;；]+", symbols_text)
-            if value.strip()
-        ]
+        symbols = [value.strip().upper() for value in re.split(r"[\s,，;；]+", symbols_text) if value.strip()]
         symbols = list(dict.fromkeys(symbols))
         fields = self.account_fields[source]
         alias_field = fields.get("alias")
@@ -1991,8 +1980,7 @@ class BottomHunterWindow(QMainWindow):
         if candidates:
             market_labels = {"CN": "A股", "HK": "港股", "US": "美股"}
             labels = [
-                f"{item['name']} · {item['symbol']} · "
-                f"{market_labels.get(item['market'], item['market'])}"
+                f"{item['name']} · {item['symbol']} · {market_labels.get(item['market'], item['market'])}"
                 for item in candidates
             ]
             if len(candidates) == 1:
@@ -2073,8 +2061,7 @@ class BottomHunterWindow(QMainWindow):
         QMessageBox.information(
             self,
             "已加入自选",
-            f"已添加 {asset.name}（{asset.symbol}），当前合并观察池共 "
-            f"{summary['asset_count']} 个标的。",
+            f"已添加 {asset.name}（{asset.symbol}），当前合并观察池共 {summary['asset_count']} 个标的。",
         )
 
     def clear_account_source(self, source: str) -> None:
@@ -2084,8 +2071,7 @@ class BottomHunterWindow(QMainWindow):
         answer = QMessageBox.question(
             self,
             "清空自选",
-            f"确定清空{SOURCE_LABELS[source]}已导入的 {status['count']} 项自选吗？\n"
-            "不会影响平台原账号中的收藏。",
+            f"确定清空{SOURCE_LABELS[source]}已导入的 {status['count']} 项自选吗？\n不会影响平台原账号中的收藏。",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -2145,12 +2131,8 @@ class BottomHunterWindow(QMainWindow):
                     "没有已导入文件，或文件内容没有变化。",
                 )
             else:
-                lines = [
-                    f"已同步：{', '.join(SOURCE_LABELS[item] for item in refreshed) or '无'}"
-                ]
-                lines.extend(
-                    f"{SOURCE_LABELS[source]}：{error}" for source, error in errors.items()
-                )
+                lines = [f"已同步：{', '.join(SOURCE_LABELS[item] for item in refreshed) or '无'}"]
+                lines.extend(f"{SOURCE_LABELS[source]}：{error}" for source, error in errors.items())
                 QMessageBox.information(self, "自选同步结果", "\n".join(lines))
 
     @Slot(str)
@@ -2214,9 +2196,7 @@ class BottomHunterWindow(QMainWindow):
         worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(
-            lambda selected=source: self._account_connect_thread_finished(selected)
-        )
+        thread.finished.connect(lambda selected=source: self._account_connect_thread_finished(selected))
         self.account_connect_thread = thread
         self.account_connect_worker = worker
         self.account_connect_source = source
@@ -2229,11 +2209,7 @@ class BottomHunterWindow(QMainWindow):
         button = fields.get("verify_button")
         if isinstance(button, QPushButton):
             button.setEnabled(not busy)
-            button.setText(
-                "正在验证…"
-                if busy
-                else "验证并启用行情"
-            )
+            button.setText("正在验证…" if busy else "验证并启用行情")
         detail = fields.get("detail")
         if busy and isinstance(detail, QLabel):
             detail.setText("正在通过官方接口验证，请稍候…")
@@ -2275,8 +2251,7 @@ class BottomHunterWindow(QMainWindow):
         answer = QMessageBox.question(
             self,
             "停用行情",
-            f"确定删除{ACCOUNT_SOURCE_LABELS[source]}的本地行情关联吗？\n"
-            "已导入的自选快照会保留。",
+            f"确定删除{ACCOUNT_SOURCE_LABELS[source]}的本地行情关联吗？\n已导入的自选快照会保留。",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -2299,14 +2274,10 @@ class BottomHunterWindow(QMainWindow):
             if source == "longbridge":
                 connection = self.account_service.status(source)
                 connection_error = self.account_connection_errors.get(source, "")
-                verified = bool(
-                    connection.get("connected") and connection.get("credential_available")
-                )
+                verified = bool(connection.get("connected") and connection.get("credential_available"))
                 if isinstance(status_widget, QLabel):
                     status_widget.setText(
-                        "行情已启用"
-                        if verified
-                        else ("需重新验证" if connection.get("connected") else "未启用")
+                        "行情已启用" if verified else ("需重新验证" if connection.get("connected") else "未启用")
                     )
                     _set_dynamic_property(status_widget, "tone", "idle" if verified else "warning")
                 alias = str(connection.get("account_label") or "")
@@ -2382,18 +2353,7 @@ class BottomHunterWindow(QMainWindow):
 
     def refresh_dashboard(self) -> None:
         watchlist = self.watchlist_repo.summary()
-        category_counts = watchlist.get("category_counts") or {}
         asset_count = int(watchlist.get("asset_count", 0))
-        self.metric_cards["total"].set_value(
-            str(asset_count), f"{int(watchlist.get('sector_count', 0))} 个动态检测板块"
-        )
-        self.metric_cards["crypto"].set_value(str(int(category_counts.get("crypto", 0))))
-        self.metric_cards["global_equity"].set_value(
-            str(int(category_counts.get("global_equity", 0))),
-            f"链上股票 {int(watchlist.get('tokenized_stock_count', 0))} 个",
-        )
-        self.metric_cards["cn_equity"].set_value(str(int(category_counts.get("cn_equity", 0))))
-        self.metric_cards["overlap"].set_value(str(int(watchlist.get("overlap_count", 0))))
         self._refresh_validation_cards()
         busy = bool(self.process and self.process.state() != QProcess.ProcessState.NotRunning)
         self.scan_button.setEnabled(asset_count > 0 and not busy)
@@ -2408,6 +2368,9 @@ class BottomHunterWindow(QMainWindow):
         if not report_path or report_path.stat().st_mtime < watchlist_mtime:
             self.signal_table.setRowCount(0)
             self.sector_table.setRowCount(0)
+            self.latest_signal_payloads = []
+            self.metric_cards["opportunity"].set_value("--", "等待最新扫描")
+            self.metric_cards["data_health"].set_value("--", f"自选 {asset_count} 个")
             if not busy:
                 if asset_count:
                     self._set_task_status("待扫描", "warning")
@@ -2425,19 +2388,31 @@ class BottomHunterWindow(QMainWindow):
 
         if not busy:
             self._set_task_status(f"报告 {summary.report_date}", "idle")
-            self.task_detail.setText(
-                f"有效信号 {summary.signal_count} 个 · 高优先级 {summary.opportunity_count} 个"
-            )
+            self.task_detail.setText(f"有效信号 {summary.signal_count} 个 · 高优先级 {summary.opportunity_count} 个")
+        self.metric_cards["opportunity"].set_value(
+            str(summary.opportunity_count), f"有效观察 {summary.signal_count} 个"
+        )
+        if summary.error_count:
+            self.metric_cards["data_health"].set_value("需关注", f"{summary.error_count} 项数据异常")
+        else:
+            self.metric_cards["data_health"].set_value("正常", "本次行情完整")
 
-        self.signal_table.setRowCount(len(summary.signals[:40]))
-        for row, item in enumerate(summary.signals[:40]):
+        self.latest_signal_payloads = list(summary.signals[:40])
+        self.signal_table.setRowCount(len(self.latest_signal_payloads))
+        for row, item in enumerate(self.latest_signal_payloads):
             score = item.get("score") or {}
             values = (
                 item.get("symbol", "--"),
                 f"{item.get('name', '--')}  ·  {item.get('market', '--')}",
                 item.get("sector_name", item.get("sector_id", "--")),
                 f"{score.get('total', 0)}/{score.get('available_max', 10)}",
-                item.get("entry_stage") or item.get("signal_level") or item.get("state", "--"),
+                UI_STAGE_LABELS.get(
+                    str(item.get("entry_stage") or ""),
+                    UI_SIGNAL_LABELS.get(
+                        str(item.get("signal_level") or ""),
+                        item.get("state", "--"),
+                    ),
+                ),
             )
             self._fill_table_row(self.signal_table, row, values)
 
@@ -2448,10 +2423,63 @@ class BottomHunterWindow(QMainWindow):
                 item.get("sector_name", item.get("sector_id", "--")),
                 item.get("market", "--"),
                 item.get("score", 0),
-                f"{float(breadth.get('up_ratio', 0)):.0%} / "
-                f"{float(breadth.get('coverage', 0)):.0%}",
+                f"{float(breadth.get('up_ratio', 0)):.0%} / {float(breadth.get('coverage', 0)):.0%}",
             )
             self._fill_table_row(self.sector_table, row, values)
+
+    def show_signal_detail(self, *_args: Any) -> None:
+        row = self.signal_table.currentRow()
+        if row < 0 or row >= len(self.latest_signal_payloads):
+            return
+        signal = self.latest_signal_payloads[row]
+        score = signal.get("score") or {}
+        metrics = signal.get("metrics") or {}
+        stage = UI_STAGE_LABELS.get(
+            str(signal.get("entry_stage") or ""),
+            UI_SIGNAL_LABELS.get(str(signal.get("signal_level") or ""), "仅观察"),
+        )
+        components = (
+            f"超跌 {score.get('oversold', 0)}/2　恐慌 {score.get('capitulation', 0)}/2　"
+            f"拒绝新低 {score.get('rejection', 0)}/2　宽度 {score.get('breadth', 0)}/1<br>"
+            f"支撑 {score.get('support', 0)}/1　基本面 "
+            f"{score.get('fundamental') if score.get('fundamental') is not None else 'N/A'}/2"
+        )
+        reasons = (
+            "".join(f"<li>{html.escape(str(value))}</li>" for value in (signal.get("reasons") or [])[:8])
+            or "<li>暂无</li>"
+        )
+        risks = (
+            "".join(f"<li>{html.escape(str(value))}</li>" for value in (signal.get("risks") or [])[:8])
+            or "<li>暂无</li>"
+        )
+        levels = []
+        if metrics.get("support_level") is not None:
+            levels.append(f"支撑 {float(metrics['support_level']):,.4g}")
+        if metrics.get("resistance_level") is not None:
+            levels.append(f"压力 {float(metrics['resistance_level']):,.4g}")
+        dialog = QDialog(self)
+        dialog.setWindowTitle("信号详情")
+        dialog.resize(660, 560)
+        layout = QVBoxLayout(dialog)
+        browser = QTextBrowser()
+        browser.setHtml(
+            "<style>body{font-family:'Noto Sans CJK SC';line-height:1.65;color:#25282d}"
+            "h2{font-size:21px}h3{font-size:15px;color:#168447}"
+            ".card{background:#f5f8f6;border:1px solid #e0e7e2;border-radius:8px;padding:12px}</style>"
+            f"<h2>{html.escape(str(signal.get('name') or '--'))} · "
+            f"{html.escape(str(signal.get('symbol') or '--'))}</h2>"
+            f"<div class='card'><b>{html.escape(stage)}</b>　"
+            f"评分 {score.get('total', 0)}/{score.get('available_max', 10)}<br>"
+            f"{components}<br>{html.escape('｜'.join(levels) or '暂无关键价位')}</div>"
+            f"<h3>触发依据</h3><ul>{reasons}</ul><h3>风险与失效</h3><ul>{risks}</ul>"
+            f"<p>数据源：{html.escape(str(signal.get('provider') or '--'))}　"
+            f"质量：{html.escape(str(signal.get('data_quality') or '--'))}</p>"
+        )
+        layout.addWidget(browser)
+        close_button = QPushButton("关闭")
+        close_button.clicked.connect(dialog.accept)
+        layout.addWidget(close_button, 0, Qt.AlignmentFlag.AlignRight)
+        dialog.exec()
 
     @staticmethod
     def _fill_table_row(table: QTableWidget, row: int, values: tuple[Any, ...]) -> None:
@@ -2470,6 +2498,24 @@ class BottomHunterWindow(QMainWindow):
             status_item = self.health_table.item(row, 1)
             status_item.setForeground(QColor("#168447" if passed else "#c33a43"))
 
+        latest = latest_json_report()
+        try:
+            data_health = load_data_health(latest) if latest else []
+        except (OSError, ValueError, KeyError):
+            data_health = []
+        self.data_health_table.setRowCount(len(data_health))
+        for row, item in enumerate(data_health):
+            values = (
+                item["market"],
+                item["session"],
+                f"{item['complete']}/{item['signals']}",
+                item["errors"],
+                item["providers"],
+            )
+            self._fill_table_row(self.data_health_table, row, values)
+            error_item = self.data_health_table.item(row, 3)
+            error_item.setForeground(QColor("#c33a43" if item["errors"] else "#168447"))
+
         try:
             runs = recent_scan_runs(limit=20)
         except Exception as exc:
@@ -2482,7 +2528,7 @@ class BottomHunterWindow(QMainWindow):
                 run.get("report_date") or "--",
                 run.get("started_at") or "--",
                 run.get("completed_at") or "--",
-                run.get("status") or "--",
+                UI_RUN_LABELS.get(str(run.get("status") or ""), run.get("status") or "--"),
             )
             self._fill_table_row(self.run_table, row, values)
 
@@ -2511,9 +2557,7 @@ class BottomHunterWindow(QMainWindow):
             self,
             "配置尚未保存",
             f"{self.current_config.name} 有未保存修改。是否先保存？",
-            QMessageBox.StandardButton.Save
-            | QMessageBox.StandardButton.Discard
-            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
         )
         if answer == QMessageBox.StandardButton.Cancel:

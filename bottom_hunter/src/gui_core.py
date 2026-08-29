@@ -120,7 +120,7 @@ def load_report_summary(path: Path) -> ReportSummary:
         item
         for item in signals
         if int(item.get("score", {}).get("total", 0)) >= 7
-        and item.get("signal_level") != "FAILED"
+        and item.get("signal_level") not in {"FAILED", "IGNORE", "WATCH"}
         and item.get("data_quality") == "complete"
     ]
     sorted_signals = sorted(
@@ -139,14 +139,8 @@ def load_report_summary(path: Path) -> ReportSummary:
     return ReportSummary(
         path=path,
         report_date=str(payload.get("report_date", "--")),
-        market_sessions={
-            str(key): str(value)
-            for key, value in (payload.get("market_sessions") or {}).items()
-        },
-        environments={
-            str(key): str(value)
-            for key, value in (payload.get("market_environment") or {}).items()
-        },
+        market_sessions={str(key): str(value) for key, value in (payload.get("market_sessions") or {}).items()},
+        environments={str(key): str(value) for key, value in (payload.get("market_environment") or {}).items()},
         signal_count=len(signals),
         opportunity_count=len(opportunities),
         sector_count=len(sorted_sectors),
@@ -157,9 +151,80 @@ def load_report_summary(path: Path) -> ReportSummary:
     )
 
 
-def recent_scan_runs(
-    database: Path = PACKAGE_DIR / "state" / "signals.db", limit: int = 10
-) -> list[dict[str, Any]]:
+def load_data_health(path: Path) -> list[dict[str, Any]]:
+    """Summarize freshness, providers and errors by market for the status page."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    sessions = payload.get("market_sessions") or {}
+    signals = list(payload.get("signals") or [])
+    errors = payload.get("data_errors") or {}
+
+    def error_market(entity: str) -> str:
+        if entity.startswith("market:"):
+            return entity.split(":", 1)[1]
+        if entity.startswith("sector:") and ":" in entity:
+            return entity.rsplit(":", 1)[1]
+        if entity.endswith(".SS") or entity.endswith(".SZ"):
+            return "CN"
+        if entity.endswith(".HK"):
+            return "HK"
+        if entity.endswith("-USDT") or entity.endswith("-USD"):
+            return "CRYPTO"
+        if entity.isascii() and entity == entity.upper() and entity.replace("-", "").isalnum():
+            return "US"
+        return "OTHER"
+
+    result = []
+    signal_markets = {str(item.get("market")) for item in signals if item.get("market")}
+    for market in sorted(set(sessions) | signal_markets):
+        market_signals = [item for item in signals if str(item.get("market")) == market]
+        providers: dict[str, int] = {}
+        for item in market_signals:
+            provider = str(item.get("provider") or "未知")
+            providers[provider] = providers.get(provider, 0) + 1
+        complete = sum(item.get("data_quality") == "complete" for item in market_signals)
+        market_errors = sum(error_market(str(entity)) == market for entity in errors)
+        provider_labels = {
+            "local_csv": "本地缓存",
+            "tencent": "腾讯",
+            "eastmoney": "东方财富",
+            "yahoo_chart": "Yahoo",
+            "longbridge": "长桥",
+            "binance": "币安",
+            "okx": "欧易",
+        }
+        provider_text = (
+            "、".join(
+                f"{provider_labels.get(name, name)} {count}"
+                for name, count in sorted(providers.items(), key=lambda pair: pair[1], reverse=True)[:3]
+            )
+            or "无可用信号"
+        )
+        result.append(
+            {
+                "market": market,
+                "session": str(sessions.get(market) or "--"),
+                "complete": complete,
+                "signals": len(market_signals),
+                "errors": market_errors,
+                "providers": provider_text,
+            }
+        )
+    global_errors = sum(error_market(str(entity)) == "OTHER" for entity in errors)
+    if global_errors:
+        result.append(
+            {
+                "market": "全局",
+                "session": "--",
+                "complete": 0,
+                "signals": 0,
+                "errors": global_errors,
+                "providers": "通知/配置/未归类异常",
+            }
+        )
+    return result
+
+
+def recent_scan_runs(database: Path = PACKAGE_DIR / "state" / "signals.db", limit: int = 10) -> list[dict[str, Any]]:
     if not database.exists():
         return []
     with sqlite3.connect(database, timeout=20) as connection:
@@ -255,20 +320,12 @@ def health_check() -> list[tuple[str, bool, str]]:
 
         research_store = ResearchStore(database)
         with research_store.connect() as connection:
-            item_count = int(
-                connection.execute("SELECT COUNT(*) FROM research_items").fetchone()[0]
-            )
-            fact_count = int(
-                connection.execute("SELECT COUNT(*) FROM financial_facts").fetchone()[0]
-            )
+            item_count = int(connection.execute("SELECT COUNT(*) FROM research_items").fetchone()[0])
+            fact_count = int(connection.execute("SELECT COUNT(*) FROM financial_facts").fetchone()[0])
             macro_count = int(
-                connection.execute(
-                    "SELECT COUNT(DISTINCT series_id) FROM macro_observations"
-                ).fetchone()[0]
+                connection.execute("SELECT COUNT(DISTINCT series_id) FROM macro_observations").fetchone()[0]
             )
-        results.append(
-            ("研究中心", True, f"财务 {fact_count} 项 · 资讯 {item_count} 条 · 宏观 {macro_count} 组")
-        )
+        results.append(("研究中心", True, f"财务 {fact_count} 项 · 资讯 {item_count} 条 · 宏观 {macro_count} 组"))
     except (sqlite3.Error, OSError, ValueError) as exc:
         results.append(("研究中心", False, str(exc)))
     latest = latest_json_report()

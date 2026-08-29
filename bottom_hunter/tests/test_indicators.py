@@ -36,4 +36,3 @@ def test_volume_baseline_excludes_current_bar(selloff_bars) -> None:
     panic = enriched.iloc[-2]
     assert panic["volume_ma20"] == 100.0
     assert panic["volume_ratio"] == 3.0
-

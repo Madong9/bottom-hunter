@@ -53,26 +53,17 @@ def calculate_breadth(
     count = len(rows)
     coverage = count / expected_count if expected_count else 0.0
     if not count:
-        return BreadthResult(
-            target, sector_id, market, 0, 0, 0, 0, 0, 0, 0, 0, 0, False, None, coverage
-        )
+        return BreadthResult(target, sector_id, market, 0, 0, 0, 0, 0, 0, 0, 0, 0, False, None, coverage)
     up = np.mean([row["return_1d"] > 0 for row in rows])
     down = np.mean([row["return_1d"] < 0 for row in rows])
     new_low = np.mean([row["new_low_20"] for row in rows])
     new_high = np.mean([row["new_high_20"] for row in rows])
     above_ma5 = np.mean([row["above_ma5"] for row in rows])
     above_ma10 = np.mean([row["above_ma10"] for row in rows])
-    strong_up = np.mean(
-        [row["return_1d"] >= thresholds["strong_up_return"] for row in rows]
-    )
+    strong_up = np.mean([row["return_1d"] >= thresholds["strong_up_return"] for row in rows])
     previous_frames = {symbol: frame for symbol, frame in frames.items()}
     prior_dates = sorted(
-        {
-            index.date()
-            for frame in previous_frames.values()
-            for index in frame.index
-            if index.date() < target
-        }
+        {index.date() for frame in previous_frames.values() for index in frame.index if index.date() < target}
     )
     previous_new_low = np.nan
     previous_up = np.nan
@@ -81,24 +72,16 @@ def calculate_breadth(
         if previous_rows:
             previous_new_low = np.mean([row["new_low_20"] for row in previous_rows])
             previous_up = np.mean([row["return_1d"] > 0 for row in previous_rows])
-    improving = bool(
-        up >= thresholds["up_ratio"]
-        and (np.isnan(previous_new_low) or new_low < previous_new_low)
-    )
+    improving = bool(up >= thresholds["up_ratio"] and (np.isnan(previous_new_low) or new_low < previous_new_low))
     worsening = bool(
-        pd.notna(previous_new_low)
-        and pd.notna(previous_up)
-        and new_low > previous_new_low
-        and up < previous_up
+        pd.notna(previous_new_low) and pd.notna(previous_up) and new_low > previous_new_low and up < previous_up
     )
     etf_up: bool | None = None
     if etf_frame is not None:
         enriched_etf = etf_frame if "return_1d" in etf_frame else enrich_bars(etf_frame)
         etf_return = _value(enriched_etf, target, "return_1d")
         etf_up = bool(etf_return > 0) if pd.notna(etf_return) else None
-    breadth_ready = bool(
-        coverage >= 0.60 and up >= thresholds["up_ratio"] and improving
-    )
+    breadth_ready = bool(coverage >= 0.60 and up >= thresholds["up_ratio"] and improving)
     breadth_score = int(breadth_ready and etf_up is True)
     return BreadthResult(
         date=target,

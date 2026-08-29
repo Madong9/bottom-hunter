@@ -21,6 +21,7 @@ from .data_provider import (
     CompositeMarketDataProvider,
     CsvFundamentalProvider,
     EastmoneyProvider,
+    FallbackFundamentalProvider,
     LocalCsvProvider,
     LongbridgeProvider,
     MarketDataProvider,
@@ -125,9 +126,7 @@ def _usable_frame(
         return None
     bars = result.bars.loc[: pd.Timestamp(session)]
     if result.quality != "complete":
-        errors[instrument_symbol] = (
-            f"数据质量为 {result.quality}（{'; '.join(result.warnings)}），不生成信号"
-        )
+        errors[instrument_symbol] = f"数据质量为 {result.quality}（{'; '.join(result.warnings)}），不生成信号"
         return None
     if pd.Timestamp(session) not in bars.index:
         errors[instrument_symbol] = f"{session} 无日K（可能停牌或数据缺失），不生成信号"
@@ -153,10 +152,7 @@ def run_scan(
 ) -> ScanOutput:
     config = AppConfig.load(config_dir)
     if config.configured_asset_count == 0:
-        raise ValueError(
-            "账号自选观察池为空；请先在桌面端“账号与自选”中导入"
-            "同花顺、币安或欧易自选文件。"
-        )
+        raise ValueError("账号自选观察池为空；请先在桌面端“账号与自选”中导入同花顺、币安或欧易自选文件。")
     raw_dir = Path(data_dir) if data_dir else config.project_dir / "data" / "raw"
     reports_dir = Path(output_dir) if output_dir else config.project_dir / "reports"
     database = Path(state_db) if state_db else config.project_dir / "state" / "signals.db"
@@ -171,35 +167,24 @@ def run_scan(
     errors: dict[str, str] = {}
     try:
         preliminary = {
-            market: calendar.latest_completed_session(market, requested_date)[0]
-            for market in config.markets
+            market: calendar.latest_completed_session(market, requested_date)[0] for market in config.markets
         }
         end = max(preliminary.values())
         history_days = int(config.defaults["history_days"])
         start = min(preliminary.values()) - timedelta(days=int(history_days * 1.65))
         active_provider = provider or _provider(config, raw_dir, offline)
-        fetched, fetch_errors = fetch_many(
-            active_provider, config.all_instruments(), start, end, workers=workers
-        )
+        fetched, fetch_errors = fetch_many(active_provider, config.all_instruments(), start, end, workers=workers)
         errors.update(fetch_errors)
-        market_sessions = _select_market_sessions(
-            config, calendar, requested_date, fetched, errors
-        )
+        market_sessions = _select_market_sessions(config, calendar, requested_date, fetched, errors)
         # Watchdog: one retry for markets whose benchmark data was stale/missing,
         # so a slow provider does not forfeit the whole day for that market.
         missing_markets = sorted(set(config.markets) - set(market_sessions))
         if missing_markets and not offline:
             retry_symbols = {
-                item.symbol: item
-                for market in missing_markets
-                for item in config.risk_instruments(market)
+                item.symbol: item for market in missing_markets for item in config.risk_instruments(market)
             }
             retry_symbols.update(
-                {
-                    item.symbol: item
-                    for market in missing_markets
-                    for item in config.market_instruments(market)
-                }
+                {item.symbol: item for market in missing_markets for item in config.market_instruments(market)}
             )
             if retry_symbols:
                 LOGGER.warning("数据看门狗：重试 %d 个缺失市场的标的", len(retry_symbols))
@@ -215,29 +200,21 @@ def run_scan(
                 fetched.update(retry_fetched)
                 for market in missing_markets:
                     errors.pop(f"market:{market}", None)
-                market_sessions = _select_market_sessions(
-                    config, calendar, requested_date, fetched, errors
-                )
+                market_sessions = _select_market_sessions(config, calendar, requested_date, fetched, errors)
         min_bars = int(config.defaults["min_history_bars"])
         enriched: dict[str, pd.DataFrame] = {}
         for instrument in config.all_instruments():
             session = market_sessions.get(instrument.market)
             if session is None:
                 continue
-            frame = _usable_frame(
-                instrument, fetched.get(instrument.symbol), session, min_bars, errors
-            )
+            frame = _usable_frame(instrument, fetched.get(instrument.symbol), session, min_bars, errors)
             if frame is not None:
                 enriched[instrument.symbol] = frame
         risk_environment: dict[str, str] = {}
         risk_details: dict[str, dict[str, float]] = {}
         for market, session in market_sessions.items():
             risk_assets = config.risk_instruments(market)
-            risk_frames = {
-                item.symbol: enriched[item.symbol]
-                for item in risk_assets
-                if item.symbol in enriched
-            }
+            risk_frames = {item.symbol: enriched[item.symbol] for item in risk_assets if item.symbol in enriched}
             environment, details = assess_risk_environment(
                 risk_frames,
                 session,
@@ -245,11 +222,11 @@ def run_scan(
             )
             risk_environment[market] = environment
             risk_details[market] = details
-        fundamental_provider = CsvFundamentalProvider(
-            config.project_dir / "data" / "fundamentals.csv"
-        )
-        cached_fundamental_provider = CachedResearchFundamentalProvider(
-            ResearchStore(database)
+        fundamental_provider = FallbackFundamentalProvider(
+            [
+                CsvFundamentalProvider(config.project_dir / "data" / "fundamentals.csv"),
+                CachedResearchFundamentalProvider(ResearchStore(database)),
+            ]
         )
         signals: list[StockSignal] = []
         sectors = []
@@ -261,11 +238,7 @@ def run_scan(
                     continue
                 session = market_sessions[market]
                 assets = config.sector_assets(sector_id, market)
-                asset_frames = {
-                    item.symbol: enriched[item.symbol]
-                    for item in assets
-                    if item.symbol in enriched
-                }
+                asset_frames = {item.symbol: enriched[item.symbol] for item in assets if item.symbol in enriched}
                 etfs = config.sector_etfs(sector_id, market)
                 etf = next((item for item in etfs if item.symbol in enriched), None)
                 etf_frame = enriched.get(etf.symbol) if etf else None
@@ -283,8 +256,7 @@ def run_scan(
                 minimum_coverage = float(settings["data"]["minimum_latest_coverage"])
                 if breadth.coverage < minimum_coverage:
                     errors[f"sector:{sector_id}:{market}"] = (
-                        f"板块最新行情覆盖率 {breadth.coverage:.0%} 低于 "
-                        f"{minimum_coverage:.0%}，不生成该板块交易信号"
+                        f"板块最新行情覆盖率 {breadth.coverage:.0%} 低于 {minimum_coverage:.0%}，不生成该板块交易信号"
                     )
                     sector_result = calculate_sector_score(
                         sector_id,
@@ -311,8 +283,7 @@ def run_scan(
                 if configured_leaders:
                     leaders_confirmed = bool(
                         len(available_leaders) / len(configured_leaders) >= minimum_coverage
-                        and sum(not bool(row["new_low_20"]) for row in available_leaders)
-                        / len(available_leaders)
+                        and sum(not bool(row["new_low_20"]) for row in available_leaders) / len(available_leaders)
                         >= 0.60
                     )
                 else:
@@ -325,10 +296,6 @@ def run_scan(
                     if frame is None or result is None:
                         continue
                     fundamental = fundamental_provider.get_fundamental_data(instrument, session)
-                    if fundamental.score is None:
-                        fundamental = cached_fundamental_provider.get_fundamental_data(
-                            instrument, session
-                        )
                     scored = score_stock(
                         frame,
                         session,
@@ -359,9 +326,7 @@ def run_scan(
                         sector_name=str(sector["name"]),
                         score=scored.score,
                         signal_level=(
-                            SignalLevel.FAILED
-                            if decision.state == BottomState.FAILED
-                            else scored.signal_level
+                            SignalLevel.FAILED if decision.state == BottomState.FAILED else scored.signal_level
                         ),
                         state=decision.state,
                         entry_stage=decision.entry_stage,
@@ -369,9 +334,7 @@ def run_scan(
                         reasons=scored.reasons,
                         risks=scored.risks,
                         relative_strength_turn=scored.relative_strength_turn,
-                        capitulation_date=(
-                            scored.capitulation.event_date if scored.capitulation else None
-                        ),
+                        capitulation_date=(scored.capitulation.event_date if scored.capitulation else None),
                         capitulation_low=(scored.capitulation.low if scored.capitulation else None),
                         data_quality=result.quality,
                         provider=result.provider,
@@ -405,7 +368,9 @@ def run_scan(
                 paper_summary["positions"],
                 paper_summary["weighted_return"] * 100,
             )
-        notify_errors = push(alerts, signals, load_notify_config())
+        # Only newly persisted alerts may leave the process. Re-running the same
+        # report date must not send the same notification again.
+        notify_errors = push(new_alerts, signals, load_notify_config())
         if notify_errors:
             errors["notify"] = "; ".join(notify_errors)
         markdown_path, json_path = generate_reports(

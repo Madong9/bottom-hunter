@@ -24,56 +24,67 @@ macro_series:
     dimension: 通胀压力
     unit: 指数
     favorable_direction: -1
+    max_age_days: 120
   - id: MABMM301CNM189S
     name: 中国 M2
     dimension: 流动性
     unit: 本币
     favorable_direction: 1
+    max_age_days: 120
   - id: CPIAUCSL
     name: 美国 CPI
     dimension: 通胀压力
     unit: 指数
     favorable_direction: -1
+    max_age_days: 75
   - id: PCEPI
     name: 美国 PCE
     dimension: 通胀压力
     unit: 指数
     favorable_direction: -1
+    max_age_days: 75
   - id: UNRATE
     name: 美国失业率
     dimension: 经济增长
     unit: "%"
     favorable_direction: -1
+    max_age_days: 75
   - id: PAYEMS
     name: 美国非农就业
     dimension: 经济增长
     unit: 千人
     favorable_direction: 1
+    max_age_days: 75
   - id: FEDFUNDS
     name: 美联储有效利率
     dimension: 流动性
     unit: "%"
     favorable_direction: -1
+    max_age_days: 75
   - id: DGS2
     name: 美债 2Y
     dimension: 流动性
     unit: "%"
     favorable_direction: -1
+    max_age_days: 10
   - id: DGS10
     name: 美债 10Y
     dimension: 流动性
     unit: "%"
     favorable_direction: -1
+    max_age_days: 10
   - id: VIXCLS
     name: VIX 恐慌指数
     dimension: 风险偏好
     unit: 点
     favorable_direction: -1
+    max_age_days: 10
   - id: DCOILWTICO
     name: WTI 原油
     dimension: 风险偏好
     unit: 美元/桶
     favorable_direction: 0
+    max_age_days: 10
 
 # 这是可编辑的启发式行业映射，界面会明确标注为“可能”影响。
 macro_impact:

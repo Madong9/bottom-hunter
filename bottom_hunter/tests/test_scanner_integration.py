@@ -29,9 +29,7 @@ class FakeProvider(MarketDataProvider):
             },
             index=dates,
         )
-        return DataResult(
-            instrument.symbol, frame, self.name, datetime.now(UTC), "complete"
-        )
+        return DataResult(instrument.symbol, frame, self.name, datetime.now(UTC), "complete")
 
 
 def test_offline_style_full_scan_writes_both_reports(tmp_path) -> None:
@@ -39,12 +37,10 @@ def test_offline_style_full_scan_writes_both_reports(tmp_path) -> None:
     config_dir.mkdir()
     shutil.copy2(PROJECT_DIR / "config" / "thresholds.yaml", config_dir / "thresholds.yaml")
     source = tmp_path / "account_watchlist.csv"
-    source.write_text(
-        "symbol,name,industry\nAAPL,Apple,Consumer Electronics\n", encoding="utf-8"
+    source.write_text("symbol,name,industry\nAAPL,Apple,Consumer Electronics\n", encoding="utf-8")
+    AccountWatchlistRepository(tmp_path, state_dir=tmp_path / "watchlist_state", config_dir=config_dir).import_file(
+        "tonghuashun", source, resolve_industries=False
     )
-    AccountWatchlistRepository(
-        tmp_path, state_dir=tmp_path / "watchlist_state", config_dir=config_dir
-    ).import_file("tonghuashun", source, resolve_industries=False)
     output = run_scan(
         requested_date=date(2024, 3, 28),
         config_dir=config_dir,

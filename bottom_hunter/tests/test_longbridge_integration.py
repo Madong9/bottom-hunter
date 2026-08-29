@@ -61,9 +61,7 @@ def test_quote_only_client_verifies_and_converts_forward_adjusted_candles() -> N
         def quote_package_details(self):
             return [SimpleNamespace(package_name="HK LV1")]
 
-        def history_candlesticks_by_date(
-            self, symbol, period, adjust_type, start, end
-        ):
+        def history_candlesticks_by_date(self, symbol, period, adjust_type, start, end):
             captured.update(
                 {
                     "symbol": symbol,

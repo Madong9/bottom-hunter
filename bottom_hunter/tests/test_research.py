@@ -10,6 +10,7 @@ from bottom_hunter.src.research import (
     MacroSeriesDefinition,
     ResearchConfig,
     ResearchService,
+    macro_is_stale,
     macro_regime,
     macro_sector_impact,
 )
@@ -48,12 +49,27 @@ class FakeSession:
 def test_research_store_deduplicates_and_builds_snapshot(tmp_path) -> None:
     store = ResearchStore(tmp_path / "signals.db")
     fact = FinancialFact(
-        "AAPL", "US", date(2026, 6, 30), NOW, "营业收入", 100.0,
-        "USD", "USD", "SEC XBRL", "https://example.com/filing", "10-Q",
+        "AAPL",
+        "US",
+        date(2026, 6, 30),
+        NOW,
+        "营业收入",
+        100.0,
+        "USD",
+        "USD",
+        "SEC XBRL",
+        "https://example.com/filing",
+        "10-Q",
     )
     item = ResearchItem(
-        ResearchKind.NEWS, SourceTier.PROFESSIONAL, "AAPL", "US", "Apple news",
-        NOW, "Example", "https://example.com/news",
+        ResearchKind.NEWS,
+        SourceTier.PROFESSIONAL,
+        "AAPL",
+        "US",
+        "Apple news",
+        NOW,
+        "Example",
+        "https://example.com/news",
     )
     store.save_financial_facts([fact])
     store.save_items([item, item])
@@ -103,13 +119,12 @@ def test_eastmoney_financial_and_filing_parsing() -> None:
 
 
 def test_fred_observation_and_macro_mapping() -> None:
-    response = FakeResponse(
-        text="observation_date,TEST\n2026-06-01,100\n2026-07-01,103\n"
-    )
+    response = FakeResponse(text="observation_date,TEST\n2026-06-01,100\n2026-07-01,103\n")
     provider = FredMacroProvider(FakeSession(response))
     item = provider.observation(MacroSeriesDefinition("TEST", "测试", "经济增长", "点", 1))
     assert item.change == 3
     assert item.signal == 2
+    assert len(item.extra["history"]) == 2
     regime = macro_regime([item])
     impact = macro_sector_impact(
         regime,
@@ -117,6 +132,17 @@ def test_fred_observation_and_macro_mapping() -> None:
     )
     assert regime["label"] == "risk-on"
     assert impact["benefiting"] == ["工业"]
+
+
+def test_stale_macro_is_excluded_from_regime() -> None:
+    stale = FredMacroProvider(
+        FakeSession(FakeResponse(text="observation_date,OLD\n2018-11-01,100\n2018-12-01,101\n"))
+    ).observation(MacroSeriesDefinition("OLD", "旧数据", "流动性", "点", 1, 120))
+    assert macro_is_stale(stale, date(2026, 8, 28)) is True
+    regime = macro_regime([stale], date(2026, 8, 28))
+    assert regime["usable_series"] == 0
+    assert regime["stale_series"] == ["OLD"]
+    assert regime["label"] == "neutral"
 
 
 def test_cached_fundamental_is_point_in_time_and_ignores_news(tmp_path) -> None:
@@ -129,8 +155,17 @@ def test_cached_fundamental_is_point_in_time_and_ignores_news(tmp_path) -> None:
     }
     facts = [
         FinancialFact(
-            "600519.SS", "CN", date(2026, 6, 30), datetime(2026, 8, 15, tzinfo=UTC),
-            metric, value, "%", "CNY", "财报", "https://example.com", "2026中报",
+            "600519.SS",
+            "CN",
+            date(2026, 6, 30),
+            datetime(2026, 8, 15, tzinfo=UTC),
+            metric,
+            value,
+            "%",
+            "CNY",
+            "财报",
+            "https://example.com",
+            "2026中报",
         )
         for metric, value in metrics.items()
     ]

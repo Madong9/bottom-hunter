@@ -84,9 +84,7 @@ def outcomes_age_notice(store: StateStore, today: date | None = None) -> str | N
     """Warn when outcome backfill has not run recently (watchdog for the loop)."""
     today = today or date.today()
     with store.connect() as connection:
-        row = connection.execute(
-            "SELECT MAX(evaluated_at) AS latest FROM signal_outcomes"
-        ).fetchone()
+        row = connection.execute("SELECT MAX(evaluated_at) AS latest FROM signal_outcomes").fetchone()
     latest = row["latest"] if row else None
     if not latest:
         return "信号验证闭环尚无任何回填结果；首次扫描后约 5 个交易日开始产出胜率。"

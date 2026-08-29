@@ -89,9 +89,7 @@ def calculate_chart_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     result["boll_lower"] = result["boll_mid"] - 2 * boll_std
 
     result["macd_dif"] = result["ema12"] - result["ema26"]
-    result["macd_dea"] = result["macd_dif"].ewm(
-        span=9, adjust=False, min_periods=9
-    ).mean()
+    result["macd_dea"] = result["macd_dif"].ewm(span=9, adjust=False, min_periods=9).mean()
     result["macd_hist"] = 2 * (result["macd_dif"] - result["macd_dea"])
     result["rsi14"] = rsi(close, 14)
 
@@ -116,9 +114,7 @@ class ChartAnnotationStore:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             payload = {}
-        self.payload: dict[str, list[dict[str, Any]]] = (
-            payload if isinstance(payload, dict) else {}
-        )
+        self.payload: dict[str, list[dict[str, Any]]] = payload if isinstance(payload, dict) else {}
 
     @staticmethod
     def _key(canonical_id: str, timeframe: str) -> str:
@@ -166,8 +162,7 @@ class MarketChartService:
         self.session.headers.update(
             {
                 "User-Agent": (
-                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) Chrome/136.0 Safari/537.36"
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0 Safari/537.36"
                 ),
                 "Accept": "application/json,text/plain,*/*",
                 "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
@@ -175,12 +170,8 @@ class MarketChartService:
             }
         )
         self._us_codes: dict[str, str] = {}
-        resolved_data_dir = (
-            Path(data_dir) if data_dir is not None else PROJECT_DIR / "data" / "raw"
-        )
-        self.local_daily_provider = (
-            None if daily_provider is not None else LocalCsvProvider(resolved_data_dir)
-        )
+        resolved_data_dir = Path(data_dir) if data_dir is not None else PROJECT_DIR / "data" / "raw"
+        self.local_daily_provider = None if daily_provider is not None else LocalCsvProvider(resolved_data_dir)
         self.daily_provider = daily_provider or self._build_daily_provider(resolved_data_dir)
         self.longbridge_client = longbridge_client or LongbridgeClient()
 
@@ -274,8 +265,7 @@ class MarketChartService:
         result = result.loc[~result.index.isna()]
         result = result.dropna(subset=["open", "high", "low", "close"])
         result = result.loc[
-            (result[["open", "high", "low", "close"]] > 0).all(axis=1)
-            & (result["high"] >= result["low"])
+            (result[["open", "high", "low", "close"]] > 0).all(axis=1) & (result["high"] >= result["low"])
         ]
         result["volume"] = result["volume"].fillna(0).clip(lower=0)
         return result.sort_index().loc[
@@ -359,8 +349,7 @@ class MarketChartService:
                         result = self._fetch_daily_fallback(asset, timeframe, limit)
                     except (DataProviderError, OSError, ValueError) as fallback_error:
                         raise ChartDataError(
-                            f"主行情源失败：{primary_error}；"
-                            f"本地缓存与备用源也不可用：{fallback_error}"
+                            f"主行情源失败：{primary_error}；本地缓存与备用源也不可用：{fallback_error}"
                         ) from fallback_error
             elif market == "CN":
                 result = self._fetch_tencent_cn_intraday(code, timeframe, limit)
@@ -372,9 +361,7 @@ class MarketChartService:
                 raise ChartDataError(f"暂不支持 {market} 的分钟 K 线")
         except ChartDataError as exc:
             if longbridge_error:
-                raise ChartDataError(
-                    f"长桥行情失败：{longbridge_error}；公开备用行情也失败：{exc}"
-                ) from exc
+                raise ChartDataError(f"长桥行情失败：{longbridge_error}；公开备用行情也失败：{exc}") from exc
             raise
         if longbridge_error:
             frame, provider, note = result
@@ -599,9 +586,9 @@ class MarketChartService:
         points = (data or {}).get("chart") or []
         rows = [
             {
-                "date": pd.to_datetime(
-                    item.get("x"), unit="ms", utc=True, errors="coerce"
-                ).tz_convert("America/New_York"),
+                "date": pd.to_datetime(item.get("x"), unit="ms", utc=True, errors="coerce").tz_convert(
+                    "America/New_York"
+                ),
                 "open": item.get("y"),
                 "high": item.get("y"),
                 "low": item.get("y"),
@@ -697,14 +684,9 @@ class MarketChartService:
             raise
         if not isinstance(payload, list):
             message = payload.get("msg") if isinstance(payload, dict) else payload
-            restricted = (
-                'restricted location' in str(message).casefold()
-                or 'b. eligibility' in str(message).casefold()
-            )
+            restricted = "restricted location" in str(message).casefold() or "b. eligibility" in str(message).casefold()
             if restricted:
-                raise ChartDataError(
-                    "币安公开行情当前地区不可用；将自动转用欧易"
-                )
+                raise ChartDataError("币安公开行情当前地区不可用；将自动转用欧易")
             raise ChartDataError(f"币安返回错误：{message}")
         rows = [
             {

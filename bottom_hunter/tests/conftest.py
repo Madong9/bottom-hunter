@@ -27,4 +27,3 @@ def selloff_bars() -> pd.DataFrame:
     frame.iloc[-1, frame.columns.get_loc("close")] = 87.0
     frame.iloc[-1, frame.columns.get_loc("volume")] = 130.0
     return frame.astype(float)
-

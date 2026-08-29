@@ -2,8 +2,10 @@
 Description=Bottom Hunter daily scan timer (A-share close + US overnight)
 
 [Timer]
-# A股收盘后运行（覆盖 CN/HK/CRYPTO）；美股数据由数据看门狗重试 + 次日运行回补。
-OnCalendar=Mon..Fri 15:20
+# A/H 股收盘后、美国市场收盘后、加密货币周末各运行一次。
+OnCalendar=Mon..Fri *-*-* 15:20:00
+OnCalendar=Tue..Sat *-*-* 06:30:00
+OnCalendar=Sat,Sun *-*-* 15:20:00
 Persistent=true
 RandomizedDelaySec=300
 

@@ -40,9 +40,7 @@ class FinancialFact:
         payload = asdict(self)
         payload["period_end"] = self.period_end.isoformat()
         payload["filed_at"] = self.filed_at.isoformat()
-        payload["available_at"] = (
-            self.available_at or self.filed_at
-        ).isoformat()
+        payload["available_at"] = (self.available_at or self.filed_at).isoformat()
         return payload
 
 
@@ -70,9 +68,7 @@ class ResearchItem:
         payload["kind"] = self.kind.value
         payload["tier"] = self.tier.value
         payload["published_at"] = self.published_at.isoformat()
-        payload["available_at"] = (
-            self.available_at or self.published_at
-        ).isoformat()
+        payload["available_at"] = (self.available_at or self.published_at).isoformat()
         payload["report_date"] = self.report_date.isoformat() if self.report_date else None
         return payload
 

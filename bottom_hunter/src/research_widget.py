@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import html
 from collections.abc import Mapping
+from datetime import date
 from pathlib import Path
 from typing import Any
 
+import matplotlib.dates as mdates
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
 from PySide6.QtCore import QObject, Qt, QThread, QUrl, Signal, Slot
 from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
@@ -22,7 +26,13 @@ from PySide6.QtWidgets import (
 )
 
 from .config import PROJECT_DIR
-from .research import ResearchService, macro_regime, official_portal_url
+from .research import (
+    ResearchService,
+    macro_age_days,
+    macro_is_stale,
+    macro_regime,
+    official_portal_url,
+)
 from .research_models import FinancialFact, MacroObservation, ResearchItem, ResearchSnapshot
 
 SENTIMENT_LABELS = {"bullish": "偏多", "bearish": "偏空", "neutral": "中性"}
@@ -51,6 +61,77 @@ def _number(value: float, unit: str) -> str:
     if unit == "%":
         return f"{value:,.2f}%"
     return f"{value:,.4g} {unit}".strip()
+
+
+class ResearchTrendChart(FigureCanvasQTAgg):
+    """Compact normalized trends so unlike financial units remain comparable."""
+
+    def __init__(self) -> None:
+        self.figure = Figure(figsize=(8, 4), dpi=100, facecolor="#ffffff")
+        super().__init__(self.figure)
+        self.setMinimumHeight(320)
+        self._empty("选择标的后显示财务趋势")
+
+    def _empty(self, message: str) -> None:
+        self.figure.clear()
+        axis = self.figure.add_subplot(111)
+        axis.axis("off")
+        axis.text(0.5, 0.5, message, ha="center", va="center", color="#8a9098")
+        self.draw_idle()
+
+    def plot_financial(self, facts: list[FinancialFact]) -> None:
+        grouped: dict[str, list[FinancialFact]] = {}
+        for fact in facts:
+            grouped.setdefault(fact.metric, []).append(fact)
+        series = [
+            (name, sorted(values, key=lambda item: item.period_end))
+            for name, values in grouped.items()
+            if len({item.period_end for item in values}) >= 2
+        ][:5]
+        if not series:
+            self._empty("财务历史不足两期，暂不能绘制趋势")
+            return
+        self.figure.clear()
+        axis = self.figure.add_subplot(111)
+        for name, values in series:
+            unique = {item.period_end: item.value for item in values}
+            dates = sorted(unique)
+            raw = [float(unique[item]) for item in dates]
+            base = raw[0]
+            normalized = [value / abs(base) * 100 if base else value for value in raw]
+            axis.plot(dates, normalized, marker="o", linewidth=1.8, label=name)
+        axis.set_title("财务指标趋势（首期=100）", loc="left", fontsize=12)
+        axis.grid(alpha=0.18)
+        axis.legend(loc="best", fontsize=9)
+        axis.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+        self.figure.autofmt_xdate()
+        self.figure.tight_layout()
+        self.draw_idle()
+
+    def plot_macro(self, observations: list[MacroObservation]) -> None:
+        series = []
+        for item in observations:
+            history = list(item.extra.get("history") or [])
+            if len(history) >= 2 and not macro_is_stale(item):
+                series.append((item.name, history))
+        if not series:
+            self._empty("刷新宏观数据后显示最近 24 期趋势")
+            return
+        self.figure.clear()
+        axis = self.figure.add_subplot(111)
+        for name, history in series[:5]:
+            dates = [date.fromisoformat(str(point["date"])) for point in history]
+            raw = [float(point["value"]) for point in history]
+            base = raw[0]
+            normalized = [value / abs(base) * 100 if base else value for value in raw]
+            axis.plot(dates, normalized, linewidth=1.7, label=name)
+        axis.set_title("宏观指标趋势（首期=100，过期指标已排除）", loc="left", fontsize=12)
+        axis.grid(alpha=0.18)
+        axis.legend(loc="best", fontsize=8, ncol=2)
+        axis.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+        self.figure.autofmt_xdate()
+        self.figure.tight_layout()
+        self.draw_idle()
 
 
 class ResearchRefreshWorker(QObject):
@@ -137,8 +218,7 @@ class ResearchWorkspace(QWidget):
         layout.addLayout(header)
 
         notice = QLabel(
-            "数据分层：官方披露可作为基本面证据；媒体用于事件背景；"
-            "雪球等社区内容只作情绪参考，不直接改变评分。"
+            "数据分层：官方披露可作为基本面证据；媒体用于事件背景；雪球等社区内容只作情绪参考，不直接改变评分。"
         )
         notice.setWordWrap(True)
         notice.setProperty("role", "muted")
@@ -148,6 +228,8 @@ class ResearchWorkspace(QWidget):
         self.overview = QTextBrowser()
         self.overview.setOpenExternalLinks(True)
         self.tabs.addTab(self.overview, "综合研判")
+        self.trend_chart = ResearchTrendChart()
+        self.tabs.addTab(self.trend_chart, "趋势图")
         self.financial_table = _table(["报告期", "类型", "指标", "数值", "来源"])
         self.financial_table.cellDoubleClicked.connect(self._open_table_link)
         self.tabs.addTab(self.financial_table, "财务概览")
@@ -187,8 +269,7 @@ class ResearchWorkspace(QWidget):
         symbol = str(asset.get("symbol") or "")
         self.title.setText(f"{name} · {symbol}")
         self.subtitle.setText(
-            f"{asset.get('market') or '--'} · {asset.get('industry') or '待分类'} · "
-            "财报、公告、新闻与观点分层展示"
+            f"{asset.get('market') or '--'} · {asset.get('industry') or '待分类'} · 财报、公告、新闻与观点分层展示"
         )
         self.portal_button.setEnabled(bool(official_portal_url(asset)))
         snapshot = self.service.cached_asset(asset)
@@ -265,6 +346,7 @@ class ResearchWorkspace(QWidget):
         self.import_button.setEnabled(True)
 
     def _render_asset(self, snapshot: ResearchSnapshot) -> None:
+        self.trend_chart.plot_financial(snapshot.financial_facts)
         self._render_facts(snapshot.financial_facts)
         self._render_items(self.filing_table, snapshot.filings, "filing")
         self._render_items(self.news_table, snapshot.news, "news")
@@ -272,8 +354,7 @@ class ResearchWorkspace(QWidget):
         analysis = self.service.analyse(snapshot)
         latest_period = max((item.period_end for item in snapshot.financial_facts), default=None)
         errors = "".join(
-            f"<li>{html.escape(name)}：{html.escape(message)}</li>"
-            for name, message in snapshot.errors.items()
+            f"<li>{html.escape(name)}：{html.escape(message)}</li>" for name, message in snapshot.errors.items()
         )
         bull = "".join(f"<li>{html.escape(item)}</li>" for item in analysis["latest_bullish"]) or "<li>暂无</li>"
         bear = "".join(f"<li>{html.escape(item)}</li>" for item in analysis["latest_bearish"]) or "<li>暂无</li>"
@@ -297,8 +378,11 @@ class ResearchWorkspace(QWidget):
         self.financial_table.setRowCount(len(facts))
         for row, item in enumerate(facts):
             values = (
-                item.period_end.isoformat(), item.period_type or "--", item.metric,
-                _number(item.value, item.unit), item.source,
+                item.period_end.isoformat(),
+                item.period_type or "--",
+                item.metric,
+                _number(item.value, item.unit),
+                item.source,
             )
             self._fill_row(self.financial_table, row, values, item.source_url)
         self.financial_table.resizeColumnsToContents()
@@ -315,8 +399,11 @@ class ResearchWorkspace(QWidget):
             else:
                 source_author = item.source + (f" · {item.author}" if item.author else "")
                 values = (
-                    when, TIER_LABELS.get(item.tier.value, item.tier.value), source_author,
-                    SENTIMENT_LABELS.get(item.sentiment, item.sentiment), item.title,
+                    when,
+                    TIER_LABELS.get(item.tier.value, item.tier.value),
+                    source_author,
+                    SENTIMENT_LABELS.get(item.sentiment, item.sentiment),
+                    item.title,
                 )
             self._fill_row(table, row, values, item.url, item.summary)
             if item.tier.value == "community":
@@ -333,21 +420,33 @@ class ResearchWorkspace(QWidget):
         errors: dict[str, str] | None = None,
     ) -> None:
         regime = regime or macro_regime(observations)
+        self.trend_chart.plot_macro(observations)
         errors = errors or {}
         self.macro_table.setRowCount(len(observations))
         signal_labels = {-2: "明显承压", -1: "偏承压", 0: "中性", 1: "偏支持", 2: "明显支持"}
         for row, item in enumerate(observations):
             change = "--" if item.change is None else f"{item.change:+,.4g}"
+            stale = macro_is_stale(item)
             values = (
-                item.dimension, item.name, item.observation_date.isoformat(),
+                item.dimension,
+                item.name,
+                item.observation_date.isoformat() + (f" · 已过期{macro_age_days(item)}天" if stale else ""),
                 _number(item.value, item.unit),
                 "--" if item.previous is None else _number(item.previous, item.unit),
-                change, signal_labels.get(item.signal, str(item.signal)), item.source,
+                change,
+                signal_labels.get(item.signal, str(item.signal)),
+                item.source,
             )
             self._fill_row(self.macro_table, row, values, item.source_url)
+            if stale:
+                for column in range(self.macro_table.columnCount()):
+                    cell = self.macro_table.item(row, column)
+                    if cell:
+                        cell.setForeground(QColor("#c77c11"))
         self.macro_table.resizeColumnsToContents()
         label = {"risk-on": "风险偏好", "risk-off": "风险规避", "neutral": "中性"}.get(regime.get("label"), "中性")
         details = " / ".join(f"{key} {value:+.2f}" for key, value in regime.get("dimensions", {}).items())
+        stale_count = len(regime.get("stale_series") or [])
         impact = regime.get("sector_impact") or {}
         benefiting = "、".join(impact.get("benefiting") or []) or "暂无明显倾向"
         pressured = "、".join(impact.get("pressured") or []) or "暂无明显倾向"
@@ -359,6 +458,8 @@ class ResearchWorkspace(QWidget):
             self.overview.setHtml(
                 f"<h2>宏观环境：{html.escape(label)}</h2>"
                 f"<p>{html.escape(details or '尚无可用数据')}</p>"
+                f"<p><b>有效指标：</b>{int(regime.get('usable_series', 0))} 个；"
+                f"<b>过期排除：</b>{stale_count} 个</p>"
                 f"<p><b>可能受益行业：</b>{html.escape(benefiting)}<br>"
                 f"<b>可能承压行业：</b>{html.escape(pressured)}</p>"
                 "<p>该信号由各指标最近两期的变化方向合成，不是买卖指令。"

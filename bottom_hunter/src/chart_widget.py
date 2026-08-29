@@ -119,12 +119,8 @@ def parse_live_candle(provider: str, message: str) -> dict[str, Any] | None:
     else:
         return None
     try:
-        timestamp = pd.to_datetime(int(values["timestamp"]), unit="ms", utc=True).tz_localize(
-            None
-        )
-        numbers = {
-            key: float(values[key]) for key in ("open", "high", "low", "close", "volume")
-        }
+        timestamp = pd.to_datetime(int(values["timestamp"]), unit="ms", utc=True).tz_localize(None)
+        numbers = {key: float(values[key]) for key in ("open", "high", "low", "close", "volume")}
     except (TypeError, ValueError, OverflowError):
         return None
     if min(numbers["open"], numbers["high"], numbers["low"], numbers["close"]) <= 0:
@@ -404,11 +400,7 @@ class ChartWorkspace(QWidget):
             market = str(asset.get("market") or "--")
             self.asset_combo.addItem(f"{name} · {symbol} · {market}", asset)
         selected_index = next(
-            (
-                index
-                for index, asset in enumerate(self.assets)
-                if str(asset.get("canonical_id")) == selected_id
-            ),
+            (index for index, asset in enumerate(self.assets) if str(asset.get("canonical_id")) == selected_id),
             0,
         )
         if self.assets:
@@ -429,8 +421,7 @@ class ChartWorkspace(QWidget):
             (
                 row
                 for row in range(self.asset_combo.count())
-                if str((self.asset_combo.itemData(row) or {}).get("canonical_id") or "")
-                == canonical_id
+                if str((self.asset_combo.itemData(row) or {}).get("canonical_id") or "") == canonical_id
             ),
             -1,
         )
@@ -506,9 +497,7 @@ class ChartWorkspace(QWidget):
         if not asset or result is None:
             self._set_live_badge("● 等待行情", "warning")
             return
-        is_crypto = str(asset.get("category") or "") == "crypto" or str(
-            asset.get("market") or ""
-        ) == "CRYPTO"
+        is_crypto = str(asset.get("category") or "") == "crypto" or str(asset.get("market") or "") == "CRYPTO"
         if not is_crypto:
             if result.provider.startswith("长桥"):
                 self.auto_refresh_timer.setInterval(5_000)
@@ -543,10 +532,7 @@ class ChartWorkspace(QWidget):
             self.auto_refresh_timer.setInterval(10_000)
             self._set_live_badge("● 加密行情 10 秒刷新", "warning")
             return
-        if (
-            self._live_failed_provider == self._live_provider
-            and self._live_retry_count >= 3
-        ):
+        if self._live_failed_provider == self._live_provider and self._live_retry_count >= 3:
             self.auto_refresh_timer.setInterval(5_000)
             self._set_live_badge("● 实时不可用 · 5 秒刷新", "warning")
             self.subtitle.setText(f"{result.note} · WebSocket 不可用，已自动改为 5 秒刷新")
@@ -592,9 +578,7 @@ class ChartWorkspace(QWidget):
         """数据立即合并，重绘按 500ms 节流合并，避免 UI 线程被高频消息占满。"""
         local_time = self.current_result.updated_at.astimezone().strftime("%H:%M:%S")
         state = "已收盘" if candle.get("closed") else "更新中"
-        self.status_label.setText(
-            f"{self.current_result.provider} · {state} · 实时更新于 {local_time}"
-        )
+        self.status_label.setText(f"{self.current_result.provider} · {state} · 实时更新于 {local_time}")
         self.subtitle.setText(self.current_result.note)
         if not self._live_render_timer.isActive():
             self._live_render_timer.start()
@@ -684,9 +668,7 @@ class ChartWorkspace(QWidget):
 
     @Slot(str, str, str)
     def _data_failed(self, canonical_id: str, timeframe: str, error: str) -> None:
-        if canonical_id == self.current_asset_id() and timeframe == str(
-            self.timeframe_combo.currentData() or ""
-        ):
+        if canonical_id == self.current_asset_id() and timeframe == str(self.timeframe_combo.currentData() or ""):
             self.status_label.setText(f"行情加载失败：{error}")
             if self.current_result is None:
                 self._render_empty("行情加载失败\n" + error)
@@ -732,16 +714,12 @@ class ChartWorkspace(QWidget):
         panel = str(self.panel_combo.currentData() or "none")
         self.figure.clear()
         if panel == "none":
-            grid = self.figure.add_gridspec(
-                2, 1, height_ratios=(4.0, 1.0), hspace=0.03
-            )
+            grid = self.figure.add_gridspec(2, 1, height_ratios=(4.0, 1.0), hspace=0.03)
             price_axis = self.figure.add_subplot(grid[0, 0])
             volume_axis = self.figure.add_subplot(grid[1, 0], sharex=price_axis)
             indicator_axis = None
         else:
-            grid = self.figure.add_gridspec(
-                3, 1, height_ratios=(3.5, 1.0, 1.45), hspace=0.04
-            )
+            grid = self.figure.add_gridspec(3, 1, height_ratios=(3.5, 1.0, 1.45), hspace=0.04)
             price_axis = self.figure.add_subplot(grid[0, 0])
             volume_axis = self.figure.add_subplot(grid[1, 0], sharex=price_axis)
             indicator_axis = self.figure.add_subplot(grid[2, 0], sharex=price_axis)
@@ -823,10 +801,7 @@ class ChartWorkspace(QWidget):
         if tick_count:
             ticks = np.unique(np.linspace(0, len(frame) - 1, tick_count, dtype=int))
             intraday = self.current_result.timeframe not in {"1d", "1w", "1M"}
-            labels = [
-                frame.index[index].strftime("%m-%d\n%H:%M" if intraday else "%Y-%m-%d")
-                for index in ticks
-            ]
+            labels = [frame.index[index].strftime("%m-%d\n%H:%M" if intraday else "%Y-%m-%d") for index in ticks]
             bottom_axis = indicator_axis or volume_axis
             bottom_axis.set_xticks(ticks)
             bottom_axis.set_xticklabels(labels, fontsize=8)
@@ -839,12 +814,8 @@ class ChartWorkspace(QWidget):
             self._autoscale_visible_y(left, right)
         self._draw_saved_annotations()
         price_limits = price_axis.get_ylim()
-        self._crosshair_vertical = price_axis.axvline(
-            0, color="#9aa2aa", linewidth=0.7, linestyle=":", visible=False
-        )
-        self._crosshair_horizontal = price_axis.axhline(
-            0, color="#9aa2aa", linewidth=0.7, linestyle=":", visible=False
-        )
+        self._crosshair_vertical = price_axis.axvline(0, color="#9aa2aa", linewidth=0.7, linestyle=":", visible=False)
+        self._crosshair_horizontal = price_axis.axhline(0, color="#9aa2aa", linewidth=0.7, linestyle=":", visible=False)
         price_axis.set_ylim(price_limits)
         self.figure.subplots_adjust(left=0.035, right=0.965, top=0.94, bottom=0.09)
         self.canvas.draw_idle()
@@ -897,9 +868,7 @@ class ChartWorkspace(QWidget):
         if active:
             axis.legend(loc="upper left", fontsize=8, frameon=False, ncol=4)
 
-    def _draw_panel_indicator(
-        self, axis: Any, x_values: np.ndarray, panel: str
-    ) -> None:
+    def _draw_panel_indicator(self, axis: Any, x_values: np.ndarray, panel: str) -> None:
         values = self._indicator_values
         if panel == "macd":
             histogram = values["macd_hist"].fillna(0)
@@ -954,9 +923,7 @@ class ChartWorkspace(QWidget):
             return
         visible_indicators = self._indicator_values.iloc[start:stop]
         price_values = [visible["low"], visible["high"]]
-        price_values.extend(
-            visible_indicators[column] for column in self._active_overlay_columns
-        )
+        price_values.extend(visible_indicators[column] for column in self._active_overlay_columns)
         combined_prices = pd.concat(price_values).dropna()
         low = float(combined_prices.min())
         high = float(combined_prices.max())
@@ -1004,17 +971,12 @@ class ChartWorkspace(QWidget):
         if (
             self.current_result is None
             or self.price_axis is None
-            or event.inaxes
-            not in {self.price_axis, self.volume_axis, self.indicator_axis}
+            or event.inaxes not in {self.price_axis, self.volume_axis, self.indicator_axis}
         ):
             return
         key = str(getattr(event, "key", "") or "").casefold()
         modifiers = QApplication.keyboardModifiers()
-        control_pressed = (
-            "control" in key
-            or "ctrl" in key
-            or bool(modifiers & Qt.KeyboardModifier.ControlModifier)
-        )
+        control_pressed = "control" in key or "ctrl" in key or bool(modifiers & Qt.KeyboardModifier.ControlModifier)
         if not control_pressed:
             return
         left, right = self.price_axis.get_xlim()
@@ -1035,9 +997,7 @@ class ChartWorkspace(QWidget):
         self._autoscale_visible_y(new_left, new_right)
         visible_count = min(count, max(1, int(round(new_right - new_left))))
         if not self._draw_mode:
-            self.draw_hint.setText(
-                f"Ctrl + 滚轮：当前约显示 {visible_count} 根K线；滚轮向上放大"
-            )
+            self.draw_hint.setText(f"Ctrl + 滚轮：当前约显示 {visible_count} 根K线；滚轮向上放大")
         gui_event = getattr(event, "guiEvent", None)
         if gui_event is not None and hasattr(gui_event, "accept"):
             gui_event.accept()
@@ -1177,9 +1137,7 @@ class ChartWorkspace(QWidget):
             "atr": (("atr14", "ATR"),),
         }.get(panel, ())
         parts = [
-            f"{label} {float(row[column]):.2f}"
-            for column, label in (*columns, *panel_columns)
-            if pd.notna(row[column])
+            f"{label} {float(row[column]):.2f}" for column, label in (*columns, *panel_columns) if pd.notna(row[column])
         ]
         return "   |   " + "  ".join(parts) if parts else ""
 

@@ -306,9 +306,7 @@ class ResearchStore:
 
     def refresh_status(self, scope: str) -> dict[str, object] | None:
         with self.connect() as connection:
-            row = connection.execute(
-                "SELECT * FROM research_refreshes WHERE scope=?", (scope,)
-            ).fetchone()
+            row = connection.execute("SELECT * FROM research_refreshes WHERE scope=?", (scope,)).fetchone()
         if not row:
             return None
         payload = dict(row)
@@ -326,12 +324,18 @@ class ResearchStore:
             ).fetchall()
         return [
             FinancialFact(
-                symbol=row["symbol"], market=row["market"],
+                symbol=row["symbol"],
+                market=row["market"],
                 period_end=date.fromisoformat(row["period_end"]),
-                filed_at=_parse_datetime(row["filed_at"]), metric=row["metric"],
-                value=float(row["value"]), unit=row["unit"], currency=row["currency"],
-                source=row["source"], source_url=row["source_url"],
-                period_type=row["period_type"], available_at=_parse_datetime(row["available_at"]),
+                filed_at=_parse_datetime(row["filed_at"]),
+                metric=row["metric"],
+                value=float(row["value"]),
+                unit=row["unit"],
+                currency=row["currency"],
+                source=row["source"],
+                source_url=row["source_url"],
+                period_type=row["period_type"],
+                available_at=_parse_datetime(row["available_at"]),
                 extra=json.loads(row["payload_json"] or "{}"),
             )
             for row in rows
@@ -364,12 +368,20 @@ class ResearchStore:
     @staticmethod
     def _row_to_item(row: sqlite3.Row) -> ResearchItem:
         return ResearchItem(
-            item_id=row["item_id"], kind=ResearchKind(row["kind"]),
-            tier=SourceTier(row["tier"]), symbol=row["symbol"], market=row["market"],
-            title=row["title"], published_at=_parse_datetime(row["published_at"]),
-            available_at=_parse_datetime(row["available_at"]), source=row["source"],
-            url=row["url"], author=row["author"], summary=row["summary"],
-            sentiment=row["sentiment"], confidence=float(row["confidence"]),
+            item_id=row["item_id"],
+            kind=ResearchKind(row["kind"]),
+            tier=SourceTier(row["tier"]),
+            symbol=row["symbol"],
+            market=row["market"],
+            title=row["title"],
+            published_at=_parse_datetime(row["published_at"]),
+            available_at=_parse_datetime(row["available_at"]),
+            source=row["source"],
+            url=row["url"],
+            author=row["author"],
+            summary=row["summary"],
+            sentiment=row["sentiment"],
+            confidence=float(row["confidence"]),
             report_date=date.fromisoformat(row["report_date"]) if row["report_date"] else None,
             extra=json.loads(row["payload_json"] or "{}"),
         )
@@ -389,12 +401,20 @@ class ResearchStore:
             ).fetchall()
         return [
             MacroObservation(
-                series_id=row["series_id"], name=row["name"], dimension=row["dimension"],
+                series_id=row["series_id"],
+                name=row["name"],
+                dimension=row["dimension"],
                 observation_date=date.fromisoformat(row["observation_date"]),
-                value=float(row["value"]), previous=row["previous"], change=row["change_value"],
-                change_pct=row["change_pct"], consensus=row["consensus"],
-                signal=int(row["signal"]), unit=row["unit"], source=row["source"],
-                source_url=row["source_url"], release_at=_parse_datetime(row["release_at"]),
+                value=float(row["value"]),
+                previous=row["previous"],
+                change=row["change_value"],
+                change_pct=row["change_pct"],
+                consensus=row["consensus"],
+                signal=int(row["signal"]),
+                unit=row["unit"],
+                source=row["source"],
+                source_url=row["source_url"],
+                release_at=_parse_datetime(row["release_at"]),
                 vintage_at=_parse_datetime(row["vintage_at"]),
                 extra=json.loads(row["payload_json"] or "{}"),
             )
@@ -427,7 +447,8 @@ class ResearchStore:
             result[symbol] = {
                 "latest_financial_period": (
                     max(item.period_end for item in snapshot.financial_facts).isoformat()
-                    if snapshot.financial_facts else None
+                    if snapshot.financial_facts
+                    else None
                 ),
                 "latest_items": [
                     {

@@ -48,8 +48,9 @@ def score_oversold(row: pd.Series, settings: dict) -> tuple[int, list[str]]:
         row["ma20_distance"] <= settings["moderate_ma20_distance"],
         row["return_10d"] <= settings["moderate_drawdown_20"],
     ]
-    severe_count, moderate_count = sum(bool(value) for value in severe_hits), sum(
-        bool(value) for value in moderate_hits
+    severe_count, moderate_count = (
+        sum(bool(value) for value in severe_hits),
+        sum(bool(value) for value in moderate_hits),
     )
     if severe_count >= 2 or (severe_count >= 1 and moderate_count >= 3):
         score = 2
@@ -155,10 +156,7 @@ def score_rejection(
     broke_event_high = latest["close"] > capitulation.high
     closed_above_prior = latest["close"] > bars["close"].shift(1).loc[target_stamp]
     pattern = bool(
-        latest["bullish_engulfing"]
-        or latest["morning_star"]
-        or latest["long_lower_shadow"]
-        or latest["higher_low_2"]
+        latest["bullish_engulfing"] or latest["morning_star"] or latest["long_lower_shadow"] or latest["higher_low_2"]
     )
     index_divergence = _benchmark_new_low(reference, target) and held
     relative_turn = bool(index_divergence or (held and latest["return_1d"] > 0))
@@ -176,18 +174,27 @@ def score_rejection(
     return score, relative_turn, False, reasons
 
 
-def classify_signal(total: int, fundamental_available: bool) -> SignalLevel:
-    # Missing fundamentals never blocks a technical watch signal, but it caps the
-    # action level below BUY CANDIDATE because the nominal 11-point score is incomplete.
+def classify_signal(
+    total: int,
+    fundamental_available: bool,
+    rejection_score: int = 0,
+    action_signals_enabled: bool = False,
+) -> SignalLevel:
+    # Calibration showed no edge for a high additive score without a rejection
+    # trigger. Oversold-only setups therefore remain observations.
     if total <= 4:
         return SignalLevel.IGNORE
+    if rejection_score <= 0:
+        return SignalLevel.WATCH
     if total <= 6:
         return SignalLevel.WATCH
     if not fundamental_available:
         return SignalLevel.EARLY_REVERSAL
     if total == 7:
         return SignalLevel.EARLY_REVERSAL
-    if total <= 10:
+    if not action_signals_enabled:
+        return SignalLevel.EARLY_REVERSAL
+    if total <= 9:
         return SignalLevel.BUY_CANDIDATE
     return SignalLevel.STRONG_REVERSAL
 
@@ -231,12 +238,10 @@ def score_stock(
         thresholds.get("support"),
         extra_levels=[event.low] if event is not None else [],
     )
-    _resistance, _resistance_distance, _breakout, resistance_reasons, resistance_metrics = (
-        evaluate_resistance(enriched, target, thresholds.get("support"))
-    )
-    breakout, _breakout_level, breakout_reasons = detect_breakout(
+    _resistance, _resistance_distance, _breakout, resistance_reasons, resistance_metrics = evaluate_resistance(
         enriched, target, thresholds.get("support")
     )
+    breakout, _breakout_level, breakout_reasons = detect_breakout(enriched, target, thresholds.get("support"))
     breakdown = ScoreBreakdown(
         oversold=oversold,
         capitulation=(
@@ -247,7 +252,9 @@ def score_stock(
         rejection=rejection,
         breadth=breadth.breadth_score,
         fundamental=fundamental.score,
-        timing=timing.score,
+        # Calendar windows remain context only after their first historical test
+        # failed to show positive incremental value.
+        timing=0,
         support=support_score,
     )
     sector_rs = (
@@ -278,47 +285,29 @@ def score_stock(
             "lower_shadow_ratio",
         )
     }
-    metrics.update(
-        {
-            f"sector_{key}": float(value) if pd.notna(value) else None
-            for key, value in sector_rs.items()
-        }
-    )
+    metrics.update({f"sector_{key}": float(value) if pd.notna(value) else None for key, value in sector_rs.items()})
     metrics["index_new_low_stock_holds"] = bool(
-        event is not None
-        and rejection > 0
-        and _benchmark_new_low(market_reference, target)
+        event is not None and rejection > 0 and _benchmark_new_low(market_reference, target)
     )
-    metrics.update(
-        {
-            f"market_{key}": float(value) if pd.notna(value) else None
-            for key, value in market_rs.items()
-        }
-    )
+    metrics.update({f"market_{key}": float(value) if pd.notna(value) else None for key, value in market_rs.items()})
     metrics.update(support_metrics)
     metrics.update(resistance_metrics)
     metrics["breakout"] = breakout
+    metrics["timing_context_score"] = timing.score
+    metrics["timing_context"] = timing.label
     relative_turn = bool(
         relative_turn
-        or (
-            (sector_rs.get("rs_1d", np.nan) > 0)
-            and (sector_rs.get("rs_3d", np.nan) > 0)
-            and row["return_1d"] > 0
-        )
+        or ((sector_rs.get("rs_1d", np.nan) > 0) and (sector_rs.get("rs_3d", np.nan) > 0) and row["return_1d"] > 0)
     )
     reasons = oversold_reasons
     if current_cap:
-        reasons.append(
-            f"恐慌抛售结构：量比 {row['volume_ratio']:.2f}、收盘位置 {row['close_position']:.0%}"
-        )
+        reasons.append(f"恐慌抛售结构：量比 {row['volume_ratio']:.2f}、收盘位置 {row['close_position']:.0%}")
     reasons.extend(rejection_reasons)
     reasons.extend(support_reasons)
     reasons.extend(resistance_reasons)
     if breakout:
         reasons.extend(breakout_reasons)
-    reasons.append(
-        f"板块上涨 {breadth.up_ratio:.0%}，宽度{'改善' if breadth.improving else '未确认'}"
-    )
+    reasons.append(f"板块上涨 {breadth.up_ratio:.0%}，宽度{'改善' if breadth.improving else '未确认'}")
     if fundamental.score is None:
         reasons.append("基本面数据不足，需要人工确认。")
     else:
@@ -327,12 +316,10 @@ def score_stock(
             failure = True
             reasons.append("可靠的人工基本面数据标记为重大破坏，底部结构失效")
     if timing.score:
-        reasons.append(f"处于{timing.label}（仅作赔率加分）")
+        reasons.append(f"处于{timing.label}（只作历史分组，不再加分）")
     risks: list[str] = []
     if event:
-        risks.append(
-            f"若收盘/低点明显跌破恐慌低点 {event.low:.2f}（约2%），信号失效"
-        )
+        risks.append(f"若收盘/低点明显跌破恐慌低点 {event.low:.2f}（约2%），信号失效")
     if _support_level is not None:
         risks.append(f"若收盘明显跌破支撑位 {_support_level:.2f}，支撑确认作废")
     if (
@@ -340,16 +327,18 @@ def score_stock(
         and not resistance_metrics.get("resistance_breakout")
         and (resistance_metrics.get("resistance_distance") or 1) <= 0.03
     ):
-        risks.append(
-            f"上方压力位 {resistance_metrics['resistance_level']:.2f} 临近，"
-            "突破前反弹空间有限"
-        )
+        risks.append(f"上方压力位 {resistance_metrics['resistance_level']:.2f} 临近，突破前反弹空间有限")
     if fundamental.score is None:
         risks.append("基本面未验证，禁止据此直接交易")
     return ScoreResult(
         score=breakdown,
-        signal_level=SignalLevel.FAILED if failure else classify_signal(
-            breakdown.total, fundamental.score is not None
+        signal_level=SignalLevel.FAILED
+        if failure
+        else classify_signal(
+            breakdown.total,
+            fundamental.score is not None,
+            breakdown.rejection,
+            bool(thresholds.get("validation", {}).get("action_signals_enabled", False)),
         ),
         metrics=metrics,
         reasons=reasons,

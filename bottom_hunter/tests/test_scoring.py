@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from bottom_hunter.src.config import AppConfig
 from bottom_hunter.src.indicators import enrich_bars
-from bottom_hunter.src.models import BreadthResult, FundamentalResult
+from bottom_hunter.src.models import BreadthResult, FundamentalResult, SignalLevel
 from bottom_hunter.src.scoring import (
     capitulation_score,
+    classify_signal,
     find_latest_capitulation,
     score_oversold,
     score_rejection,
@@ -14,9 +15,7 @@ from bottom_hunter.src.trading_calendar import TimingWindow
 
 
 def _breadth(target) -> BreadthResult:
-    return BreadthResult(
-        target, "test", "US", 3, 2 / 3, 1 / 3, 0, 0, 2 / 3, 2 / 3, 1 / 3, 1, True, True, 1
-    )
+    return BreadthResult(target, "test", "US", 3, 2 / 3, 1 / 3, 0, 0, 2 / 3, 2 / 3, 1 / 3, 1, True, True, 1)
 
 
 def test_strong_capitulation_and_rejection(selloff_bars) -> None:
@@ -25,9 +24,7 @@ def test_strong_capitulation_and_rejection(selloff_bars) -> None:
     panic_date = enriched.index[-2].date()
     target = enriched.index[-1].date()
     assert capitulation_score(enriched.iloc[-2], settings["capitulation"]) == 2
-    event = find_latest_capitulation(
-        enriched, target, {**settings["capitulation"], **settings["rejection"]}
-    )
+    event = find_latest_capitulation(enriched, target, {**settings["capitulation"], **settings["rejection"]})
     assert event is not None and event.event_date == panic_date
     score, relative, failed, reasons = score_rejection(
         enriched,
@@ -77,8 +74,8 @@ def test_missing_fundamentals_are_not_awarded_two_points(selloff_bars) -> None:
         TimingWindow(1, True, False, False, False, True),
     )
     assert result.score.fundamental is None
-    assert result.score.available_max == 9
-    assert result.score.total <= 9
+    assert result.score.available_max == 8
+    assert result.score.total <= 8
 
 
 def test_score_on_target_is_unchanged_by_modified_future(selloff_bars) -> None:
@@ -91,9 +88,7 @@ def test_score_on_target_is_unchanged_by_modified_future(selloff_bars) -> None:
     fundamental = FundamentalResult(None, "基本面数据不足，需要人工确认。")
     timing = TimingWindow(0, False, False, False, False, True)
     first = score_stock(prefix, target, settings, _breadth(target), fundamental, timing)
-    second = score_stock(
-        future_changed, target, settings, _breadth(target), fundamental, timing
-    )
+    second = score_stock(future_changed, target, settings, _breadth(target), fundamental, timing)
     assert first.score == second.score
     assert first.metrics == second.metrics
 
@@ -104,3 +99,9 @@ def test_oversold_requires_multiple_confirmations(selloff_bars) -> None:
     score, reasons = score_oversold(row, settings)
     assert score >= 1
     assert len(reasons) == 4
+
+
+def test_action_labels_require_rejection_and_validation_gate() -> None:
+    assert classify_signal(9, True, rejection_score=0, action_signals_enabled=True) == SignalLevel.WATCH
+    assert classify_signal(9, True, rejection_score=2, action_signals_enabled=False) == SignalLevel.EARLY_REVERSAL
+    assert classify_signal(9, True, rejection_score=2, action_signals_enabled=True) == SignalLevel.BUY_CANDIDATE

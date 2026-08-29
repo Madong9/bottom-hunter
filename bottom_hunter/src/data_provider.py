@@ -57,24 +57,16 @@ class MarketDataProvider(ABC):
     name = "abstract"
 
     @abstractmethod
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         """Return adjusted, completed daily OHLCV bars in [start, end]."""
 
-    def get_index_data(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_index_data(self, instrument: Instrument, start: date, end: date) -> DataResult:
         return self.get_daily_bars(instrument, start, end)
 
-    def get_sector_data(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_sector_data(self, instrument: Instrument, start: date, end: date) -> DataResult:
         return self.get_daily_bars(instrument, start, end)
 
-    def get_fundamental_data(
-        self, instrument: Instrument, as_of: date
-    ) -> FundamentalResult:
+    def get_fundamental_data(self, instrument: Instrument, as_of: date) -> FundamentalResult:
         return FundamentalResult(
             score=None,
             reason="基本面数据不足，需要人工确认。",
@@ -105,16 +97,13 @@ def normalize_bars(frame: pd.DataFrame, start: date, end: date) -> pd.DataFrame:
         normalized[column] = pd.to_numeric(normalized[column], errors="coerce")
     normalized = normalized.loc[~normalized.index.isna(), :]
     normalized = normalized.sort_index()
-    normalized = normalized.loc[~normalized.index.duplicated(keep="last"), OHLCV + (
-        ["adj_close"] if "adj_close" in normalized else []
-    )]
+    normalized = normalized.loc[
+        ~normalized.index.duplicated(keep="last"), OHLCV + (["adj_close"] if "adj_close" in normalized else [])
+    ]
     start_ts, end_ts = pd.Timestamp(start), pd.Timestamp(end)
     normalized = normalized.loc[(normalized.index >= start_ts) & (normalized.index <= end_ts)]
     normalized = normalized.dropna(subset=["open", "high", "low", "close"])
-    invalid = (
-        (normalized[["open", "high", "low", "close"]] <= 0).any(axis=1)
-        | (normalized["high"] < normalized["low"])
-    )
+    invalid = (normalized[["open", "high", "low", "close"]] <= 0).any(axis=1) | (normalized["high"] < normalized["low"])
     normalized = normalized.loc[~invalid]
     normalized["volume"] = normalized["volume"].fillna(0).clip(lower=0)
     if "adj_close" in normalized and normalized["adj_close"].notna().any():
@@ -138,9 +127,7 @@ class LocalCsvProvider(MarketDataProvider):
     def safe_name(symbol: str) -> str:
         return symbol.replace("^", "INDEX_").replace("/", "_")
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         candidates = [
             self.data_dir / f"{self.safe_name(instrument.symbol)}.csv",
             self.data_dir / f"{instrument.symbol}.csv",
@@ -169,9 +156,7 @@ class BinanceKlineProvider(MarketDataProvider):
     def __init__(self, timeout: int = 12):
         self.timeout = timeout
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         if instrument.market != "CRYPTO":
             raise ProviderNotApplicable("币安 K 线数据源仅支持加密货币")
         source_symbol = instrument.source_symbols.get("binance")
@@ -184,19 +169,13 @@ class BinanceKlineProvider(MarketDataProvider):
             "symbol": symbol,
             "interval": "1d",
             "startTime": int(datetime.combine(start, dt_time.min, UTC).timestamp() * 1000),
-            "endTime": int(
-                datetime.combine(end + timedelta(days=1), dt_time.min, UTC).timestamp()
-                * 1000
-                - 1
-            ),
+            "endTime": int(datetime.combine(end + timedelta(days=1), dt_time.min, UTC).timestamp() * 1000 - 1),
             "limit": 1000,
         }
         try:
             response = requests.get(self.URL, params=params, timeout=self.timeout)
             if getattr(response, "status_code", 200) == 451:
-                raise ProviderNotApplicable(
-                    "币安公开 K 线在当前地区无法使用；将自动转用欧易或本地缓存"
-                )
+                raise ProviderNotApplicable("币安公开 K 线在当前地区无法使用；将自动转用欧易或本地缓存")
             response.raise_for_status()
             payload = response.json()
         except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as exc:
@@ -205,14 +184,9 @@ class BinanceKlineProvider(MarketDataProvider):
             raise DataProviderError(f"币安 K 线响应不是有效 JSON: {exc}") from exc
         if isinstance(payload, dict):
             message = payload.get("msg") or payload.get("message") or payload
-            restricted = (
-                "restricted location" in str(message).casefold()
-                or "b. eligibility" in str(message).casefold()
-            )
+            restricted = "restricted location" in str(message).casefold() or "b. eligibility" in str(message).casefold()
             if restricted:
-                raise ProviderNotApplicable(
-                    "币安公开 K 线在当前地区无法使用；将自动转用欧易或本地缓存"
-                )
+                raise ProviderNotApplicable("币安公开 K 线在当前地区无法使用；将自动转用欧易或本地缓存")
             raise DataProviderError(f"币安返回错误: {message}")
         rows = [
             {
@@ -245,9 +219,7 @@ class OkxCandleProvider(MarketDataProvider):
     def __init__(self, timeout: int = 12):
         self.timeout = timeout
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         if instrument.market != "CRYPTO":
             raise ProviderNotApplicable("欧易 K 线数据源仅支持加密货币")
         source_symbol = instrument.source_symbols.get("okx")
@@ -284,9 +256,7 @@ class OkxCandleProvider(MarketDataProvider):
                 if len(item) >= 9 and str(item[8]) != "1":
                     continue
                 collected[int(item[0])] = item
-            valid_rows = [
-                int(item[0]) for item in rows if isinstance(item, list) and len(item) >= 6
-            ]
+            valid_rows = [int(item[0]) for item in rows if isinstance(item, list) and len(item) >= 6]
             if not valid_rows:
                 break
             oldest = min(valid_rows)
@@ -325,9 +295,7 @@ class LongbridgeProvider(MarketDataProvider):
     def __init__(self, client: LongbridgeClient | None = None):
         self.client = client or LongbridgeClient()
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         if instrument.market not in {"CN", "HK", "US"}:
             raise ProviderNotApplicable("长桥行情源仅用于 A股、港股和美股")
         if not self.client.configured():
@@ -364,14 +332,10 @@ class YahooChartProvider(MarketDataProvider):
     def __init__(self, timeout: int = 20):
         self.timeout = timeout
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         symbol = instrument.provider_symbol or instrument.symbol
         period1 = int(datetime.combine(start, dt_time.min, UTC).timestamp())
-        period2 = int(
-            datetime.combine(end + timedelta(days=1), dt_time.min, UTC).timestamp()
-        )
+        period2 = int(datetime.combine(end + timedelta(days=1), dt_time.min, UTC).timestamp())
         query = urlencode(
             {
                 "period1": period1,
@@ -399,9 +363,7 @@ class YahooChartProvider(MarketDataProvider):
         result = results[0]
         timestamps = result.get("timestamp") or []
         quote_rows = (result.get("indicators", {}).get("quote") or [{}])[0]
-        adjusted = (result.get("indicators", {}).get("adjclose") or [{}])[0].get(
-            "adjclose", []
-        )
+        adjusted = (result.get("indicators", {}).get("adjclose") or [{}])[0].get("adjclose", [])
         frame = pd.DataFrame(
             {
                 "date": pd.to_datetime(timestamps, unit="s", utc=True).tz_convert(None),
@@ -437,9 +399,7 @@ class StooqProvider(MarketDataProvider):
             return f"{symbol}.us"
         return symbol
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         if instrument.market != "US":
             raise ProviderNotApplicable(f"Stooq 未配置 {instrument.market} 市场映射")
         query = urlencode(
@@ -480,9 +440,7 @@ class CboeVixProvider(MarketDataProvider):
     def __init__(self, timeout: int = 8):
         self.timeout = timeout
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         if instrument.symbol != "^VIX":
             raise ProviderNotApplicable("Cboe VIX 数据源仅支持 ^VIX")
         request = Request(
@@ -567,9 +525,7 @@ class TencentProvider(MarketDataProvider):
         return resolved
 
     def _code(self, instrument: Instrument) -> str:
-        if instrument.provider_symbol and instrument.provider_symbol.startswith(
-            ("sh", "sz", "hk", "us")
-        ):
+        if instrument.provider_symbol and instrument.provider_symbol.startswith(("sh", "sz", "hk", "us")):
             return instrument.provider_symbol
         symbol = instrument.symbol.upper()
         if symbol in self.INDEX_CODES:
@@ -588,13 +544,9 @@ class TencentProvider(MarketDataProvider):
             return self._us_code(symbol)
         raise ProviderNotApplicable(f"腾讯行情不支持代码 {instrument.symbol}")
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         code = self._code(instrument)
-        parameters = ",".join(
-            [code, "day", start.isoformat(), end.isoformat(), "1000", "qfq"]
-        )
+        parameters = ",".join([code, "day", start.isoformat(), end.isoformat(), "1000", "qfq"])
         url = f"{self.FQ_URL}?{urlencode({'param': parameters})}"
         raw = self._read(url)
         try:
@@ -602,9 +554,7 @@ class TencentProvider(MarketDataProvider):
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise DataProviderError(f"腾讯行情响应不是有效 JSON: {exc}") from exc
         if payload.get("code") != 0:
-            raise DataProviderError(
-                f"腾讯行情返回错误 {payload.get('code')}: {payload.get('msg', '')}"
-            )
+            raise DataProviderError(f"腾讯行情返回错误 {payload.get('code')}: {payload.get('msg', '')}")
         data = payload.get("data") or {}
         section = data.get(code) or next(iter(data.values()), {})
         lines = section.get("qfqday") or section.get("day") or []
@@ -726,10 +676,7 @@ class EastmoneyProvider(MarketDataProvider):
                 item
                 for item in candidates
                 if str(item.get("Code", "")).upper() == raw.upper()
-                and (
-                    instrument.market != "US"
-                    or str(item.get("Classify", "")) == "UsStock"
-                )
+                and (instrument.market != "US" or str(item.get("Classify", "")) == "UsStock")
             ]
             if not exact:
                 raise ProviderNotApplicable(f"东方财富无法解析代码 {instrument.symbol}")
@@ -740,9 +687,7 @@ class EastmoneyProvider(MarketDataProvider):
             self._resolved[symbol] = quote_id
         return quote_id
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         quote_id = self._quote_id(instrument)
         payload = self._get_json(
             self.KLINE_URL,
@@ -797,14 +742,10 @@ class CircuitBreakerProvider(MarketDataProvider):
         self._open = False
         self._lock = threading.Lock()
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         with self._lock:
             if self._open:
-                raise ProviderNotApplicable(
-                    f"{self.name} 本批次连续网络失败，熔断后跳过"
-                )
+                raise ProviderNotApplicable(f"{self.name} 本批次连续网络失败，熔断后跳过")
         try:
             result = self.provider.get_daily_bars(instrument, start, end)
         except NetworkDataProviderError:
@@ -832,9 +773,7 @@ class CompositeMarketDataProvider(MarketDataProvider):
         if not self.providers:
             raise ValueError("至少需要一个行情提供器")
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         errors: list[str] = []
         for provider in self.providers:
             try:
@@ -866,9 +805,7 @@ class CachedMarketDataProvider(MarketDataProvider):
         self.remote = remote
         self.allow_stale_fallback = allow_stale_fallback
 
-    def get_daily_bars(
-        self, instrument: Instrument, start: date, end: date
-    ) -> DataResult:
+    def get_daily_bars(self, instrument: Instrument, start: date, end: date) -> DataResult:
         cached: DataResult | None = None
         try:
             cached = self.cache.get_daily_bars(instrument, start, end)
@@ -923,15 +860,11 @@ class CsvFundamentalProvider:
         self._frame = frame.sort_values("date") if not frame.empty else frame
         return self._frame
 
-    def get_fundamental_data(
-        self, instrument: Instrument, as_of: date
-    ) -> FundamentalResult:
+    def get_fundamental_data(self, instrument: Instrument, as_of: date) -> FundamentalResult:
         frame = self._load_frame()
         if frame.empty:
             return self._missing()
-        candidates = frame.loc[
-            frame["symbol"].astype(str) == instrument.symbol,
-        ]
+        candidates = frame.loc[frame["symbol"].astype(str) == instrument.symbol,]
         candidates = candidates[candidates["date"] <= as_of]
         if candidates.empty:
             return self._missing()
@@ -952,6 +885,22 @@ class CsvFundamentalProvider:
     @staticmethod
     def _missing(reason: str = "基本面数据不足，需要人工确认。") -> FundamentalResult:
         return FundamentalResult(score=None, reason=reason, source=None, as_of=None)
+
+
+class FallbackFundamentalProvider:
+    """Use the first point-in-time fundamental source that has a score."""
+
+    def __init__(self, providers: list[Any]):
+        self.providers = list(providers)
+
+    def get_fundamental_data(self, instrument: Instrument, as_of: date) -> FundamentalResult:
+        fallback = FundamentalResult(None, "没有可用的时点基本面数据。", None, None)
+        for provider in self.providers:
+            result = provider.get_fundamental_data(instrument, as_of)
+            if result.score is not None:
+                return result
+            fallback = result
+        return fallback
 
 
 def fetch_many(

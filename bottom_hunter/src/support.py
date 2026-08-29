@@ -98,9 +98,7 @@ def evaluate_support(
         return 0, None, ["收盘价下方无邻近支撑位"], metrics
     nearest = max(candidates)
     distance = close / nearest - 1
-    confluence = sum(
-        1 for level in levels if abs(level - nearest) / nearest <= float(merged["touch_band"])
-    )
+    confluence = sum(1 for level in levels if abs(level - nearest) / nearest <= float(merged["touch_band"]))
     metrics = {
         "support_level": nearest,
         "support_distance": float(distance),
@@ -110,10 +108,7 @@ def evaluate_support(
     held = close >= nearest
     near = distance <= float(merged["max_above"])
     if touched and held and near:
-        reason = (
-            f"回踩支撑位 {nearest:.2f} 后收于其上（距离 {distance:.1%}，"
-            f"共振 {confluence} 处）"
-        )
+        reason = f"回踩支撑位 {nearest:.2f} 后收于其上（距离 {distance:.1%}，共振 {confluence} 处）"
         return 1, nearest, [reason], metrics
     side = "上方" if distance >= 0 else "下方"
     return (
@@ -156,10 +151,7 @@ def detect_breakout(
         return False, broken_level, []
     if ma20 is None or pd.isna(ma20) or close <= float(ma20):
         return False, broken_level, []
-    reasons.append(
-        f"突破候选：收盘 {close:.2f} 越过压力位 {broken_level:.2f}，"
-        f"量比 {volume_ratio:.2f}、站上 MA20"
-    )
+    reasons.append(f"突破候选：收盘 {close:.2f} 越过压力位 {broken_level:.2f}，量比 {volume_ratio:.2f}、站上 MA20")
     return True, broken_level, reasons
 
 
@@ -181,11 +173,7 @@ def evaluate_resistance(
     close = float(enriched.at[stamp, "close"])
     all_levels = find_resistance_levels(enriched, target, merged)
     above = [level for level in all_levels if level >= close]
-    broken = [
-        level
-        for level in all_levels
-        if level < close and level >= close * (1 - float(merged["touch_band"]))
-    ]
+    broken = [level for level in all_levels if level < close and level >= close * (1 - float(merged["touch_band"]))]
     metrics = {
         "resistance_level": None,
         "resistance_distance": None,

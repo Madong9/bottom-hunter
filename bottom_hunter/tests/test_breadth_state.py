@@ -34,9 +34,7 @@ def test_breadth_needs_up_ratio_low_contraction_and_etf() -> None:
         "C": _frame(target, False, False, False),
     }
     etf = _frame(target, True, False, False)
-    result = calculate_breadth(
-        "test", "US", frames, target, 3, {"up_ratio": 0.6, "strong_up_return": 0.02}, etf
-    )
+    result = calculate_breadth("test", "US", frames, target, 3, {"up_ratio": 0.6, "strong_up_return": 0.02}, etf)
     assert result.up_ratio == 2 / 3
     assert result.improving is True
     assert result.etf_up is True
@@ -46,9 +44,7 @@ def test_breadth_needs_up_ratio_low_contraction_and_etf() -> None:
 def test_state_two_after_confirmed_rejection(selloff_bars) -> None:
     target = selloff_bars.index[-1].date()
     settings = AppConfig.load().defaults
-    breadth = BreadthResult(
-        target, "x", "US", 2, 1, 0, 0, 0, 1, 1, 1, 1, True, True, 1
-    )
+    breadth = BreadthResult(target, "x", "US", 2, 1, 0, 0, 0, 1, 1, 1, 1, True, True, 1)
     scored = score_stock(
         selloff_bars,
         target,
@@ -60,4 +56,3 @@ def test_state_two_after_confirmed_rejection(selloff_bars) -> None:
     decision = decide_state(scored, enrich_bars(selloff_bars), target, breadth, "Neutral")
     assert decision.entry_stage is not None
     assert decision.entry_stage.value == "ENTRY_STAGE_2"
-

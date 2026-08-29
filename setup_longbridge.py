@@ -73,7 +73,16 @@ def main() -> int:
         )
         interpreter = existing_python
     subprocess.run(
-        [str(interpreter), "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"],
+        [
+            str(interpreter),
+            "-m",
+            "pip",
+            "install",
+            "--upgrade",
+            "pip",
+            "setuptools",
+            "wheel",
+        ],
         check=True,
     )
     subprocess.run(

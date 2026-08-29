@@ -36,9 +36,7 @@ class AppConfig:
         watchlist_path = directory / "watchlist.yaml"
         thresholds_path = directory / "thresholds.yaml"
         if not watchlist_path.exists() or not thresholds_path.exists():
-            raise FileNotFoundError(
-                f"配置目录必须包含 watchlist.yaml 和 thresholds.yaml: {directory}"
-            )
+            raise FileNotFoundError(f"配置目录必须包含 watchlist.yaml 和 thresholds.yaml: {directory}")
         with watchlist_path.open(encoding="utf-8") as handle:
             watchlist = yaml.safe_load(handle) or {}
         with thresholds_path.open(encoding="utf-8") as handle:
@@ -105,19 +103,14 @@ class AppConfig:
                 asset_type="crypto" if market_id == "CRYPTO" else "index",
                 sources=tuple((market.get("benchmark_source_symbols") or {}).keys()),
                 source_symbols={
-                    str(key): str(value)
-                    for key, value in (market.get("benchmark_source_symbols") or {}).items()
+                    str(key): str(value) for key, value in (market.get("benchmark_source_symbols") or {}).items()
                 },
             )
             result.setdefault(benchmark.symbol, benchmark)
         return list(result.values())
 
     def risk_instruments(self, market: str) -> list[Instrument]:
-        return [
-            _instrument(item, None)
-            for item in self.watchlist.get("risk_appetite", [])
-            if item["market"] == market
-        ]
+        return [_instrument(item, None) for item in self.watchlist.get("risk_appetite", []) if item["market"] == market]
 
 
 def _instrument(item: dict[str, Any], sector_id: str | None) -> Instrument:
@@ -135,18 +128,12 @@ def _instrument(item: dict[str, Any], sector_id: str | None) -> Instrument:
         asset_type=str(item.get("asset_type", "equity")),
         tokenized_stock=bool(item.get("tokenized_stock", False)),
         sources=tuple(str(value) for value in item.get("sources", [])),
-        source_symbols={
-            str(key): str(value) for key, value in (item.get("source_symbols") or {}).items()
-        },
+        source_symbols={str(key): str(value) for key, value in (item.get("source_symbols") or {}).items()},
     )
 
 
 def _validate_watchlist(payload: dict[str, Any]) -> None:
-    if (
-        not payload.get("markets")
-        or "sectors" not in payload
-        or not isinstance(payload.get("sectors"), dict)
-    ):
+    if not payload.get("markets") or "sectors" not in payload or not isinstance(payload.get("sectors"), dict):
         raise ValueError("watchlist.yaml 缺少 markets 或 sectors")
     known_markets = set(payload["markets"])
     seen: set[tuple[str, str]] = set()

@@ -123,9 +123,7 @@ class AccountConnectionService:
         longbridge_client_factory: Callable[[dict[str, str]], Any] | None = None,
     ) -> None:
         self.metadata_path = (
-            Path(metadata_path).resolve()
-            if metadata_path
-            else PROJECT_DIR / "state" / "account_connections.json"
+            Path(metadata_path).resolve() if metadata_path else PROJECT_DIR / "state" / "account_connections.json"
         )
         self.timeout = timeout
         self.vault = vault or CredentialVault()
@@ -166,9 +164,7 @@ class AccountConnectionService:
     def _safe_response(response: requests.Response, platform: str) -> Any:
         response_text = str(getattr(response, "text", "") or "")
         restricted_markers = ("restricted location", "b. eligibility")
-        if platform == "币安" and any(
-            marker in response_text.casefold() for marker in restricted_markers
-        ):
+        if platform == "币安" and any(marker in response_text.casefold() for marker in restricted_markers):
             raise RestrictedLocationError(
                 "币安区域限制：官方账号接口拒绝当前网络位置；这不是 API Key 填写错误。"
                 "系统不会绕过平台限制。你仍可不验证账号，直接导入币安自选文件；"
@@ -183,9 +179,7 @@ class AccountConnectionService:
                 message = payload.get("msg") or payload.get("message") or payload.get("code")
             else:
                 message = response.status_code
-            if platform == "币安" and any(
-                marker in str(message).casefold() for marker in restricted_markers
-            ):
+            if platform == "币安" and any(marker in str(message).casefold() for marker in restricted_markers):
                 raise RestrictedLocationError(
                     "币安区域限制：官方账号接口拒绝当前网络位置；这不是 API Key 填写错误。"
                     "系统不会绕过平台限制。你仍可不验证账号，直接导入币安自选文件；"
@@ -207,9 +201,7 @@ class AccountConnectionService:
         if not api_key or not secret_key:
             raise ValueError("币安 API Key 和 Secret Key 不能为空")
         base_url = base_url.rstrip("/")
-        restrictions = self._binance_signed_get(
-            base_url, "/sapi/v1/account/apiRestrictions", api_key, secret_key
-        )
+        restrictions = self._binance_signed_get(base_url, "/sapi/v1/account/apiRestrictions", api_key, secret_key)
         if not bool(restrictions.get("enableReading", False)):
             raise AccountConnectionError("币安 API Key 没有读取权限")
         unsafe = [
@@ -225,10 +217,7 @@ class AccountConnectionService:
             if bool(restrictions.get(key, False))
         ]
         if unsafe:
-            raise UnsafeApiPermission(
-                "拒绝关联：请新建仅启用读取权限的币安 API Key；"
-                f"当前开启了 {', '.join(unsafe)}"
-            )
+            raise UnsafeApiPermission(f"拒绝关联：请新建仅启用读取权限的币安 API Key；当前开启了 {', '.join(unsafe)}")
 
         account = self._binance_signed_get(
             base_url,
@@ -272,9 +261,7 @@ class AccountConnectionService:
         params = {"timestamp": str(int(time.time() * 1000)), "recvWindow": "5000"}
         params.update(extra or {})
         query = urlencode(params)
-        signature = hmac.new(
-            secret_key.encode("utf-8"), query.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(secret_key.encode("utf-8"), query.encode("utf-8"), hashlib.sha256).hexdigest()
         try:
             response = self.session.get(
                 f"{base_url}{path}?{query}&signature={signature}",
@@ -306,9 +293,7 @@ class AccountConnectionService:
             raise ValueError("欧易 API Key、Secret Key 和 Passphrase 不能为空")
         base_url = base_url.rstrip("/")
         path = "/api/v5/account/config"
-        timestamp = datetime.now(UTC).isoformat(timespec="milliseconds").replace(
-            "+00:00", "Z"
-        )
+        timestamp = datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         signature = base64.b64encode(
             hmac.new(
                 secret_key.encode("utf-8"),
@@ -323,9 +308,7 @@ class AccountConnectionService:
             "OK-ACCESS-PASSPHRASE": passphrase,
         }
         try:
-            response = self.session.get(
-                f"{base_url}{path}", headers=headers, timeout=self.timeout
-            )
+            response = self.session.get(f"{base_url}{path}", headers=headers, timeout=self.timeout)
         except requests.RequestException as exc:
             raise AccountConnectionError(f"欧易连接失败：{exc}") from exc
         payload = self._safe_response(response, "欧易")
@@ -336,16 +319,11 @@ class AccountConnectionService:
         if not values or not isinstance(values[0], dict):
             raise AccountConnectionError("欧易账号配置响应为空")
         config = values[0]
-        permissions = {
-            item.strip().casefold()
-            for item in str(config.get("perm") or "").split(",")
-            if item.strip()
-        }
+        permissions = {item.strip().casefold() for item in str(config.get("perm") or "").split(",") if item.strip()}
         unsafe = permissions.intersection({"trade", "withdraw"})
         if unsafe or "read_only" not in permissions:
             raise UnsafeApiPermission(
-                "拒绝关联：请新建仅包含 Read 权限的欧易 API Key；"
-                f"当前权限为 {', '.join(sorted(permissions)) or '未知'}"
+                f"拒绝关联：请新建仅包含 Read 权限的欧易 API Key；当前权限为 {', '.join(sorted(permissions)) or '未知'}"
             )
         account_id = str(config.get("uid") or hashlib.sha256(api_key.encode()).hexdigest()[:12])
         persisted = self.vault.save(
@@ -402,15 +380,9 @@ class AccountConnectionService:
             verification = client.verify()
         except LongbridgeError as exc:
             raise AccountConnectionError(str(exc)) from exc
-        account_id = verification.member_id or hashlib.sha256(
-            credentials["app_key"].encode("utf-8")
-        ).hexdigest()[:12]
+        account_id = verification.member_id or hashlib.sha256(credentials["app_key"].encode("utf-8")).hexdigest()[:12]
         persisted = self.vault.save("longbridge", credentials)
-        package_detail = (
-            f"；行情套餐：{', '.join(verification.packages)}"
-            if verification.packages
-            else ""
-        )
+        package_detail = f"；行情套餐：{', '.join(verification.packages)}" if verification.packages else ""
         result = ConnectionResult(
             source="longbridge",
             account_id=account_id,

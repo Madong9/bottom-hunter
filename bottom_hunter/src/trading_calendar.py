@@ -97,20 +97,12 @@ class TradingCalendarService:
         """Return official sessions, or None when the calendar dependency is unavailable."""
         calendar = self._calendar(market)
         if calendar == self.CONTINUOUS:
-            return {
-                stamp.date()
-                for stamp in pd.date_range(pd.Timestamp(start), pd.Timestamp(end), freq="D")
-            }
+            return {stamp.date() for stamp in pd.date_range(pd.Timestamp(start), pd.Timestamp(end), freq="D")}
         if calendar is None:
             return None
-        return {
-            stamp.date()
-            for stamp in calendar.sessions_in_range(pd.Timestamp(start), pd.Timestamp(end))
-        }
+        return {stamp.date() for stamp in calendar.sessions_in_range(pd.Timestamp(start), pd.Timestamp(end))}
 
-    def timing_window(
-        self, market: str, session: date, settings: dict
-    ) -> TimingWindow:
+    def timing_window(self, market: str, session: date, settings: dict) -> TimingWindow:
         calendar = self._calendar(market)
         if calendar == self.CONTINUOUS:
             return TimingWindow(0, False, False, False, False, True)
@@ -132,9 +124,7 @@ class TradingCalendarService:
         quarter_month = session.month in {3, 6, 9, 12}
         quarter_start_month = session.month in {1, 4, 7, 10}
         quarter_end_flag = quarter_month and remaining <= int(settings["quarter_end_sessions"])
-        quarter_start_flag = quarter_start_month and from_start <= int(
-            settings["quarter_start_sessions"]
-        )
+        quarter_start_flag = quarter_start_month and from_start <= int(settings["quarter_start_sessions"])
         active = month_end_flag or month_start_flag or quarter_end_flag or quarter_start_flag
         return TimingWindow(
             int(active),

@@ -107,14 +107,9 @@ class StateStore:
 
     @staticmethod
     def _migrate(connection: sqlite3.Connection) -> None:
-        columns = {
-            row["name"]
-            for row in connection.execute("PRAGMA table_info(signals)").fetchall()
-        }
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(signals)").fetchall()}
         if "breakout" not in columns:
-            connection.execute(
-                "ALTER TABLE signals ADD COLUMN breakout INTEGER NOT NULL DEFAULT 0"
-            )
+            connection.execute("ALTER TABLE signals ADD COLUMN breakout INTEGER NOT NULL DEFAULT 0")
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
@@ -173,9 +168,7 @@ class StateStore:
                 (symbol, sector_id, before.isoformat()),
             ).fetchone()
 
-    def previous_signals_map(
-        self, signals: list[StockSignal]
-    ) -> dict[tuple[str, str], Any]:
+    def previous_signals_map(self, signals: list[StockSignal]) -> dict[tuple[str, str], Any]:
         """批量查询上一条信号，单连接完成，避免每个信号各开一次连接。"""
         keys = {(signal.symbol, signal.sector_id): signal.date for signal in signals}
         result: dict[tuple[str, str], Any] = {}
@@ -202,9 +195,7 @@ class StateStore:
                 (sector_id, market, before.isoformat()),
             ).fetchone()
 
-    def previous_sectors_map(
-        self, sectors: list[SectorResult]
-    ) -> dict[tuple[str, str], Any]:
+    def previous_sectors_map(self, sectors: list[SectorResult]) -> dict[tuple[str, str], Any]:
         """批量查询板块上一条评分，单连接完成。"""
         keys = {(sector.sector_id, sector.market): sector.date for sector in sectors}
         result: dict[tuple[str, str], Any] = {}
@@ -339,17 +330,13 @@ class StateStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
-    def save_outcomes(
-        self, outcomes: list[tuple[str, str, str, int, float | None, float | None]]
-    ) -> int:
+    def save_outcomes(self, outcomes: list[tuple[str, str, str, int, float | None, float | None]]) -> int:
         """Rows of (signal_date, symbol, sector_id, horizon, return, drawdown)."""
         if not outcomes:
             return 0
         now = datetime.now(UTC).isoformat()
         with self.connect() as connection:
-            before = connection.execute(
-                "SELECT COUNT(*) AS n FROM signal_outcomes"
-            ).fetchone()["n"]
+            before = connection.execute("SELECT COUNT(*) AS n FROM signal_outcomes").fetchone()["n"]
             connection.executemany(
                 """
                 INSERT INTO signal_outcomes(
@@ -374,9 +361,7 @@ class StateStore:
                     for signal_date, symbol, sector_id, horizon, forward_return, max_drawdown in outcomes
                 ],
             )
-            after = connection.execute(
-                "SELECT COUNT(*) AS n FROM signal_outcomes"
-            ).fetchone()["n"]
+            after = connection.execute("SELECT COUNT(*) AS n FROM signal_outcomes").fetchone()["n"]
         return int(after - before)
 
     def outcome_summary(self, window_days: int = 30, horizon: int = 5) -> dict[str, Any]:
@@ -409,9 +394,7 @@ class StateStore:
             "median_return": float(np.median(returns)),
             "average_drawdown": float(np.mean(drawdowns)) if drawdowns else None,
             "profit_loss_ratio": (
-                float(np.mean(wins) / abs(np.mean(losses)))
-                if wins and losses and np.mean(losses) != 0
-                else None
+                float(np.mean(wins) / abs(np.mean(losses))) if wins and losses and np.mean(losses) != 0 else None
             ),
         }
 
@@ -444,27 +427,64 @@ class StateStore:
             return cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
 
     def paper_positions(self, through: date) -> list[dict[str, Any]]:
-        """Latest accumulated weight and entry VWAP per (symbol, sector)."""
+        """Target weight and incremental-entry VWAP per (symbol, sector).
+
+        Stored stage weights are cumulative targets (25%, 60%, 100%), not
+        independent fills.  Reconstructing the increments here keeps existing
+        databases compatible and prevents the three stages from becoming 185%.
+        """
         with self.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT symbol, sector_id,
-                       SUM(weight) AS weight,
-                       SUM(weight * price) / NULLIF(SUM(weight), 0) AS entry_price,
-                       MAX(fill_date) AS last_fill
+                SELECT fill_date, symbol, sector_id, stage, weight, price
                 FROM paper_fills
                 WHERE fill_date <= ?
-                GROUP BY symbol, sector_id
-                HAVING SUM(weight) > 0
-                ORDER BY last_fill DESC
+                ORDER BY symbol, sector_id, fill_date,
+                         CASE stage
+                           WHEN 'ENTRY_STAGE_1' THEN 1
+                           WHEN 'ENTRY_STAGE_2' THEN 2
+                           WHEN 'ENTRY_STAGE_3' THEN 3
+                           ELSE 9
+                         END
                 """,
                 (through.isoformat(),),
             ).fetchall()
-        return [dict(row) for row in rows]
+        positions: dict[tuple[str, str], dict[str, Any]] = {}
+        for row in rows:
+            key = (str(row["symbol"]), str(row["sector_id"]))
+            position = positions.setdefault(
+                key,
+                {
+                    "symbol": key[0],
+                    "sector_id": key[1],
+                    "weight": 0.0,
+                    "weighted_cost": 0.0,
+                    "last_fill": str(row["fill_date"]),
+                },
+            )
+            target_weight = max(0.0, min(1.0, float(row["weight"])))
+            increment = max(0.0, target_weight - float(position["weight"]))
+            if increment:
+                position["weighted_cost"] += increment * float(row["price"])
+                position["weight"] = target_weight
+            position["last_fill"] = max(position["last_fill"], str(row["fill_date"]))
+        result = []
+        for position in positions.values():
+            weight = float(position["weight"])
+            if weight <= 0:
+                continue
+            result.append(
+                {
+                    "symbol": position["symbol"],
+                    "sector_id": position["sector_id"],
+                    "weight": weight,
+                    "entry_price": float(position["weighted_cost"]) / weight,
+                    "last_fill": position["last_fill"],
+                }
+            )
+        return sorted(result, key=lambda item: item["last_fill"], reverse=True)
 
-    def save_valuations(
-        self, value_date: date, valuations: list[dict[str, Any]]
-    ) -> None:
+    def save_valuations(self, value_date: date, valuations: list[dict[str, Any]]) -> None:
         if not valuations:
             return
         with self.connect() as connection:
@@ -497,15 +517,27 @@ class StateStore:
         with self.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT value_date,
-                       SUM(weight * last_price / entry_price) AS equity_index
+                SELECT value_date, weight, last_price, entry_price
                 FROM paper_valuations
-                GROUP BY value_date
-                ORDER BY value_date
+                ORDER BY value_date, symbol, sector_id
                 """
             ).fetchall()
-        series = [
-            {"date": row["value_date"], "equity_index": float(row["equity_index"])}
-            for row in rows
-        ]
+        grouped: dict[str, list[sqlite3.Row]] = {}
+        for row in rows:
+            grouped.setdefault(str(row["value_date"]), []).append(row)
+        series = []
+        for value_date, items in grouped.items():
+            total_weight = sum(float(item["weight"]) for item in items)
+            scale = 1.0 / max(1.0, total_weight)
+            invested = min(1.0, total_weight)
+            holdings = sum(
+                float(item["weight"]) * scale * float(item["last_price"]) / float(item["entry_price"]) for item in items
+            )
+            series.append(
+                {
+                    "date": value_date,
+                    "equity_index": (1.0 - invested) + holdings,
+                    "invested_weight": invested,
+                }
+            )
         return {"points": series, "latest": series[-1]["equity_index"] if series else None}

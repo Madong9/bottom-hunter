@@ -34,9 +34,7 @@ def test_normalize_rejects_duplicates_and_bad_rows() -> None:
 def test_fundamental_provider_is_point_in_time(tmp_path) -> None:
     path = tmp_path / "fundamentals.csv"
     path.write_text(
-        "date,symbol,score,reason,source\n"
-        "2024-01-10,TEST,1,不确定,source-a\n"
-        "2024-02-10,TEST,2,已排除,source-b\n",
+        "date,symbol,score,reason,source\n2024-01-10,TEST,1,不确定,source-a\n2024-02-10,TEST,2,已排除,source-b\n",
         encoding="utf-8",
     )
     provider = CsvFundamentalProvider(path)
@@ -94,3 +92,34 @@ def test_new_run_marks_interrupted_previous_run_aborted(tmp_path) -> None:
         (first, "aborted"),
         (second, "running"),
     ]
+
+
+def test_paper_stage_weights_are_cumulative_targets_and_nav_keeps_cash(tmp_path) -> None:
+    store = StateStore(tmp_path / "signals.db")
+    store.paper_fills(
+        date(2026, 8, 26),
+        [{"symbol": "TEST", "sector_id": "s", "stage": "ENTRY_STAGE_1", "weight": 0.25, "price": 100}],
+    )
+    store.paper_fills(
+        date(2026, 8, 27),
+        [{"symbol": "TEST", "sector_id": "s", "stage": "ENTRY_STAGE_2", "weight": 0.60, "price": 110}],
+    )
+    position = store.paper_positions(date(2026, 8, 27))[0]
+    assert position["weight"] == 0.60
+    assert position["entry_price"] == (0.25 * 100 + 0.35 * 110) / 0.60
+    store.save_valuations(
+        date(2026, 8, 28),
+        [
+            {
+                "symbol": "TEST",
+                "sector_id": "s",
+                "weight": 0.60,
+                "entry_price": position["entry_price"],
+                "last_price": position["entry_price"],
+                "unrealized_return": 0.0,
+            }
+        ],
+    )
+    summary = store.paper_history_summary()
+    assert summary["latest"] == 1.0
+    assert summary["points"][0]["invested_weight"] == 0.60

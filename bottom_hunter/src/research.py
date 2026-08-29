@@ -36,12 +36,34 @@ from .research_storage import ResearchStore
 
 USER_AGENT = "BottomHunter/0.1 research client (local desktop application)"
 POSITIVE_WORDS = (
-    "超预期", "增长", "盈利", "增持", "回购", "中标", "突破", "上调",
-    "beat", "growth", "upgrade", "profit", "buyback",
+    "超预期",
+    "增长",
+    "盈利",
+    "增持",
+    "回购",
+    "中标",
+    "突破",
+    "上调",
+    "beat",
+    "growth",
+    "upgrade",
+    "profit",
+    "buyback",
 )
 NEGATIVE_WORDS = (
-    "低于预期", "亏损", "减持", "问询", "处罚", "诉讼", "下调", "风险",
-    "miss", "loss", "downgrade", "lawsuit", "warning",
+    "低于预期",
+    "亏损",
+    "减持",
+    "问询",
+    "处罚",
+    "诉讼",
+    "下调",
+    "风险",
+    "miss",
+    "loss",
+    "downgrade",
+    "lawsuit",
+    "warning",
 )
 
 
@@ -110,6 +132,7 @@ class MacroSeriesDefinition:
     dimension: str
     unit: str
     favorable_direction: int = 0
+    max_age_days: int = 90
 
 
 @dataclass(frozen=True)
@@ -138,6 +161,7 @@ class ResearchConfig:
                 dimension=str(item.get("dimension") or "其他"),
                 unit=str(item.get("unit") or ""),
                 favorable_direction=max(-1, min(1, int(item.get("favorable_direction", 0)))),
+                max_age_days=max(1, int(item.get("max_age_days", 90))),
             )
             for item in payload.get("macro_series") or []
         )
@@ -218,10 +242,17 @@ class EastmoneyResearchProvider:
                     continue
                 result.append(
                     FinancialFact(
-                        symbol=str(asset["symbol"]), market="CN", period_end=period_end,
-                        filed_at=filed_at, available_at=filed_at, metric=metric, value=numeric,
-                        unit=unit, currency=str(row.get("CURRENCY") or "CNY"),
-                        source="东方财富财务数据", source_url=source_url,
+                        symbol=str(asset["symbol"]),
+                        market="CN",
+                        period_end=period_end,
+                        filed_at=filed_at,
+                        available_at=filed_at,
+                        metric=metric,
+                        value=numeric,
+                        unit=unit,
+                        currency=str(row.get("CURRENCY") or "CNY"),
+                        source="东方财富财务数据",
+                        source_url=source_url,
                         period_type=str(row.get("REPORT_DATE_NAME") or row.get("REPORT_TYPE") or ""),
                         extra={"provider_field": field},
                     )
@@ -235,8 +266,12 @@ class EastmoneyResearchProvider:
         response = self.session.get(
             self.ANNOUNCEMENT_URL,
             params={
-                "sr": "-1", "page_size": "40", "page_index": "1",
-                "ann_type": "A", "client_source": "web", "stock_list": code,
+                "sr": "-1",
+                "page_size": "40",
+                "page_index": "1",
+                "ann_type": "A",
+                "client_source": "web",
+                "stock_list": code,
             },
             timeout=self.timeout,
             headers={"Referer": "https://data.eastmoney.com/"},
@@ -250,18 +285,23 @@ class EastmoneyResearchProvider:
             if not article_code or not title:
                 continue
             published = _parse_datetime(row.get("display_time") or row.get("notice_date"))
-            columns = ", ".join(
-                str(item.get("column_name") or "") for item in row.get("columns") or []
-            ).strip(", ")
+            columns = ", ".join(str(item.get("column_name") or "") for item in row.get("columns") or []).strip(", ")
             result.append(
                 ResearchItem(
-                    item_id=article_code, kind=ResearchKind.FILING, tier=SourceTier.OFFICIAL,
-                    symbol=str(asset["symbol"]), market="CN", title=title,
-                    published_at=published, available_at=published,
+                    item_id=article_code,
+                    kind=ResearchKind.FILING,
+                    tier=SourceTier.OFFICIAL,
+                    symbol=str(asset["symbol"]),
+                    market="CN",
+                    title=title,
+                    published_at=published,
+                    available_at=published,
                     report_date=(date.fromisoformat(str(row["notice_date"])[:10]) if row.get("notice_date") else None),
                     source="上市公司公告（东财索引）",
                     url=f"https://data.eastmoney.com/notices/detail/{code}/{article_code}.html",
-                    summary=columns, sentiment="neutral", confidence=0.98,
+                    summary=columns,
+                    sentiment="neutral",
+                    confidence=0.98,
                     extra={"article_code": article_code},
                 )
             )
@@ -311,9 +351,7 @@ class SecEdgarProvider:
                 temporary = self.cache_path.with_suffix(".tmp")
                 temporary.write_text(json.dumps(payload), encoding="utf-8")
                 temporary.replace(self.cache_path)
-            self._ticker_cache = {
-                str(item.get("ticker", "")).upper(): item for item in payload.values()
-            }
+            self._ticker_cache = {str(item.get("ticker", "")).upper(): item for item in payload.values()}
             return self._ticker_cache
 
     def _cik(self, asset: Mapping[str, Any]) -> str:
@@ -349,15 +387,23 @@ class SecEdgarProvider:
                     accession_plain = accession.replace("-", "")
                     document_url = (
                         f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accession_plain}/"
-                        if accession else f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+                        if accession
+                        else f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
                     )
                     result.append(
                         FinancialFact(
-                            symbol=str(asset["symbol"]), market="US",
-                            period_end=date.fromisoformat(end), filed_at=filed_at,
-                            available_at=filed_at, metric=metric, value=float(record["val"]),
-                            unit=unit, currency="USD" if unit == "USD" else "",
-                            source="SEC XBRL", source_url=document_url, period_type=form,
+                            symbol=str(asset["symbol"]),
+                            market="US",
+                            period_end=date.fromisoformat(end),
+                            filed_at=filed_at,
+                            available_at=filed_at,
+                            metric=metric,
+                            value=float(record["val"]),
+                            unit=unit,
+                            currency="USD" if unit == "USD" else "",
+                            source="SEC XBRL",
+                            source_url=document_url,
+                            period_type=form,
                             extra={"tag": tag, "accession": accession, "frame": record.get("frame")},
                         )
                     )
@@ -387,12 +433,19 @@ class SecEdgarProvider:
             filed_at = _parse_datetime(record["filingDate"])
             result.append(
                 ResearchItem(
-                    item_id=accession, kind=ResearchKind.FILING, tier=SourceTier.OFFICIAL,
-                    symbol=str(asset["symbol"]), market="US",
-                    title=f"{form} · {description or primary}", published_at=filed_at,
-                    available_at=filed_at, source="SEC EDGAR", url=url,
+                    item_id=accession,
+                    kind=ResearchKind.FILING,
+                    tier=SourceTier.OFFICIAL,
+                    symbol=str(asset["symbol"]),
+                    market="US",
+                    title=f"{form} · {description or primary}",
+                    published_at=filed_at,
+                    available_at=filed_at,
+                    source="SEC EDGAR",
+                    url=url,
                     report_date=(date.fromisoformat(record["reportDate"]) if record["reportDate"] else None),
-                    summary=f"申报类型 {form}", confidence=1.0,
+                    summary=f"申报类型 {form}",
+                    confidence=1.0,
                     extra={"accession": accession, "form": form},
                 )
             )
@@ -436,10 +489,17 @@ class GoogleNewsRssProvider:
             sentiment, confidence = classify_sentiment(f"{title} {summary}")
             result.append(
                 ResearchItem(
-                    kind=kind, tier=tier, symbol=str(asset["symbol"]),
-                    market=str(asset.get("market") or ""), title=title,
-                    published_at=published, available_at=published, source=source or "Google News",
-                    url=link, summary=summary, sentiment=sentiment,
+                    kind=kind,
+                    tier=tier,
+                    symbol=str(asset["symbol"]),
+                    market=str(asset.get("market") or ""),
+                    title=title,
+                    published_at=published,
+                    available_at=published,
+                    source=source or "Google News",
+                    url=link,
+                    summary=summary,
+                    sentiment=sentiment,
                     confidence=min(confidence, 0.65 if tier == SourceTier.COMMUNITY else 0.75),
                     extra={"aggregator": "Google News RSS", "query": query},
                 )
@@ -476,7 +536,9 @@ class GoogleNewsRssProvider:
             query = f'site:{site} "{name}"'
             result.extend(
                 self._fetch(
-                    asset, query, kind=ResearchKind.COMMUNITY_OPINION,
+                    asset,
+                    query,
+                    kind=ResearchKind.COMMUNITY_OPINION,
                     tier=SourceTier.COMMUNITY,
                 )
             )
@@ -516,28 +578,59 @@ class FredMacroProvider:
             signal = magnitude * direction * definition.favorable_direction
         now = datetime.now(UTC)
         return MacroObservation(
-            series_id=definition.series_id, name=definition.name,
-            dimension=definition.dimension, observation_date=observation_date,
-            value=value, previous=previous, change=change, change_pct=change_pct,
-            signal=max(-2, min(2, signal)), unit=definition.unit, source="FRED",
+            series_id=definition.series_id,
+            name=definition.name,
+            dimension=definition.dimension,
+            observation_date=observation_date,
+            value=value,
+            previous=previous,
+            change=change,
+            change_pct=change_pct,
+            signal=max(-2, min(2, signal)),
+            unit=definition.unit,
+            source="FRED",
             source_url=f"https://fred.stlouisfed.org/series/{definition.series_id}",
-            release_at=now, vintage_at=now,
-            extra={"note": "release_at 为本机获取时间；回测需另行导入当时 vintage"},
+            release_at=now,
+            vintage_at=now,
+            extra={
+                "note": "release_at 为本机获取时间；回测需另行导入当时 vintage",
+                "max_age_days": definition.max_age_days,
+                "history": [
+                    {"date": observation.isoformat(), "value": historic_value}
+                    for observation, historic_value in values[-24:]
+                ],
+            },
         )
 
 
-def macro_regime(observations: Iterable[MacroObservation]) -> dict[str, Any]:
+def macro_age_days(item: MacroObservation, as_of: date | None = None) -> int:
+    return max(0, ((as_of or datetime.now(UTC).date()) - item.observation_date).days)
+
+
+def macro_is_stale(item: MacroObservation, as_of: date | None = None) -> bool:
+    max_age = max(1, int(item.extra.get("max_age_days", 90)))
+    return macro_age_days(item, as_of) > max_age
+
+
+def macro_regime(observations: Iterable[MacroObservation], as_of: date | None = None) -> dict[str, Any]:
     grouped: dict[str, list[int]] = {}
+    stale: list[str] = []
     for item in observations:
+        if macro_is_stale(item, as_of):
+            stale.append(item.series_id)
+            continue
         grouped.setdefault(item.dimension, []).append(item.signal)
-    dimensions = {
-        dimension: round(sum(values) / len(values), 2)
-        for dimension, values in grouped.items() if values
-    }
+    dimensions = {dimension: round(sum(values) / len(values), 2) for dimension, values in grouped.items() if values}
     scored = list(dimensions.values())
     overall = sum(scored) / len(scored) if scored else 0.0
     label = "risk-on" if overall >= 0.5 else ("risk-off" if overall <= -0.5 else "neutral")
-    return {"label": label, "score": round(overall, 2), "dimensions": dimensions}
+    return {
+        "label": label,
+        "score": round(overall, 2),
+        "dimensions": dimensions,
+        "stale_series": stale,
+        "usable_series": sum(len(values) for values in grouped.values()),
+    }
 
 
 def macro_sector_impact(
@@ -603,15 +696,19 @@ class ResearchService:
             "community": lambda: self.news_provider.community(asset),
         }
         if market == "CN":
-            tasks.update({
-                "financials": lambda: self.eastmoney.financial_facts(asset),
-                "filings": lambda: self.eastmoney.filings(asset),
-            })
+            tasks.update(
+                {
+                    "financials": lambda: self.eastmoney.financial_facts(asset),
+                    "filings": lambda: self.eastmoney.filings(asset),
+                }
+            )
         elif market == "US":
-            tasks.update({
-                "financials": lambda: self.sec.financial_facts(asset),
-                "filings": lambda: self.sec.filings(asset),
-            })
+            tasks.update(
+                {
+                    "financials": lambda: self.sec.financial_facts(asset),
+                    "filings": lambda: self.sec.filings(asset),
+                }
+            )
         errors: dict[str, str] = {}
         facts: list[FinancialFact] = []
         items: list[ResearchItem] = []
@@ -690,12 +787,17 @@ class ResearchService:
                 detected_confidence = 0.5
             items.append(
                 ResearchItem(
-                    kind=kind, tier=tier, symbol=str(row.get("symbol") or default_symbol),
-                    market=str(row.get("market") or ""), title=title,
+                    kind=kind,
+                    tier=tier,
+                    symbol=str(row.get("symbol") or default_symbol),
+                    market=str(row.get("market") or ""),
+                    title=title,
                     published_at=_parse_datetime(row.get("published_at")),
                     source=str(row.get("source") or "手工导入"),
-                    url=str(row.get("url") or ""), author=str(row.get("author") or ""),
-                    summary=summary, sentiment=sentiment,
+                    url=str(row.get("url") or ""),
+                    author=str(row.get("author") or ""),
+                    summary=summary,
+                    sentiment=sentiment,
                     confidence=float(confidence) if confidence not in {None, ""} else detected_confidence,
                     extra={"import_file": str(file_path)},
                 )
@@ -733,18 +835,14 @@ class CachedResearchFundamentalProvider:
     def __init__(self, store: ResearchStore):
         self.store = store
 
-    def get_fundamental_data(
-        self, instrument: Instrument, as_of: date
-    ) -> FundamentalResult:
+    def get_fundamental_data(self, instrument: Instrument, as_of: date) -> FundamentalResult:
         facts = [
             item
             for item in self.store.financial_facts(instrument.symbol, limit=240)
             if (item.available_at or item.filed_at).date() <= as_of
         ]
         if not facts:
-            return FundamentalResult(
-                None, "研究中心尚无该日期前可用的财报数据。", None, None
-            )
+            return FundamentalResult(None, "研究中心尚无该日期前可用的财报数据。", None, None)
         latest_by_metric: dict[str, FinancialFact] = {}
         history_by_metric: dict[str, list[FinancialFact]] = {}
         for item in sorted(facts, key=lambda value: (value.period_end, value.filed_at), reverse=True):
@@ -789,9 +887,7 @@ class CachedResearchFundamentalProvider:
         if net_profit is not None:
             (positives if net_profit > 0 else risks).append("净利润为正" if net_profit > 0 else "净利润为负")
         if cash_flow is not None:
-            (positives if cash_flow > 0 else risks).append(
-                "现金流为正" if cash_flow > 0 else "现金流为负"
-            )
+            (positives if cash_flow > 0 else risks).append("现金流为正" if cash_flow > 0 else "现金流为负")
 
         evidence_count = len(positives) + len(risks)
         if evidence_count < 3:
@@ -832,8 +928,7 @@ class CachedResearchFundamentalProvider:
             (
                 item
                 for item in history[1:]
-                if item.period_type == latest.period_type
-                and 300 <= (latest.period_end - item.period_end).days <= 430
+                if item.period_type == latest.period_type and 300 <= (latest.period_end - item.period_end).days <= 430
             ),
             None,
         )

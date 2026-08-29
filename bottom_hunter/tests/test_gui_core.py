@@ -20,6 +20,7 @@ from bottom_hunter.src.gui_core import (
     PACKAGE_DIR,
     build_backtest_command,
     build_scan_command,
+    load_data_health,
     load_report_summary,
     save_editor_content,
     validate_editor_content,
@@ -31,13 +32,9 @@ from bottom_hunter.src.gui_qt import main as gui_main
 def test_gui_builds_safe_argument_lists() -> None:
     latest = build_scan_command("", False, 6, python_executable="python", workspace=Path("/app"))
     assert latest.argv == ["python", "/app/scanner.py", "--workers", "6"]
-    historical = build_scan_command(
-        "2026-08-13", True, 3, python_executable="python", workspace=Path("/app")
-    )
+    historical = build_scan_command("2026-08-13", True, 3, python_executable="python", workspace=Path("/app"))
     assert historical.argv[-3:] == ["--date", "2026-08-13", "--offline"]
-    backtest = build_backtest_command(
-        "2026-01-01", "2026-08-13", False, 4, "python", Path("/app")
-    )
+    backtest = build_backtest_command("2026-01-01", "2026-08-13", False, 4, "python", Path("/app"))
     assert backtest.argv[2:6] == ["--start", "2026-01-01", "--end", "2026-08-13"]
 
 
@@ -133,12 +130,16 @@ def test_report_summary_counts_only_complete_high_scores(tmp_path) -> None:
                 "signals": [
                     {
                         "symbol": "A",
+                        "market": "US",
+                        "provider": "test",
                         "score": {"total": 8, "rejection": 2},
                         "signal_level": "EARLY REVERSAL",
                         "data_quality": "complete",
                     },
                     {
                         "symbol": "B",
+                        "market": "US",
+                        "provider": "test",
                         "score": {"total": 9, "rejection": 2},
                         "signal_level": "FAILED",
                         "data_quality": "complete",
@@ -146,7 +147,7 @@ def test_report_summary_counts_only_complete_high_scores(tmp_path) -> None:
                 ],
                 "sectors": [],
                 "alerts": [],
-                "data_errors": {"X": "missing"},
+                "data_errors": {"notify": "missing"},
             }
         ),
         encoding="utf-8",
@@ -156,6 +157,12 @@ def test_report_summary_counts_only_complete_high_scores(tmp_path) -> None:
     assert summary.opportunity_count == 1
     assert summary.error_count == 1
     assert summary.signals[0]["symbol"] == "B"
+    health = load_data_health(path)
+    us = next(item for item in health if item["market"] == "US")
+    global_row = next(item for item in health if item["market"] == "全局")
+    assert us["complete"] == 2
+    assert us["errors"] == 0
+    assert global_row["errors"] == 1
 
 
 def test_config_editor_validates_backs_up_and_saves(tmp_path) -> None:
@@ -303,16 +310,10 @@ def test_chart_workspace_draws_and_persists_lines(monkeypatch, tmp_path) -> None
     workspace.annotations = []
     workspace._render_chart()
     workspace._set_draw_mode("horizontal")
-    workspace._chart_clicked(
-        SimpleNamespace(inaxes=workspace.price_axis, xdata=5.0, ydata=106.5)
-    )
+    workspace._chart_clicked(SimpleNamespace(inaxes=workspace.price_axis, xdata=5.0, ydata=106.5))
     workspace._set_draw_mode("trend")
-    workspace._chart_clicked(
-        SimpleNamespace(inaxes=workspace.price_axis, xdata=2.0, ydata=101.0)
-    )
-    workspace._chart_clicked(
-        SimpleNamespace(inaxes=workspace.price_axis, xdata=12.0, ydata=115.0)
-    )
+    workspace._chart_clicked(SimpleNamespace(inaxes=workspace.price_axis, xdata=2.0, ydata=101.0))
+    workspace._chart_clicked(SimpleNamespace(inaxes=workspace.price_axis, xdata=12.0, ydata=115.0))
     app.processEvents()
 
     assert [item["type"] for item in workspace.annotations] == ["horizontal", "trend"]
@@ -321,9 +322,7 @@ def test_chart_workspace_draws_and_persists_lines(monkeypatch, tmp_path) -> None
     workspace.close()
 
 
-def test_chart_workspace_ctrl_wheel_changes_visible_candle_count(
-    monkeypatch, tmp_path
-) -> None:
+def test_chart_workspace_ctrl_wheel_changes_visible_candle_count(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
     from datetime import datetime
 
@@ -376,9 +375,7 @@ def test_chart_workspace_ctrl_wheel_changes_visible_candle_count(
     workspace.close()
 
 
-def test_chart_workspace_can_switch_overlay_and_panel_indicators(
-    monkeypatch, tmp_path
-) -> None:
+def test_chart_workspace_can_switch_overlay_and_panel_indicators(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
     from datetime import datetime
 

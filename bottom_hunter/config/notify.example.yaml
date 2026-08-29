@@ -35,8 +35,8 @@ channels:
     bot_token: ""
     chat_id: ""
 
-# 只推送这些类型的提醒（A 分数跳升 / B 阶段变化 / C 板块暴涨 / E 结构失效）。
-# 高分信号（BUY CANDIDATE 及以上）始终包含在推送摘要里。
+# 只推送这些新产生且已由 SQLite 去重的提醒。
+# 同一标的的状态、依据、观察位和失效条件会合并成一条中文摘要。
 alert_types:
   - A_SCORE_JUMP
   - B_ENTRY_STAGE

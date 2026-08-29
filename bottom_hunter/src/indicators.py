@@ -42,9 +42,7 @@ def atr(bars: pd.DataFrame, period: int = 14) -> pd.Series:
 def bullish_engulfing(bars: pd.DataFrame) -> pd.Series:
     previous_bearish = bars["close"].shift(1) < bars["open"].shift(1)
     current_bullish = bars["close"] > bars["open"]
-    engulfs = (bars["open"] <= bars["close"].shift(1)) & (
-        bars["close"] >= bars["open"].shift(1)
-    )
+    engulfs = (bars["open"] <= bars["close"].shift(1)) & (bars["close"] >= bars["open"].shift(1))
     return (previous_bearish & current_bullish & engulfs).fillna(False)
 
 
@@ -67,12 +65,8 @@ def enrich_bars(bars: pd.DataFrame) -> pd.DataFrame:
     for days in (5, 10, 20):
         result[f"ma{days}"] = close.rolling(days, min_periods=days).mean()
     result["ma20_distance"] = safe_divide(close, result["ma20"]) - 1
-    result["drawdown_20"] = safe_divide(
-        close, close.rolling(20, min_periods=20).max()
-    ) - 1
-    result["drawdown_60"] = safe_divide(
-        close, close.rolling(60, min_periods=60).max()
-    ) - 1
+    result["drawdown_20"] = safe_divide(close, close.rolling(20, min_periods=20).max()) - 1
+    result["drawdown_60"] = safe_divide(close, close.rolling(60, min_periods=60).max()) - 1
     result["rsi14"] = rsi(close, 14)
     result["atr14"] = atr(result, 14)
     result["true_range"] = true_range(result)
@@ -92,13 +86,11 @@ def enrich_bars(bars: pd.DataFrame) -> pd.DataFrame:
     result["new_high_20"] = (result["high"] >= prior_high20).fillna(False)
     result["bullish_engulfing"] = bullish_engulfing(result)
     result["morning_star"] = morning_star(result)
-    result["long_lower_shadow"] = (
-        (result["lower_shadow_ratio"] >= 0.40)
-        & (result["close_position"] >= 0.60)
-    ).fillna(False)
+    result["long_lower_shadow"] = ((result["lower_shadow_ratio"] >= 0.40) & (result["close_position"] >= 0.60)).fillna(
+        False
+    )
     result["higher_low_2"] = (
-        (result["low"] > result["low"].shift(1))
-        & (result["low"].shift(1) > result["low"].shift(2))
+        (result["low"] > result["low"].shift(1)) & (result["low"].shift(1) > result["low"].shift(2))
     ).fillna(False)
     return result
 
@@ -117,9 +109,7 @@ def aligned_returns(
             output[f"rs_{period}d"] = np.nan
             continue
         stock_return = joined["stock"].iloc[-1] / joined["stock"].iloc[-period - 1] - 1
-        reference_return = (
-            joined["reference"].iloc[-1] / joined["reference"].iloc[-period - 1] - 1
-        )
+        reference_return = joined["reference"].iloc[-1] / joined["reference"].iloc[-period - 1] - 1
         output[f"rs_{period}d"] = float(stock_return - reference_return)
     return output
 
@@ -133,4 +123,3 @@ def normalized_relative_curve(stock: pd.DataFrame, reference: pd.DataFrame) -> p
     if joined.empty:
         return joined
     return joined / joined.iloc[0] * 100
-

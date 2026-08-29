@@ -5,6 +5,7 @@ __pycache__/
 reports/daily_report_*.md
 reports/daily_report_*.json
 reports/backtest_*
+reports/digest_*.txt
 reports/charts/
 state/*.db
 state/*.db-*
@@ -14,6 +15,7 @@ state/industry_cache.json
 state/watchlist_summary.json
 state/research_cache/
 state/chart_drawings.json
+config/notify.yaml
 data/raw/*.csv
 legacy_archive/
 !reports/example_daily_report.md

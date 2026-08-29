@@ -52,10 +52,7 @@ class LongbridgeCandleResult:
 
 
 def sanitize_credentials(values: Mapping[str, Any] | None) -> dict[str, str]:
-    result = {
-        key: str((values or {}).get(key) or "").strip()
-        for key in LONG_BRIDGE_ENV_KEYS
-    }
+    result = {key: str((values or {}).get(key) or "").strip() for key in LONG_BRIDGE_ENV_KEYS}
     result["http_url"] = result["http_url"] or DEFAULT_HTTP_URL
     result["quote_ws_url"] = result["quote_ws_url"] or DEFAULT_QUOTE_WS_URL
     return result
@@ -69,10 +66,7 @@ def credentials_complete(values: Mapping[str, Any] | None) -> bool:
 def runtime_credentials(vault: Any | None = None) -> dict[str, str]:
     """Load credentials from environment first, then the desktop keyring."""
 
-    environment = {
-        key: os.environ.get(environment_key, "")
-        for key, environment_key in LONG_BRIDGE_ENV_KEYS.items()
-    }
+    environment = {key: os.environ.get(environment_key, "") for key, environment_key in LONG_BRIDGE_ENV_KEYS.items()}
     if credentials_complete(environment):
         return sanitize_credentials(environment)
     if vault is None:
@@ -90,14 +84,11 @@ def runtime_credentials(vault: Any | None = None) -> dict[str, str]:
 def _sdk_install_hint() -> str:
     version = f"{sys.version_info.major}.{sys.version_info.minor}"
     suffix = (
-        " 当前 Python 3.13 可能需要 Rust 编译环境；建议改用 Python 3.11/3.12。"
-        if sys.version_info >= (3, 13)
-        else ""
+        " 当前 Python 3.13 可能需要 Rust 编译环境；建议改用 Python 3.11/3.12。" if sys.version_info >= (3, 13) else ""
     )
     return (
         f"未安装或无法加载长桥官方 Python SDK（当前 Python {version}）。"
-        "请在项目目录执行：pip install -e './bottom_hunter[longbridge]'。"
-        + suffix
+        "请在项目目录执行：pip install -e './bottom_hunter[longbridge]'。" + suffix
     )
 
 
@@ -247,11 +238,7 @@ class LongbridgeClient:
             return ()
         result: list[str] = []
         for item in values:
-            name = (
-                getattr(item, "package_name", None)
-                or getattr(item, "name", None)
-                or str(item)
-            )
+            name = getattr(item, "package_name", None) or getattr(item, "name", None) or str(item)
             if str(name).strip():
                 result.append(str(name).strip())
         return tuple(result)
@@ -302,9 +289,7 @@ class LongbridgeClient:
         longbridge_symbol = normalize_symbol(symbol, market)
         bindings = self._bindings()
         period_name = self.PERIOD_NAMES[timeframe]
-        aggregate_four_hours = timeframe == "4h" and not hasattr(
-            bindings.Period, period_name
-        )
+        aggregate_four_hours = timeframe == "4h" and not hasattr(bindings.Period, period_name)
         period = getattr(
             bindings.Period,
             "Min_60" if aggregate_four_hours else period_name,
@@ -331,15 +316,11 @@ class LongbridgeClient:
                         ),
                         adjust_type,
                     )
-                quote_level = self._context_value(
-                    context, "quote_level", "按账号套餐"
-                )
+                quote_level = self._context_value(context, "quote_level", "按账号套餐")
         except LongbridgeError:
             raise
         except Exception as exc:
-            raise LongbridgeError(
-                f"长桥 {longbridge_symbol} 行情请求失败：{exc}"
-            ) from exc
+            raise LongbridgeError(f"长桥 {longbridge_symbol} 行情请求失败：{exc}") from exc
         bars = self._candles_frame(values, market)
         if aggregate_four_hours:
             bars = self._resample_four_hours(bars)
@@ -352,9 +333,7 @@ class LongbridgeClient:
         working = frame.copy()
         working["date"] = pd.to_datetime(working["date"], errors="coerce")
         working = working.dropna(subset=["date"]).set_index("date")
-        result = working.resample(
-            "4h", origin="start_day", label="right", closed="right"
-        ).agg(
+        result = working.resample("4h", origin="start_day", label="right", closed="right").agg(
             {
                 "open": "first",
                 "high": "max",
@@ -367,9 +346,7 @@ class LongbridgeClient:
 
     @staticmethod
     def _candles_frame(values: Any, market: str) -> pd.DataFrame:
-        zone = {"CN": "Asia/Shanghai", "HK": "Asia/Hong_Kong", "US": "America/New_York"}.get(
-            str(market).upper(), "UTC"
-        )
+        zone = {"CN": "Asia/Shanghai", "HK": "Asia/Hong_Kong", "US": "America/New_York"}.get(str(market).upper(), "UTC")
         rows: list[dict[str, Any]] = []
         for item in values or ():
             timestamp = getattr(item, "timestamp", None)

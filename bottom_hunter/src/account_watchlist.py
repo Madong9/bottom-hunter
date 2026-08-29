@@ -151,13 +151,7 @@ def _normalize_market_hint(market_hint: str) -> str:
 
 
 def _equity_symbol(raw_symbol: str, market_hint: str = "") -> tuple[str, str]:
-    symbol = (
-        raw_symbol.strip()
-        .upper()
-        .replace("SHSE.", "")
-        .replace("SZSE.", "")
-        .replace("BJSE.", "")
-    )
+    symbol = raw_symbol.strip().upper().replace("SHSE.", "").replace("SZSE.", "").replace("BJSE.", "")
     symbol = symbol.replace(".SH", ".SS")
     hint = _normalize_market_hint(market_hint)
     prefixed = re.fullmatch(r"(SH|SZ|BJ)(\d{6})", symbol)
@@ -639,8 +633,7 @@ def search_equities(query: str, market_hint: str = "", timeout: int = 8) -> list
     candidates.sort(
         key=lambda item: (
             item["name"].casefold() != query_folded,
-            item["code"].casefold() != query_folded
-            and item["symbol"].casefold() != query_folded,
+            item["code"].casefold() != query_folded and item["symbol"].casefold() != query_folded,
             item["market"],
             item["symbol"],
         )
@@ -657,9 +650,7 @@ def _resolve_name_only_row(source: str, row: Mapping[str, Any]) -> dict[str, Any
         return resolved_row
     market_hint = _row_value(resolved_row, "market", "市场", "exchange", "交易所")
     matches = [
-        candidate
-        for candidate in search_equities(name, market_hint)
-        if candidate["name"].casefold() == name.casefold()
+        candidate for candidate in search_equities(name, market_hint) if candidate["name"].casefold() == name.casefold()
     ]
     if len(matches) != 1:
         reason = "没有精确匹配" if not matches else f"找到 {len(matches)} 个同名结果"
@@ -767,8 +758,7 @@ def parse_watchlist_file(
     if name_only_indexes:
         with ThreadPoolExecutor(max_workers=min(6, len(name_only_indexes))) as executor:
             futures = {
-                executor.submit(_resolve_name_only_row, source, rows[index]): index
-                for index in name_only_indexes
+                executor.submit(_resolve_name_only_row, source, rows[index]): index for index in name_only_indexes
             }
             for future in as_completed(futures):
                 index = futures[future]
@@ -869,8 +859,7 @@ class IndustryResolver:
             exact = [
                 item
                 for item in search_equities(symbol, "US", timeout=self.timeout)
-                if item["symbol"].casefold() == symbol.casefold()
-                and _clean(item.get("quote_id"))
+                if item["symbol"].casefold() == symbol.casefold() and _clean(item.get("quote_id"))
             ]
             if exact:
                 return exact[0]["quote_id"]
@@ -881,9 +870,7 @@ class IndustryResolver:
         if not quote_id:
             return {}
         request = Request(
-            self.PROFILE_URL
-            + "?"
-            + urlencode({"secid": quote_id, "fields": "f57,f58,f127"}),
+            self.PROFILE_URL + "?" + urlencode({"secid": quote_id, "fields": "f57,f58,f127"}),
             headers={
                 "User-Agent": "Mozilla/5.0 BottomHunter/0.5",
                 "Referer": "https://quote.eastmoney.com/",
@@ -1082,14 +1069,11 @@ class AccountWatchlistRepository:
         unresolved = [
             asset
             for asset in assets
-            if asset.category != "crypto"
-            and (asset.industry == UNKNOWN_INDUSTRY or _is_placeholder_name(asset))
+            if asset.category != "crypto" and (asset.industry == UNKNOWN_INDUSTRY or _is_placeholder_name(asset))
         ]
         resolved: dict[str, dict[str, str]] = {}
         with ThreadPoolExecutor(max_workers=min(6, max(1, len(unresolved)))) as executor:
-            futures = {
-                executor.submit(resolver.resolve_profile, asset): asset for asset in unresolved
-            }
+            futures = {executor.submit(resolver.resolve_profile, asset): asset for asset in unresolved}
             for future in as_completed(futures):
                 asset = futures[future]
                 try:
@@ -1106,9 +1090,7 @@ class AccountWatchlistRepository:
                 **{
                     **asdict(asset),
                     "name": resolved.get(asset.canonical_id, {}).get("name", asset.name),
-                    "industry": resolved.get(asset.canonical_id, {}).get(
-                        "industry", asset.industry
-                    ),
+                    "industry": resolved.get(asset.canonical_id, {}).get("industry", asset.industry),
                     "metadata": {
                         **asset.metadata,
                         **(
@@ -1238,9 +1220,7 @@ class AccountWatchlistRepository:
                     merged[key] = current
                 current["sources"].append(source)
                 current["source_symbols"][source] = asset.source_symbol
-                current["tokenized_stock"] = bool(
-                    current["tokenized_stock"] or asset.tokenized_stock
-                )
+                current["tokenized_stock"] = bool(current["tokenized_stock"] or asset.tokenized_stock)
                 if current["industry"] == UNKNOWN_INDUSTRY and asset.industry != UNKNOWN_INDUSTRY:
                     current["industry"] = asset.industry
                 if current["name"] in {current["symbol"], current["symbol"].split("-", 1)[0]}:
@@ -1362,8 +1342,7 @@ class AccountWatchlistRepository:
         }
         _atomic_yaml(self.active_watchlist_path, watchlist)
         category_counts = {
-            category: sum(item["category"] == category for item in assets)
-            for category in CATEGORY_LABELS
+            category: sum(item["category"] == category for item in assets) for category in CATEGORY_LABELS
         }
         summary = {
             "generated_at": watchlist["generated_at"],
@@ -1372,13 +1351,10 @@ class AccountWatchlistRepository:
             "overlap_count": sum(len(item["sources"]) > 1 for item in assets),
             "tokenized_stock_count": sum(bool(item["tokenized_stock"]) for item in assets),
             "unresolved_industry_count": sum(
-                item["category"] != "crypto" and item["industry"] == UNKNOWN_INDUSTRY
-                for item in assets
+                item["category"] != "crypto" and item["industry"] == UNKNOWN_INDUSTRY for item in assets
             ),
             "category_counts": category_counts,
-            "source_counts": {
-                source: len(self.load_source_assets(source)) for source in SUPPORTED_SOURCES
-            },
+            "source_counts": {source: len(self.load_source_assets(source)) for source in SUPPORTED_SOURCES},
             "assets": assets,
             "sectors": [
                 {

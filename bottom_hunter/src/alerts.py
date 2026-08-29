@@ -6,9 +6,7 @@ from .models import Alert, BottomState, SectorResult, StockSignal
 from .storage import StateStore
 
 
-def build_alerts(
-    signals: list[StockSignal], sectors: list[SectorResult], store: StateStore
-) -> list[Alert]:
+def build_alerts(signals: list[StockSignal], sectors: list[SectorResult], store: StateStore) -> list[Alert]:
     alerts: list[Alert] = []
     previous_signals = store.previous_signals_map(signals)
     for signal in signals:
@@ -20,18 +18,23 @@ def build_alerts(
         if previous:
             try:
                 previous_payload = json.loads(previous["payload_json"])
-                previous_relative = bool(
-                    previous_payload.get("metrics", {}).get("index_new_low_stock_holds")
-                )
+                previous_relative = bool(previous_payload.get("metrics", {}).get("index_new_low_stock_holds"))
             except (json.JSONDecodeError, TypeError):
                 previous_relative = False
-        if previous_score is not None and previous_score <= 6 and signal.score.total >= 8:
+        first_high_score = previous_score is None and signal.score.total >= 7
+        crossed_high_score = previous_score is not None and previous_score <= 6 and signal.score.total >= 7
+        if first_high_score or crossed_high_score:
+            detail = (
+                f"首次达到 {signal.score.total} 分"
+                if first_high_score
+                else f"首次从 {previous_score} 分跃升至 {signal.score.total} 分"
+            )
             alerts.append(
                 Alert(
                     signal.date,
                     "A_SCORE_JUMP",
                     signal.symbol,
-                    f"{signal.symbol} 首次从 {previous_score} 分跃升至 {signal.score.total} 分。",
+                    f"{signal.symbol} {detail}。",
                 )
             )
         if signal.entry_stage and signal.entry_stage.value != previous_stage:
@@ -60,11 +63,7 @@ def build_alerts(
             "BREADTH_CONFIRM",
             "TREND_CONFIRM",
         }
-        if (
-            signal.state == BottomState.FAILED
-            and previous_state != BottomState.FAILED.value
-            and prior_bottom_state
-        ):
+        if signal.state == BottomState.FAILED and previous_state != BottomState.FAILED.value and prior_bottom_state:
             alerts.append(
                 Alert(
                     signal.date,

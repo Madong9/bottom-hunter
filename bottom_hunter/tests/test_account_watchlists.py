@@ -29,9 +29,7 @@ def _write(path: Path, content: str) -> Path:
 
 
 def test_platform_rows_are_normalized_without_mixing_tokenized_stocks_into_crypto() -> None:
-    a_share = normalize_import_row(
-        "tonghuashun", {"证券代码": "600519", "名称": "贵州茅台", "所属行业": "食品饮料"}
-    )
+    a_share = normalize_import_row("tonghuashun", {"证券代码": "600519", "名称": "贵州茅台", "所属行业": "食品饮料"})
     assert a_share.symbol == "600519.SS"
     assert a_share.category == "cn_equity"
 
@@ -59,15 +57,11 @@ def test_platform_rows_are_normalized_without_mixing_tokenized_stocks_into_crypt
     assert okx_stock.category == "global_equity"
     assert okx_stock.tokenized_stock is True
 
-    bstock = normalize_import_row(
-        "binance", {"symbol": "TSLABUSDT", "asset_type": "stock", "name": "Tesla bStock"}
-    )
+    bstock = normalize_import_row("binance", {"symbol": "TSLABUSDT", "asset_type": "stock", "name": "Tesla bStock"})
     assert bstock.symbol == "TSLA"
     assert bstock.tokenized_stock is True
 
-    prefixed_hk = normalize_import_row(
-        "tonghuashun", {"股票代码": "HK1810", "股票名称": "小米集团-W"}
-    )
+    prefixed_hk = normalize_import_row("tonghuashun", {"股票代码": "HK1810", "股票名称": "小米集团-W"})
     assert prefixed_hk.symbol == "1810.HK"
     assert prefixed_hk.market == "HK"
     assert prefixed_hk.category == "global_equity"
@@ -85,11 +79,7 @@ def test_ths_blk_and_exchange_text_files_are_supported(tmp_path) -> None:
 
 def test_tonghuashun_sel_stockblock_and_beijing_symbols_are_supported(tmp_path) -> None:
     selected = tmp_path / "自选股.sel"
-    selected.write_bytes(
-        (2).to_bytes(2, "little")
-        + b"\x07\x21" + b"000001"
-        + b"\x07\x11" + b"600519"
-    )
+    selected.write_bytes((2).to_bytes(2, "little") + b"\x07\x21" + b"000001" + b"\x07\x11" + b"600519")
     assert {item.symbol for item in parse_watchlist_file(selected, "tonghuashun")} == {
         "000001.SZ",
         "600519.SS",
@@ -97,8 +87,7 @@ def test_tonghuashun_sel_stockblock_and_beijing_symbols_are_supported(tmp_path) 
 
     stock_block = _write(
         tmp_path / "StockBlock.ini",
-        "[BLOCK_NAME_MAP_TABLE]\nSELF=自选股\n"
-        "[BLOCK_STOCK_CONTEXT]\nSELF=33:000001,17:600519,87:830799\n",
+        "[BLOCK_NAME_MAP_TABLE]\nSELF=自选股\n[BLOCK_STOCK_CONTEXT]\nSELF=33:000001,17:600519,87:830799\n",
     )
     symbols = {item.symbol for item in parse_watchlist_file(stock_block, "tonghuashun")}
     assert symbols == {"000001.SZ", "600519.SS", "830799.BJ"}
@@ -389,9 +378,7 @@ class _Session:
 
 def test_account_connectors_accept_only_read_only_keys(tmp_path) -> None:
     vault = _MemoryVault()
-    service = AccountConnectionService(
-        tmp_path / "connections.json", vault=vault, session=_Session()
-    )
+    service = AccountConnectionService(tmp_path / "connections.json", vault=vault, session=_Session())
     binance = service.connect_binance("api-key", "secret", account_label="my-binance")
     assert binance.permissions == "read_only"
     assert binance.persisted_in_keyring is True
@@ -413,10 +400,7 @@ def test_binance_restricted_location_has_actionable_non_bypass_message() -> None
     response = _Response(
         {
             "code": 0,
-            "msg": (
-                "Service unavailable from a restricted location according to "
-                "'b. Eligibility'"
-            ),
+            "msg": ("Service unavailable from a restricted location according to 'b. Eligibility'"),
         },
         status_code=451,
     )

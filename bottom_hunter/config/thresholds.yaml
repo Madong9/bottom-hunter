@@ -44,5 +44,15 @@ defaults:
     circuit_breaker_failures: 3
     eastmoney_max_concurrency: 3
     minimum_latest_coverage: 0.70
+  backtest:
+    cost_bps: 20
+    stop_loss: 0.08
+    take_profit: 0.12
+    max_holding_sessions: 20
+    episode_reset_days: 5
+    walk_forward_folds: 4
+  validation:
+    # 当前一年事件回测没有任何阈值通过行动级验证；通过后再人工开启。
+    action_signals_enabled: false
 
 sector_overrides: {}

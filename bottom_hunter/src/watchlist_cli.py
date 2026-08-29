@@ -57,10 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         summary = repository.rebuild_active_watchlist()
     elif args.command == "sync":
         summary, refreshed, errors = repository.refresh_linked_files()
-        print(
-            "已同步："
-            + (", ".join(SOURCE_LABELS[source] for source in refreshed) if refreshed else "无")
-        )
+        print("已同步：" + (", ".join(SOURCE_LABELS[source] for source in refreshed) if refreshed else "无"))
         for source, error in errors.items():
             print(f"[{SOURCE_LABELS[source]}] {error}")
     elif args.command == "set-industry":

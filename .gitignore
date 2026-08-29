@@ -16,6 +16,7 @@ tmp/
 # Runtime/cache data
 bottom_hunter/state/research_cache/
 bottom_hunter/state/chart_drawings.json
+bottom_hunter/config/notify.yaml
 
 # IDE
 .idea/

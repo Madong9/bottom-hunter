@@ -19,6 +19,7 @@ from matplotlib.patches import Rectangle
 from .indicators import enrich_bars, normalized_relative_curve
 from .io_utils import CJK_FONT_FAMILIES
 from .models import Alert, SectorResult, StockSignal
+from .notify import ALERT_LABELS
 from .research_storage import ResearchStore
 from .storage import StateStore
 
@@ -80,9 +81,7 @@ def report_payload(
 def write_json(payload: dict[str, Any], output_dir: Path, report_date: date) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / f"daily_report_{report_date:%Y%m%d}.json"
-    path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8"
-    )
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
     return path
 
 
@@ -103,7 +102,7 @@ def write_markdown(
         signal
         for signal in signals
         if signal["score"]["total"] >= 7
-        and signal["signal_level"] != "FAILED"
+        and signal["signal_level"] not in {"FAILED", "IGNORE", "WATCH"}
         and signal["data_quality"] == "complete"
     ]
     opportunities.sort(
@@ -120,6 +119,8 @@ def write_markdown(
         f"日期：{report_date.isoformat()}",
         "",
         "用途：只产生观察/交易框架信号，不自动下单，不构成投资建议。",
+        "",
+        "校准状态：行动级标签当前关闭；历史验证通过前，所有候选均按研究观察处理。",
         "",
         "## 市场环境",
         "",
@@ -143,6 +144,9 @@ def write_markdown(
     if paper.get("latest") is not None:
         lines += ["", "## 模拟组合（三阶段框架，仅供研究）", ""]
         lines.append(f"- 组合净值指数：{paper['latest']:.4f}（1.0000 起步）")
+        latest_point = (paper.get("points") or [{}])[-1]
+        if latest_point.get("invested_weight") is not None:
+            lines.append(f"- 当前模拟投入比例：{latest_point['invested_weight']:.0%}")
         lines.append(f"- 数据点：{len(paper['points'])} 个交易日；明细见 paper_valuations 表。")
     lines += ["", "## 今日最高优先级机会", ""]
     if not opportunities:
@@ -167,13 +171,12 @@ def write_markdown(
             (
                 f"Score：{score['total']}/{score['available_max']}（基本面 N/A，满分尚不完整）"
                 if score["fundamental"] is None
-                else f"Score：{score['total']}/11"
+                else f"Score：{score['total']}/10"
             ),
             "",
             f"状态：{state}",
             "",
-            f"信号：{stage}；等级 {signal['signal_level']}"
-            + ("；⚡突破候选" if signal.get("breakout") else ""),
+            f"信号：{stage}；等级 {signal['signal_level']}" + ("；⚡突破候选" if signal.get("breakout") else ""),
             "",
             "分项："
             f"超跌 {score['oversold']}/2、恐慌 {score['capitulation']}/2、"
@@ -188,8 +191,7 @@ def write_markdown(
         lines.extend(f"- {reason}" for reason in signal["reasons"])
         lines += [
             "",
-            "相对强弱："
-            + ("已出现拐点。" if signal["relative_strength_turn"] else "尚未确认拐点。"),
+            "相对强弱：" + ("已出现拐点。" if signal["relative_strength_turn"] else "尚未确认拐点。"),
             "",
             "风险：",
             "",
@@ -202,19 +204,26 @@ def write_markdown(
     lines += ["## 今日最值得观察的反弹板块", ""]
     if sectors:
         lines += ["| 排名 | 板块 | 市场 | Sector Bottom Score | 宽度/覆盖率 |", "|---:|---|---|---:|---:|"]
-        for rank, sector in enumerate(sectors, 1):
+        visible_sectors = sectors[:10]
+        for rank, sector in enumerate(visible_sectors, 1):
             breadth = sector["breadth"]
             lines.append(
                 f"| {rank} | {sector['sector_name']} | {sector['market']} | "
                 f"{sector['score']}/100 | {breadth['up_ratio']:.0%}/{breadth['coverage']:.0%} |"
             )
-        lines += ["", "反转领先顺序：", ""]
-        for sector in sectors:
+        if len(sectors) > len(visible_sectors):
+            lines.append(
+                f"\n仅展示前 {len(visible_sectors)} 名，其余 {len(sectors) - len(visible_sectors)} 个板块见 JSON 明细。"
+            )
+        lines += ["", "前十板块反转领先顺序：", ""]
+        for sector in visible_sectors:
             names = " → ".join(sector["leader_ranking"][:5]) or "数据不足"
             lines.append(f"- {sector['sector_name']}（{sector['market']}）：{names}")
     if payload["alerts"]:
         lines += ["", "## 高级别提醒（已去重）", ""]
-        lines.extend(f"- [{item['type']}] {item['message']}" for item in payload["alerts"])
+        lines.extend(
+            f"- [{ALERT_LABELS.get(item['type'], item['type'])}] {item['message']}" for item in payload["alerts"]
+        )
     research = payload.get("research") or {}
     research_assets = research.get("assets") or {}
     macro_items = research.get("macro") or []
@@ -234,22 +243,30 @@ def write_markdown(
             lines.append("")
         if macro_items:
             lines += ["宏观环境最新观测：", ""]
+            as_of = date.fromisoformat(str(payload["report_date"]))
             for item in macro_items[:12]:
+                observation_date = date.fromisoformat(str(item.get("observation_date")))
+                age_days = max(0, (as_of - observation_date).days)
+                max_age_days = max(1, int((item.get("extra") or {}).get("max_age_days", 90)))
+                freshness = f"，⚠ 已过期 {age_days} 天，不参与宏观评分" if age_days > max_age_days else ""
                 lines.append(
                     f"- {item.get('dimension', '其他')} / {item.get('name', item.get('series_id'))}："
-                    f"{item.get('value')} {item.get('unit', '')}（{item.get('observation_date', '--')}）"
+                    f"{item.get('value')} {item.get('unit', '')}"
+                    f"（{item.get('observation_date', '--')}{freshness}）"
                 )
     lines += ["", "## 数据质量", ""]
     if payload["data_errors"]:
         lines.append("以下证券数据不完整，未生成其交易信号：")
         lines.append("")
-        lines.extend(f"- {symbol}：{message}" for symbol, message in payload["data_errors"].items())
+        error_items = list(payload["data_errors"].items())
+        lines.extend(f"- {symbol}：{message}" for symbol, message in error_items[:20])
+        if len(error_items) > 20:
+            lines.append(f"- 其余 {len(error_items) - 20} 项异常见 JSON 明细。")
     else:
         lines.append("本次入选信号所需行情完整。")
     if research_assets:
         fundamental_note = (
-            "研究中心已缓存部分财报和公告；社区观点不参与基本面评分。"
-            "评分仍为 N/A 的标的需人工核对原始披露。"
+            "研究中心已缓存部分财报和公告；社区观点不参与基本面评分。评分仍为 N/A 的标的需人工核对原始披露。"
         )
     else:
         fundamental_note = (
@@ -294,9 +311,7 @@ def generate_chart(
     ax_price.plot(enriched.index, enriched["ma10"], label="MA10", linewidth=1)
     ax_price.plot(enriched.index, enriched["ma20"], label="MA20", linewidth=1.1)
     if signal.capitulation_low is not None:
-        ax_price.axhline(
-            signal.capitulation_low, color="#9467bd", linestyle="--", label="capitulation_low"
-        )
+        ax_price.axhline(signal.capitulation_low, color="#9467bd", linestyle="--", label="capitulation_low")
     stage_colors = {
         "ENTRY_STAGE_1": "#ff7f0e",
         "ENTRY_STAGE_2": "#1f77b4",

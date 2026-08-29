@@ -138,9 +138,7 @@ def test_binance_reads_imported_crypto_source_symbol(monkeypatch) -> None:
         category="crypto",
         source_symbols={"binance": "BTCUSDT"},
     )
-    result = BinanceKlineProvider().get_daily_bars(
-        instrument, date(2026, 8, 13), date(2026, 8, 14)
-    )
+    result = BinanceKlineProvider().get_daily_bars(instrument, date(2026, 8, 13), date(2026, 8, 14))
     assert captured["symbol"] == "BTCUSDT"
     assert result.provider == "binance_klines"
     assert captured["url"] == "https://data-api.binance.vision/api/v3/klines"
@@ -161,9 +159,7 @@ def test_okx_ignores_unfinished_daily_candle(monkeypatch) -> None:
                 ],
             }
 
-    monkeypatch.setattr(
-        "bottom_hunter.src.data_provider.requests.get", lambda *args, **kwargs: Response()
-    )
+    monkeypatch.setattr("bottom_hunter.src.data_provider.requests.get", lambda *args, **kwargs: Response())
     instrument = Instrument(
         "BTC-USDT",
         "Bitcoin",
@@ -171,9 +167,7 @@ def test_okx_ignores_unfinished_daily_candle(monkeypatch) -> None:
         category="crypto",
         source_symbols={"okx": "BTC-USDT"},
     )
-    result = OkxCandleProvider().get_daily_bars(
-        instrument, date(2026, 8, 13), date(2026, 8, 14)
-    )
+    result = OkxCandleProvider().get_daily_bars(instrument, date(2026, 8, 13), date(2026, 8, 14))
     assert len(result.bars) == 1
     assert result.bars.iloc[0]["close"] == 105
 
@@ -188,9 +182,7 @@ def test_okx_can_supply_fallback_bars_for_binance_only_pair(monkeypatch) -> None
         def json(self):
             return {
                 "code": "0",
-                "data": [
-                    ["1786579200000", "100", "110", "90", "105", "1234", "", "", "1"]
-                ],
+                "data": [["1786579200000", "100", "110", "90", "105", "1234", "", "", "1"]],
             }
 
     def fake_get(_url, **kwargs):
@@ -206,9 +198,7 @@ def test_okx_can_supply_fallback_bars_for_binance_only_pair(monkeypatch) -> None
         source_symbols={"binance": "BTCUSDT"},
     )
 
-    result = OkxCandleProvider().get_daily_bars(
-        instrument, date(2026, 8, 13), date(2026, 8, 13)
-    )
+    result = OkxCandleProvider().get_daily_bars(instrument, date(2026, 8, 13), date(2026, 8, 13))
 
     assert captured["instId"] == "BTC-USDT"
     assert result.provider == "okx_candles"

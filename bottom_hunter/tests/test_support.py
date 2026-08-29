@@ -72,9 +72,7 @@ def test_capitulation_low_is_used_as_anchor() -> None:
     target = frame.index[-1].date()
     frame.iloc[-1, frame.columns.get_loc("low")] = 94.8
     frame.iloc[-1, frame.columns.get_loc("close")] = 95.4
-    score, level, _reasons, _metrics = evaluate_support(
-        frame, target, extra_levels=[95.0]
-    )
+    score, level, _reasons, _metrics = evaluate_support(frame, target, extra_levels=[95.0])
     assert score == 1
     assert level == 95.0
 

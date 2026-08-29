@@ -83,18 +83,12 @@ class ScoreBreakdown:
     @property
     def total(self) -> int:
         return (
-            self.oversold
-            + self.capitulation
-            + self.rejection
-            + self.breadth
-            + (self.fundamental or 0)
-            + self.timing
-            + self.support
+            self.oversold + self.capitulation + self.rejection + self.breadth + (self.fundamental or 0) + self.support
         )
 
     @property
     def available_max(self) -> int:
-        return 11 if self.fundamental is not None else 9
+        return 10 if self.fundamental is not None else 8
 
 
 @dataclass
@@ -126,9 +120,7 @@ class StockSignal:
         payload["signal_level"] = self.signal_level.value
         payload["state"] = self.state.value
         payload["entry_stage"] = self.entry_stage.value if self.entry_stage else None
-        payload["capitulation_date"] = (
-            self.capitulation_date.isoformat() if self.capitulation_date else None
-        )
+        payload["capitulation_date"] = self.capitulation_date.isoformat() if self.capitulation_date else None
         payload["data_timestamp"] = self.data_timestamp.isoformat()
         payload["score"]["total"] = self.score.total
         payload["score"]["available_max"] = self.score.available_max

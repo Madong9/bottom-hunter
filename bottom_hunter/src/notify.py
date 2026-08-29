@@ -36,11 +36,34 @@ from typing import Any
 import requests
 
 from .config import PROJECT_DIR
-from .models import Alert, SignalLevel, StockSignal
+from .models import Alert, StockSignal
 
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_ALERT_TYPES = ("A_SCORE_JUMP", "B_ENTRY_STAGE", "C_SECTOR_SURGE", "E_SIGNAL_FAILED")
+
+ALERT_LABELS = {
+    "A_SCORE_JUMP": "评分跃升",
+    "B_ENTRY_STAGE": "阶段变化",
+    "C_SECTOR_SURGE": "板块升温",
+    "D_RELATIVE_DIVERGENCE": "相对强度拐点",
+    "E_SIGNAL_FAILED": "结构失效",
+}
+STAGE_LABELS = {
+    "ENTRY_STAGE_1": "阶段1·恐慌反转",
+    "ENTRY_STAGE_2": "阶段2·拒绝新低",
+    "ENTRY_STAGE_3": "阶段3·宽度确认",
+}
+STATE_LABELS = {
+    "NORMAL": "正常",
+    "SELL_OFF": "下跌释放",
+    "CAPITULATION": "恐慌释放",
+    "REVERSAL_DAY": "反转日",
+    "NO_NEW_LOW": "拒绝创新低",
+    "BREADTH_CONFIRM": "宽度确认",
+    "TREND_CONFIRM": "趋势确认",
+    "FAILED": "结构失效",
+}
 
 
 @dataclass(frozen=True)
@@ -60,9 +83,7 @@ class NotifyConfig:
 
     @property
     def wecom_app_ready(self) -> bool:
-        return bool(
-            self.wecom_corpid and self.wecom_corpsecret and self.wecom_agentid
-        )
+        return bool(self.wecom_corpid and self.wecom_corpsecret and self.wecom_agentid)
 
     @property
     def has_channel(self) -> bool:
@@ -200,9 +221,7 @@ def _wxpusher(config: NotifyConfig, title: str, body: str, timeout: int) -> str 
     }
     if config.wxpusher_uid:
         payload["uids"] = [config.wxpusher_uid]
-    response = requests.post(
-        "https://wxpusher.zjiecode.com/api/send/message", json=payload, timeout=timeout
-    )
+    response = requests.post("https://wxpusher.zjiecode.com/api/send/message", json=payload, timeout=timeout)
     try:
         data = response.json()
     except ValueError as exc:
@@ -224,22 +243,72 @@ def _telegram(token: str, chat_id: str, title: str, body: str, timeout: int) -> 
 
 
 def format_digest(alerts: list[Alert], signals: list[StockSignal]) -> tuple[str, str]:
-    """Compact text digest, also written to disk for manual forwarding."""
-    lines = [f"· {alert.alert_type}: {alert.message}" for alert in alerts[:10]]
-    strong = [
-        signal
-        for signal in signals
-        if signal.signal_level in (SignalLevel.BUY_CANDIDATE, SignalLevel.STRONG_REVERSAL)
-        and not signal.breakout
-    ]
-    if strong:
-        lines.append("")
-        lines.append("高分信号：")
+    """Mobile-first Chinese digest containing only newly alerted entities."""
+    if not alerts:
+        return "Bottom Hunter｜今日无新增提醒", "今日无新增高优先级提醒。"
+    alert_entities = {alert.entity for alert in alerts}
+    signal_map = {signal.symbol: signal for signal in signals if signal.symbol in alert_entities}
+    signal_map.update(
+        {
+            f"{signal.symbol}:{signal.sector_id}": signal
+            for signal in signals
+            if f"{signal.symbol}:{signal.sector_id}" in alert_entities
+        }
+    )
+    ordered = sorted(
+        {id(signal): signal for signal in signal_map.values()}.values(),
+        key=lambda signal: (
+            signal.state.value == "FAILED",
+            signal.score.total,
+            signal.score.rejection,
+        ),
+        reverse=True,
+    )[:3]
+    target = max(alert.date for alert in alerts)
+    markets = sorted({signal.market for signal in ordered})
+    market_text = "/".join(markets) if markets else "多市场"
+    title = f"底部狩猎 {target:%m-%d}｜{len(alerts)}条新提醒｜{market_text}"
+    lines: list[str] = []
+    for index, signal in enumerate(ordered, 1):
+        state = STATE_LABELS.get(signal.state.value, signal.state.value)
+        stage = STAGE_LABELS.get(signal.entry_stage.value if signal.entry_stage else "", "仅观察")
         lines.extend(
-            f"· {signal.symbol} {signal.name} {signal.score.total}分 [{signal.signal_level.value}]"
-            for signal in strong[:10]
+            [
+                f"### {index}. {signal.name}（{signal.symbol}）",
+                f"状态：{state}｜{stage}｜{signal.score.total}/{signal.score.available_max}",
+            ]
         )
-    return "Bottom Hunter 信号提醒", "\n".join(lines)
+        reasons = [reason for reason in signal.reasons if "仓位框架" not in reason][:2]
+        if reasons:
+            lines.append("触发：" + "；".join(reasons))
+        support = signal.metrics.get("support_level")
+        resistance = signal.metrics.get("resistance_level")
+        levels = []
+        if support is not None:
+            levels.append(f"支撑 {float(support):,.4g}")
+        if resistance is not None:
+            levels.append(f"压力 {float(resistance):,.4g}")
+        if levels:
+            lines.append("观察位：" + "｜".join(levels))
+        if signal.capitulation_low is not None:
+            lines.append(f"失效参考：跌破恐慌低点 {signal.capitulation_low:,.4g}")
+        lines.append(f"数据：{signal.date.isoformat()}｜{signal.provider}｜{signal.data_quality}")
+        lines.append("")
+    rendered_entities = {signal.symbol for signal in ordered}
+    remaining = [
+        alert
+        for alert in alerts
+        if alert.entity not in rendered_entities
+        and not any(alert.entity.startswith(f"{symbol}:") for symbol in rendered_entities)
+    ]
+    if remaining:
+        lines.append("其他变化：")
+        lines.extend(
+            f"- {ALERT_LABELS.get(alert.alert_type, alert.alert_type)}：{alert.message}" for alert in remaining[:5]
+        )
+        lines.append("")
+    lines.append("风险：当前策略仍在滚动验证，仅供研究观察，不构成投资建议。")
+    return title, "\n".join(lines).strip()
 
 
 _format = format_digest
@@ -255,10 +324,7 @@ def push(
     if not config.enabled or not config.has_channel:
         return []
     selected = [alert for alert in alerts if alert.alert_type in config.alert_types]
-    if not selected and not any(
-        signal.signal_level in (SignalLevel.BUY_CANDIDATE, SignalLevel.STRONG_REVERSAL)
-        for signal in signals
-    ):
+    if not selected:
         return []
     title, body = format_digest(selected, signals)
     errors: list[str] = []
@@ -292,9 +358,7 @@ def push(
             errors.append(f"WxPusher: {exc}")
     if config.telegram_bot_token and config.telegram_chat_id:
         try:
-            error = _telegram(
-                config.telegram_bot_token, config.telegram_chat_id, title, body, timeout
-            )
+            error = _telegram(config.telegram_bot_token, config.telegram_chat_id, title, body, timeout)
             if error:
                 errors.append(error)
         except (requests.RequestException, ValueError) as exc:
