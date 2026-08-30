@@ -29,6 +29,7 @@ bottom-hunter = "bottom_hunter.src.scanner:main"
 bottom-hunter-backtest = "bottom_hunter.src.backtest:main"
 bottom-hunter-gui = "bottom_hunter.src.gui_launcher:main"
 bottom-hunter-watchlists = "bottom_hunter.src.watchlist_cli:main"
+bottom-hunter-uidemo = "bottom_hunter.ui_demo.demo_launcher:main"
 
 [tool.setuptools.packages.find]
 where = [".."]

@@ -1,0 +1,6 @@
+module bottom_hunter.ui_demo.components
+singleton Theme 1.0 Theme.qml
+GlassCard 1.0 GlassCard.qml
+MetricCard 1.0 MetricCard.qml
+GlassNavRail 1.0 GlassNavRail.qml
+StatusBadge 1.0 StatusBadge.qml
