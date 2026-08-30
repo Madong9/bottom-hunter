@@ -20,7 +20,7 @@ Rectangle {
     }
 
     radius: 14
-    color: Qt.rgba(0.051, 0.078, 0.102, 0.055)
+    color: Qt.rgba(1, 1, 1, 0.05)
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, hover.hovered ? 0.16 : 0.10)
 

@@ -1,33 +1,39 @@
 #version 440
 
-// RainGlass droplet material — procedural, temporally stable droplet field
-// with lens-like refraction, edge specular highlights and surface tension.
+// Crystal Clear Rain Glass — screen-space water droplets on transparent glass.
 //
-// MASTER_PROMPT §9 requirements implemented here:
-//   * multi-size droplets: mostly tiny static + few medium + rare large
-//   * non-perfect circles (gravity-stretched ellipses)
-//   * edge specular + normal-like shading
-//   * local refraction via background UV distortion + slight magnification
-//   * rare slow slides + wet streaks
-//   * stable hash-based seed: NO per-frame regeneration (no flicker)
+// The droplets are NOT 3D spheres / orbs / bubbles. They are flat,
+// near-transparent lens patches on the glass surface that:
+//   * densely fill the field with micro/small drops (70%+ under ~9px)
+//   * refract the underlying UI (lens magnification / local UV displacement)
+//   * show a thin specular edge + a very weak environment reflection
+//   * never tint the body cyan or darken the scene
 //
-// Inputs from ShaderEffect:
-//   source        — what the glass sits on (background capture)
-//   resolution    — item pixel size
-//   u_time        — seconds (slowed down at the call site)
-//   u_parallax    — vec2 offset in px (mouse parallax, ≤4px)
-//   u_quality     — 1.0 high / 0.75 balanced / 0.0 low (kills distortion)
-//   u_density     — droplet density multiplier (0..1)
+// Distribution (§5.1):
+//   micro  1.5–4 px   (dense, static)          grid ~12px
+//   small  4–9 px     (~18%)                   grid ~34px
+//   medium 9–18 px    (few)                    grid ~110px
+//   large  18–30 px   (rare, may slide)        grid ~320px
+//   hard cap ~32px
+//
+// Inputs (ShaderEffect):
+//   source         — the UI/scene underneath (background capture)
+//   resolution     — item px size
+//   u_time         — seconds (slow; droplets slide at 2–6 px/s max)
+//   u_parallax     — vec2 px offset (mouse parallax, ≤4px)
+//   u_quality      — 1.0 high / 0.75 balanced / 0.0 low (kills slide)
+//   u_density      — 0..1 global density
+//   u_exclude      — vec4(x, y, w, h) importance zone, density scaled down
 
 layout(binding = 1) uniform sampler2D source;
 
-// Non-opaque uniforms must live in a UBO for the Vulkan/GLSL target (qsb rule).
 layout(std140, binding = 0) uniform UboBlock {
     vec2 resolution;
     float u_time;
     vec2 u_parallax;
     float u_quality;
     float u_density;
+    vec4 u_exclude;
 } ubuf;
 
 layout(location = 0) in vec2 qt_TexCoord0;
@@ -48,107 +54,111 @@ vec2 hash21(float p) {
     return fract((p3.xx + p3.yz) * p3.zy);
 }
 
-// ---- droplet field ---------------------------------------------------------
-
-const float GRID_SMALL = 26.0;   // px cell for tiny static drops
-const float GRID_MED   = 110.0;  // px cell for medium drops
-const float GRID_LARGE = 260.0;  // px cell for rare large drops
-
-// Signed distance-ish falloff with soft edge for lighting.
-float dropletProfile(float dist, float radius) {
-    return 1.0 - smoothstep(radius * 0.62, radius, dist);
+// ---- importance / exclusion zone ------------------------------------------
+// Inside the excluded rect (chart body / tables / prices) droplet density and
+// slide are scaled down so critical financial data stays legible (§8).
+float exclusionScale(vec2 p) {
+    vec4 r = ubuf.u_exclude;
+    if (r.z <= 0.0 || r.w <= 0.0) return 1.0;
+    vec2 rel = (p - r.xy) / r.zw;
+    if (rel.x >= 0.0 && rel.x <= 1.0 && rel.y >= 0.0 && rel.y <= 1.0) {
+        // soft edge falloff
+        float edge = min(rel.x, min(rel.y, min(1.0 - rel.x, 1.0 - rel.y)));
+        float soft = smoothstep(0.0, 0.08, edge);
+        return mix(0.18, 1.0, soft);
+    }
+    return 1.0;
 }
 
 void main() {
     vec2 fragPx = qt_TexCoord0 * ubuf.resolution;
-    vec2 parallaxPx = ubuf.u_parallax * ubuf.u_quality;   // background layer only
-
-    // ---- background with parallax + slight per-drop magnification ----
-    // Base background sample.
+    vec2 parallaxPx = ubuf.u_parallax * ubuf.u_quality;
     vec2 baseUv = qt_TexCoord0 + parallaxPx / ubuf.resolution;
 
-    // Refraction field: accumulate uv distortion from every nearby droplet.
     vec2 refractOffset = vec2(0.0);
-    float lightAccum = 0.0;
-    float specAccum = 0.0;
+    float highlight = 0.0;
+    float innerLight = 0.0;
 
-    float density = ubuf.u_density;
+    float zone = exclusionScale(fragPx);
+    float density = ubuf.u_density * zone;
 
-    // Three layers, small→large. Search only this cell + neighbours to keep
-    // the loop bounded (3x3 per layer = 27 candidate droplets max).
-    for (int layer = 0; layer < 3; ++layer) {
-        float cell = layer == 0 ? GRID_SMALL : (layer == 1 ? GRID_MED : GRID_LARGE);
-        float layerDensity = layer == 0 ? density : density * (layer == 1 ? 0.45 : 0.18);
-        float slideChance = layer == 0 ? 0.0 : (layer == 1 ? 0.06 : 0.10);
+    // 4 layers, micro→large. Each searches 3x3 neighbouring cells -> bounded.
+    // Layer radii (px): micro ~1.5-4, small ~4-9, medium ~9-18, large ~18-30.
+    const float GRID[4] = float[4](12.0, 34.0, 110.0, 320.0);
+    const float R_MIN[4] = float[4](1.5, 4.0, 9.0, 18.0);
+    const float R_MAX[4] = float[4](4.0, 9.0, 18.0, 30.0);
+    const float DENS[4] = float[4](1.00, 0.18, 0.06, 0.015);
+
+    for (int layer = 0; layer < 4; ++layer) {
+        float cell = GRID[layer];
+        float layerDensity = density * DENS[layer];
+        float slideChance = layer < 2 ? 0.0 : (layer == 2 ? 0.05 : 0.10);
 
         vec2 cellPx = vec2(cell);
         vec2 cellIdx = floor(fragPx / cellPx);
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dx = -1; dx <= 1; ++dx) {
                 vec2 idx = cellIdx + vec2(float(dx), float(dy));
-                vec2 cellUv = idx * cellPx;
                 float cellHash = hash11(idx.x * 127.1 + idx.y * 311.7 + float(layer) * 57.31);
                 if (cellHash > layerDensity) continue;
 
                 vec2 rnd = hash21(cellHash * 913.7 + float(layer) * 57.31);
-                vec2 centre = cellUv + (vec2(0.5) + (rnd - 0.5) * 0.72) * cellPx;
+                vec2 centre = cellPx * (idx + vec2(0.5) + (rnd - 0.5) * 0.6);
 
-                // rare slow slide (medium/large only)
+                // slow slide for medium/large only (2-6 px/s)
                 float slide = 0.0;
                 float slideSeed = hash11(cellHash * 417.3);
-                if (layer > 0 && slideSeed < slideChance * ubuf.u_quality) {
+                if (layer >= 2 && slideSeed < slideChance * ubuf.u_quality) {
                     float speed = 2.2 + hash11(cellHash * 71.3) * 3.5;
-                    float travel = cell * 1.6;
+                    float travel = cell * 1.5;
                     float phase = fract(ubuf.u_time / (travel / speed) + hash11(cellHash * 19.7));
                     slide = phase * travel;
                 }
                 vec2 pos = centre + vec2(0.0, slide);
 
-                float radius = cell * (0.16 + hash11(cellHash * 53.1) * 0.22);
+                float radius = mix(R_MIN[layer], R_MAX[layer], hash11(cellHash * 53.1));
+                // gravity stretch: slight vertical elongation for larger drops
+                float stretch = 1.0 + (layer >= 2 ? 0.10 + hash11(cellHash * 97.9) * 0.18 : 0.0);
                 vec2 delta = fragPx - pos;
-                float stretch = 1.0 + hash11(cellHash * 97.9) * 0.28;
                 delta.y /= stretch;
                 float dist = length(delta);
 
-                // influence zone: slightly larger than the droplet
-                float influence = radius * 1.5;
+                float influence = radius * 1.6;
                 if (dist < influence) {
-                    float inside = dropletProfile(dist, radius);
-                    // refraction: pull uv towards droplet centre (magnify)
-                    vec2 dir = (dist > 0.001) ? delta / dist : vec2(0.0);
-                    float strength = inside * (1.0 - 0.35 * inside);
-                    refractOffset += -dir * inside * radius * 0.16 * ubuf.u_quality;
-                    // specular edge: bright ring near the droplet border
-                    float edgeBand = smoothstep(radius * 0.72, radius * 0.97, dist)
-                                   - smoothstep(radius * 0.97, radius, dist);
+                    // lens profile: full effect inside, soft falloff at rim
+                    float inside = 1.0 - smoothstep(radius * 0.5, radius, dist);
+                    // derive pseudo-normal from radial direction (normal illusion)
+                    vec2 dir = (dist > 0.001) ? delta / dist : vec2(0.0, 1.0);
+                    // refraction: pull UV toward centre = magnification (transparent!)
+                    float mag = inside * radius * 0.22;
+                    refractOffset += -dir * mag * ubuf.u_quality;
+                    // inner light: extremely weak, near-neutral (not cyan)
+                    innerLight += inside * 0.10;
+
+                    // thin specular ring near the edge + directional highlight
+                    float ring = smoothstep(radius * 0.78, radius * 0.98, dist)
+                               - smoothstep(radius * 0.98, radius, dist);
                     vec2 lightDir = normalize(vec2(0.55, -0.72));
-                    float rim = edgeBand * (0.55 + 0.45 * dot(dir, lightDir));
-                    specAccum += rim;
-                    lightAccum += inside * 0.22;
+                    highlight += ring * (0.5 + 0.5 * dot(dir, lightDir)) * 0.7;
                 }
             }
         }
     }
 
-    // ---- final composite ---------------------------------------------
+    // ---- composite: transparent droplets over the underlying scene ---------
     vec2 refractedUv = baseUv + refractOffset / ubuf.resolution;
     refractedUv = clamp(refractedUv, vec2(0.002), vec2(0.998));
-    vec3 bg = texture(source, refractedUv).rgb;
+    vec3 color = texture(source, refractedUv).rgb;
 
-    // glass tint: cool charcoal over the background
-    vec3 tint = vec3(0.051, 0.078, 0.102);   // #0D141A
-    float tintAlpha = 0.42;
-    vec3 color = mix(bg, tint, tintAlpha);
+    // near-transparent glass veil: neutral, very light (NOT dark/carbon)
+    // 只做极轻的环境反射与轻微提亮，让玻璃“无色透明”。
+    color = mix(color, color * 1.03 + vec3(0.015, 0.018, 0.020), 0.35);
+    color += innerLight * vec3(0.95, 0.98, 1.0) * 0.18;   // faint inner light
+    color += highlight * vec3(0.85, 0.92, 0.98);          // thin specular edge
 
-    // droplet interior brightening (light through glass)
-    color += lightAccum * vec3(0.9, 0.97, 1.0);
-
-    // edge specular highlights (white-ish, restrained)
-    color += specAccum * vec3(0.82, 0.92, 0.98) * 0.85;
-
-    // very subtle grain to avoid banding (MASTER_PROMPT §8.7)
+    // subtle grain (anti-banding)
     float grain = hash11(fragPx.x * 12.9 + fragPx.y * 78.2) - 0.5;
-    color += grain * 0.012;
+    color += grain * 0.006;
 
     fragColor = vec4(color, 1.0);
 }

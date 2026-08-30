@@ -1,0 +1,18 @@
+NEGATIVE REFERENCE
+
+文件：
+N1_WRONG_BIG_CYAN_ORBS.png
+
+这张截图是错误结果，不是目标。
+
+GLM 必须避免：
+- 几个巨大青色球漂浮在主界面上
+- 3D sphere / icosphere / orb / bubble
+- cyan/turquoise solid glass
+- 大球遮挡业务 UI
+
+真正目标：
+- 无色透明玻璃
+- 小水滴贴在玻璃表面
+- screen-space shader
+- 真实折射后方 UI

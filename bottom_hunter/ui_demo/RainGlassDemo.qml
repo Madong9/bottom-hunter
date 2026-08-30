@@ -75,9 +75,31 @@ Rectangle {
         id: bgGradientItem
         anchors.fill: parent
         gradient: Gradient {
-            GradientStop { position: 0.0; color: "#05070A" }
-            GradientStop { position: 0.55; color: "#090D12" }
-            GradientStop { position: 1.0; color: "#0D131A" }
+            GradientStop { position: 0.0; color: "#0A1016" }
+            GradientStop { position: 0.5; color: "#0E161E" }
+            GradientStop { position: 1.0; color: "#111B24" }
+        }
+
+        // 柔和散景光斑：给透明玻璃后方提供可被折射的明暗层次（§4：背景暗 ≠ 玻璃暗）
+        // 程序化 bokeh，非图片资源。
+        Repeater {
+            model: [
+                { x: 0.12, y: 0.16, r: 190, c: "#1C2A3E", a: 0.35 },
+                { x: 0.85, y: 0.22, r: 150, c: "#24364A", a: 0.30 },
+                { x: 0.72, y: 0.78, r: 240, c: "#182634", a: 0.32 },
+                { x: 0.18, y: 0.82, r: 130, c: "#22354B", a: 0.26 },
+                { x: 0.45, y: 0.42, r: 90,  c: "#2A3E55", a: 0.20 },
+                { x: 0.06, y: 0.52, r: 80,  c: "#1E3145", a: 0.22 }
+            ]
+            delegate: Rectangle {
+                x: modelData.x * parent.width - modelData.r
+                y: modelData.y * parent.height - modelData.r
+                width: modelData.r * 2
+                height: modelData.r * 2
+                radius: modelData.r
+                color: modelData.c
+                opacity: modelData.a
+            }
         }
     }
 
@@ -92,6 +114,8 @@ Rectangle {
         property vector2d u_parallax: Qt.vector2d(root.parallaxX, root.parallaxY)
         property real u_quality: root.shaderQuality
         property real u_density: root.dropletDensity
+        // importance/exclusion zone (§8): chart body keeps its density low
+        property vector4d u_exclude: Qt.vector4d(0, 0, 0, 0)
 
         fragmentShader: "effects/RainGlassMaterial.qsb"
 
@@ -142,7 +166,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 52
                     radius: 14
-                    color: Qt.rgba(0.051, 0.078, 0.102, 0.085)
+                    color: Qt.rgba(1, 1, 1, 0.07)
                     border.width: 1
                     border.color: Qt.rgba(1, 1, 1, 0.10)
 
@@ -210,7 +234,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     radius: 16
-                    color: Qt.rgba(0.051, 0.078, 0.102, 0.035)
+                    color: Qt.rgba(1, 1, 1, 0.03)
                     border.width: 1
                     border.color: Qt.rgba(1, 1, 1, 0.08)
 

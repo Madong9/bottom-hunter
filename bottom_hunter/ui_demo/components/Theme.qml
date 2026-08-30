@@ -7,10 +7,9 @@ QtObject {
     id: theme
 
     // ---- Colors -------------------------------------------------------
-    readonly property color bg0: "#05070A"
-    readonly property color bg1: "#090D12"
-    readonly property color bg2: "#0D131A"
-    readonly property color glassTint: "#0D141A"
+    readonly property color bg0: "#0A1016"     // 背景偏暗但非纯黑（§0.1 背景暗 ≠ 玻璃暗）
+    readonly property color bg1: "#0E161E"
+    readonly property color bg2: "#111B24"
 
     readonly property color textPrimary: "#EEF3F6"
     readonly property color textSecondary: "#9AA6B2"
@@ -27,15 +26,16 @@ QtObject {
     readonly property color marketUp: "#E05C5C"
     readonly property color marketDown: "#2BD58F"
 
-    // ---- Glass --------------------------------------------------------
+    // ---- Glass（无色透明：近白 tint，低 opacity，边缘高光 §4.2）----------
     // Level A（nav/toolbar）最明显，Level B（卡片）中等，Level C（数据区）克制
-    readonly property real glassAlphaA: 0.085
-    readonly property real glassAlphaB: 0.055
-    readonly property real glassAlphaC: 0.035
+    readonly property color glassTint: "#FFFFFF"          // 近白，非深色
+    readonly property real glassAlphaA: 0.07
+    readonly property real glassAlphaB: 0.05
+    readonly property real glassAlphaC: 0.03
     readonly property color glassEdge: "#FFFFFF"
-    readonly property real glassEdgeAlpha: 0.10
-    readonly property real glassEdgeAlphaHover: 0.16
-    readonly property real glassTopLight: 0.14
+    readonly property real glassEdgeAlpha: 0.22
+    readonly property real glassEdgeAlphaHover: 0.32
+    readonly property real glassTopLight: 0.20
 
     // ---- Radius（分档，不要全 24px）------------------------------------
     readonly property int radiusSmall: 9

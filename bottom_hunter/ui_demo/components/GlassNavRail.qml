@@ -10,7 +10,7 @@ Rectangle {
     signal navigate(int index)
 
     // Level A: glass 感最明显
-    color: Qt.rgba(0.051, 0.078, 0.102, 0.085)
+    color: Qt.rgba(1, 1, 1, 0.07)
     radius: 20
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.10)

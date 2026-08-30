@@ -1,0 +1,17 @@
+请先完整读取附件中的：
+
+1. `01_MASTER_PROMPT_GLM53_CRYSTAL_RAIN_GLASS.md`
+2. `02_REFERENCE_GUIDE.md`
+3. `03_ACCEPTANCE_CHECKLIST.md`
+4. `references/A0_PRIMARY_VISUAL_TARGET_CRYSTAL_CLEAR_UI.png`
+5. `references/N1_WRONG_BIG_CYAN_ORBS.png`
+
+其中 A0 是最高优先级正面视觉目标，N1 是必须避免的错误实现。
+
+最关键的修正是：
+
+**我要的是无色透明晶体玻璃，不是暗色玻璃。**
+**我要的是粘在玻璃表面的真实小雨滴，不是漂浮的 3D 青色大水球。**
+
+严格按 Master Prompt 从 PHASE 0 / PHASE 1 开始。
+本轮不要迁移正式七个页面，只完成错误实现清理、独立 CrystalRainGlassDemo、GPU/FPS 验证和实际运行截图，然后停下来等我验收。
