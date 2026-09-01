@@ -126,8 +126,12 @@ def test_application_shell_loads(monkeypatch) -> None:
 # ---- business isolation -----------------------------------------------------
 
 def test_pages_do_not_import_business_modules() -> None:
+    # The DTO ADAPTER (contracts.py) is the only sanctioned boundary that may
+    # reference the backend; the viewmodel layer and QML must not.
     forbidden = re.compile(r"bottom_hunter\.src|from\s+bottom_hunter\.src|scanner", re.I)
     for py in PAGES_DIR.rglob("*.py"):
+        if py.name == "contracts.py":
+            continue  # adapter boundary
         text = py.read_text(encoding="utf-8", errors="ignore")
         assert not forbidden.search(text), f"business import in {py.name}"
     for qml in PAGES_DIR.rglob("*.qml"):
