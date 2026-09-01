@@ -9,11 +9,11 @@ Rectangle {
     property int currentIndex: 0
     signal navigate(int index)
 
-    // Level A: glass 感最明显
-    color: Qt.rgba(1, 1, 1, 0.07)
+    // Level A: clear glass (v2: neutral white tint 0.045, NOT dark plastic)
+    color: Qt.rgba(1, 1, 1, 0.045)
     radius: 20
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.10)
+    border.color: Qt.rgba(1, 1, 1, 0.12)
 
     // 顶部内高光（Level A 明显）
     Rectangle {
@@ -21,6 +21,20 @@ Rectangle {
         anchors.margins: 1
         height: 1
         color: Qt.rgba(1, 1, 1, 0.16)
+    }
+
+    // thick-glass slab edges: subtle darker bottom / right refraction edge
+    Rectangle {
+        anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+        anchors.margins: 1
+        height: 1
+        color: Qt.rgba(0, 0, 0, 0.10)
+    }
+    Rectangle {
+        anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
+        anchors.margins: 1
+        width: 1
+        color: Qt.rgba(0, 0, 0, 0.08)
     }
 
     Column {
@@ -64,15 +78,15 @@ Rectangle {
                 height: 46
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                // active 克制 emerald 药丸（不整块亮绿）
+                // active 克制 emerald 药丸（very subtle tint + thin edge）
                 Rectangle {
                     anchors.fill: parent
                     radius: 14
                     color: index === root.currentIndex
-                           ? Qt.rgba(0.169, 0.835, 0.463, 0.11)
+                           ? Qt.rgba(0.169, 0.835, 0.463, 0.09)
                            : hover.hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
                     border.width: index === root.currentIndex ? 1 : 0
-                    border.color: Qt.rgba(0.169, 0.835, 0.463, 0.32)
+                    border.color: Qt.rgba(0.169, 0.835, 0.463, 0.28)
                 }
 
                 Text {
