@@ -40,9 +40,16 @@ Item {
     // 1 = full-field diameter/count proof rings (lab diagnostic)
     property real u_debug: 0.0
 
-    // read-only introspection for the launcher (texture size proof)
+    // read-only introspection for the launcher (texture size proofs)
     readonly property vector2d captureTextureSize: Qt.vector2d(
         srcCapture.textureSize.width, srcCapture.textureSize.height)
+    // computed from maskScale (avoids forward-reference binding issues)
+    readonly property vector2d rainMaskTextureSize: Qt.vector2d(
+        Math.max(4, Math.round(width * maskScale)),
+        Math.max(4, Math.round(height * maskScale)))
+
+    // true low-resolution importance mask: 1/4 linear dimensions (STEP 4)
+    readonly property real maskScale: 0.25
 
     // internal fallback mask: all-normal density (used when maskSource null);
     // parked off-window (visible so the capture is never empty)
@@ -92,13 +99,16 @@ Item {
         smooth: true
     }
 
-    // importance mask capture (low-resolution; R = density factor)
+    // importance mask capture (TRUE low-resolution: 1/4 linear dims,
+    // e.g. 1440x900 -> 360x225; smooth sampling, dilation stays accurate)
     ShaderEffectSource {
         id: maskCapture
         anchors.fill: parent
         sourceItem: root.maskSource !== null ? root.maskSource : fallbackMask
         visible: false
         smooth: true
+        textureSize: Qt.size(Math.max(4, Math.round(root.width * root.maskScale)),
+                             Math.max(4, Math.round(root.height * root.maskScale)))
     }
 
     // RAIN — physically last; refracts the whole composited UI

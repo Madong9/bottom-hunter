@@ -276,6 +276,7 @@ Item {
                     spacing: 2
 
                     Text {
+                        id: titleText
                         text: "工作台"
                         color: "#f2f4f8"
                         font.pixelSize: 23
@@ -283,6 +284,7 @@ Item {
                         font.family: "Noto Sans CJK SC"
                     }
                     Text {
+                        id: subtitleText
                         text: "捕捉超跌后的结构性反转，不追逐单一指标"
                         color: "#8b93a2"
                         font.pixelSize: 12
@@ -296,18 +298,21 @@ Item {
                     spacing: 12
 
                     Text {
+                        id: pocText
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Crystal Clear Glass POC"
                         color: "#5b6270"
                         font.pixelSize: 11
                     }
                     Text {
+                        id: dateText
                         anchors.verticalCenter: parent.verticalCenter
                         text: "2026-08-31"
                         color: "#9aa3b2"
                         font.pixelSize: 12
                     }
                     StatusBadge {
+                        id: statusBadge
                         anchors.verticalCenter: parent.verticalCenter
                         text: "就绪"
                         tone: "idle"
@@ -324,124 +329,160 @@ Item {
                 spacing: 16
 
                 Repeater {
+                    id: cardsRepeater
                     model: [
-                        { label: "今日机会", value: "--",      hint: "等待最新扫描",      accent: "#07C160" },
-                        { label: "数据健康", value: "--",      hint: "行情完整度",        accent: "#F3BA2F" },
-                        { label: "信号验证", value: "--",      hint: "近30天5日持有胜率", accent: "#2D8CF0" },
-                        { label: "模拟组合", value: "1.0000",  hint: "三阶段框架净值",    accent: "#8854D0" }
+                        { label: "今日机会", stateProp: "opportunityCount",       stateHint: "opportunityHint",       fallback: "--",     fallbackHint: "等待最新扫描",      accent: "#07C160" },
+                        { label: "数据健康", stateProp: "dataHealth",             stateHint: "dataHealthHint",        fallback: "--",     fallbackHint: "行情完整度",        accent: "#F3BA2F" },
+                        { label: "信号验证", stateProp: "signalValidation",       stateHint: "signalValidationHint",  fallback: "--",     fallbackHint: "近30天5日持有胜率", accent: "#2D8CF0" },
+                        { label: "模拟组合", stateProp: "portfolioValue",         stateHint: "portfolioHint",         fallback: "1.0000", fallbackHint: "三阶段框架净值",    accent: "#8854D0" }
                     ]
                     delegate: GlassMetricCard {
                         width: (cardsRow.width - 3 * cardsRow.spacing) / 4
                         height: 91
                         label: modelData.label
-                        value: modelData.value
-                        hint: modelData.hint
+                        // PHASE 2-A: real data via OverviewState (context
+                        // property); falls back to the POC defaults when no
+                        // backend has populated the state
+                        property var _st: typeof overviewState !== "undefined" ? overviewState : null
+                        value: _st !== null ? _st[modelData.stateProp] : modelData.fallback
+                        hint: _st !== null ? _st[modelData.stateHint] : modelData.fallbackHint
                         accent: modelData.accent
+                        // register with the protection registry (dynamic zones)
+                        Component.onCompleted: protectionRegistry.registerCard(this)
                     }
                 }
             }
         }
     }
 
-    // ================= IMPORTANCE / EXCLUSION MASK (low-res data texture) ===
-    // White = normal rain density, dark = low density (protected). A small set
-    // of rectangular zones over critical content (titles, values, chip) — NOT
-    // per-widget QObjects. Feeds StaticRainUI.u_mask; reduces droplet PRESENCE
-    // only, never removes the optical glass.
+    // ================= IMPORTANCE / EXCLUSION MASK (rain; registry-driven)
+    // Zones come from ProtectionRegistry (REAL Item geometry via mapToItem —
+    // no hardcoded magic coordinates). White = normal rain density, black =
+    // full exclusion. Dilation per level: critical +28px, normal +20px —
+    // beyond max droplet influence (~14.4px), so no droplet body can touch
+    // protected content. Affects droplet PRESENCE only; glass, refraction
+    // elsewhere and edge highlights stay untouched. Card margins / panel
+    // edges stay white (normal density).
     Item {
         id: importanceMask
         anchors.fill: parent
         visible: false   // rendered via maskCapture only
 
-        Rectangle {
+        Canvas {
+            id: importanceMaskCanvas
             anchors.fill: parent
-            color: "#FFFFFF"
-        }
-
-        // LOW density zones — PRE-DILATED beyond actual text bounds so no
-        // droplet body (max influence ~14.4px) can touch protected content:
-        // extremely important metric value fields dilated 28px (range
-        // 24-32), normal critical text / date / status dilated 20px (range
-        // 18-24). Full exclusion inside the zone (factor 0) — affects
-        // droplet PRESENCE only; glass, refraction elsewhere and edge
-        // highlights stay untouched. Card margins / panel edges stay white
-        // (normal density).
-        Repeater {
-            model: [
-                { x: 96,   y: 6,   w: 340, h: 86 },  // 工作台 title + subtitle (+20px)
-                { x: 1100, y: 14,  w: 310, h: 74 },  // POC tag + date + 就绪 chip (+20px)
-                { x: 114,  y: 107, w: 156, h: 84 },  // card 1 label/value/hint (+28px)
-                { x: 445,  y: 107, w: 156, h: 84 },  // card 2 label/value/hint (+28px)
-                { x: 776,  y: 107, w: 156, h: 84 },  // card 3 label/value/hint (+28px)
-                { x: 1107, y: 107, w: 156, h: 84 }   // card 4 label/value/hint (+28px)
-            ]
-            delegate: Rectangle {
-                x: modelData.x
-                y: modelData.y
-                width: modelData.w
-                height: modelData.h
-                radius: 8
-                color: "#000000"   // full exclusion (presence only)
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                ctx.fillStyle = "#FFFFFF"          // normal density
+                ctx.fillRect(0, 0, width, height)
+                ctx.fillStyle = "#000000"          // full exclusion (presence only)
+                const src = protectionRegistry.sources
+                for (let i = 0; i < src.length; ++i) {
+                    const pad = src[i].level === "critical" ? 28 : 20
+                    ctx.fillRect(src[i].x - pad, src[i].y - pad,
+                                 src[i].w + 2 * pad, src[i].h + 2 * pad)
+                }
             }
+            Connections {
+                target: protectionRegistry
+                function onSourcesChanged() { importanceMaskCanvas.requestPaint() }
+            }
+            Component.onCompleted: requestPaint()
         }
     }
 
     // ================= READABILITY MASK (soft, feathered; NOT the rain mask)
     // Purpose: attenuate high-brightness environment features behind critical
-    // financial content — NOT a dark box, NOT visible. Geometry = the same
-    // protected content as the rain mask, expanded further with FEATHERED
-    // edges (shadowBlur 22px):
-    //   critical numeric fields (metric values): +32px (range 28-36)
-    //   normal important text (title, chip/date/status): +24px (range 20-28)
-    //   edge feather: 22px (range 16-28)
-    // Plus the deterministic vertical-streak strips where they cross metric
-    // cards (streaks stay untouched in empty/background regions).
-    // Attenuation in EnvReadability: highlights -90%, base city -10%, soft.
+    // financial content — NOT a dark box, NOT visible. Zones come from
+    // ProtectionRegistry (REAL Item geometry) with FEATHERED edges
+    // (shadowBlur 22px) and per-level dilation: critical +32px (28-36),
+    // normal +24px (20-28), feather 22px (16-28). Plus the deterministic
+    // vertical-streak strips where they cross metric cards (streaks stay
+    // untouched in empty/background regions; x positions are derived from
+    // the seeded environment Canvas, not UI geometry).
+    // Attenuation in EnvReadability: excess-attenuation model — highlights
+    // -90%, ambient base -10%, soft; the pixel never mixes toward black.
     Item {
         id: readabilityMask
         anchors.fill: parent
         visible: false   // rendered via readMaskCapture only
 
         Canvas {
+            id: readabilityMaskCanvas
             anchors.fill: parent
             onPaint: {
                 const ctx = getContext("2d")
                 ctx.reset()
                 // feathered white zones on transparent canvas; R channel =
                 // protection strength sampled by EnvReadability.u_mask
-                const FEATHER = 22
                 ctx.shadowColor = "rgba(255,255,255,1)"
-                ctx.shadowBlur = FEATHER
+                ctx.shadowBlur = 22
                 ctx.shadowOffsetX = 0
                 ctx.shadowOffsetY = 0
                 ctx.fillStyle = "rgba(255,255,255,1)"
-                // critical numeric fields: metric value zone +32px
-                const cards = [112, 443, 774, 1105]
-                for (let i = 0; i < 4; ++i) {
-                    ctx.fillRect(cards[i] - 2, 103, 164, 92)
+                const src = protectionRegistry.sources
+                for (let i = 0; i < src.length; ++i) {
+                    const pad = src[i].level === "critical" ? 32 : 24
+                    ctx.fillRect(src[i].x - pad, src[i].y - pad,
+                                 src[i].w + 2 * pad, src[i].h + 2 * pad)
                 }
-                // normal important text: title +24px, chip/date/status +24px
-                ctx.fillRect(92, 2, 348, 94)
-                ctx.fillRect(1096, 10, 318, 82)
                 // vertical streak strips where they cross metric cards
                 // (deterministic streak x from the seeded env Canvas)
                 const streakX = [297.3, 525.9, 714.7, 938.2, 1142.5, 1346.0]
-                for (let i = 0; i < streakX.length; ++i) {
-                    ctx.fillRect(streakX[i] - 15, 104, 30, 91)
+                for (let j = 0; j < streakX.length; ++j) {
+                    ctx.fillRect(streakX[j] - 15, 104, 30, 91)
                 }
+            }
+            Connections {
+                target: protectionRegistry
+                function onSourcesChanged() { readabilityMaskCanvas.requestPaint() }
             }
             Component.onCompleted: requestPaint()
         }
     }
 
-    // readability mask capture (low cost; R = feathered protection strength)
+    // readability mask capture (TRUE low-resolution: 1/4 linear dims, smooth)
     ShaderEffectSource {
         id: readMaskCapture
         anchors.fill: parent
         sourceItem: readabilityMask
         visible: false
         smooth: true
+        textureSize: Qt.size(Math.max(4, Math.round(root.width / 4)),
+                             Math.max(4, Math.round(root.height / 4)))
     }
+
+    // ================= PROTECTION REGISTRY (dynamic zone geometry) ===========
+    // Single source of truth for protection zones: derived from REAL Item
+    // geometry (mapToItem) — no hardcoded coordinates. Both masks and the
+    // audit overlay consume it. Rebuilds on resize and late font layout, so
+    // masks automatically follow the UI.
+    ProtectionRegistry {
+        id: protectionRegistry
+        sceneRoot: sceneContent
+        normalItems: [titleText, subtitleText, pocText, dateText, statusBadge]
+    }
+
+    // rebuild on resize + late font layout (Timer covers async text metrics)
+    Connections {
+        target: root
+        function onWidthChanged() { protectionRegistry.rebuild() }
+        function onHeightChanged() { protectionRegistry.rebuild() }
+    }
+    Timer {
+        interval: 250
+        running: true
+        repeat: false
+        onTriggered: protectionRegistry.rebuild()
+    }
+
+    // read-only introspection for launcher/tests
+    readonly property var protectionZones: protectionRegistry.sources
+    readonly property var metricValueRects: protectionRegistry.metricValueRects
+    readonly property vector2d readMaskTextureSize: Qt.vector2d(
+        readMaskCapture.textureSize.width, readMaskCapture.textureSize.height)
+    readonly property vector2d rainMaskTextureSize: surface.rainMaskTextureSize
 
     // ================= RAIN GLASS — physically LAST ==========================
     RainGlassSurface {
@@ -455,48 +496,66 @@ Item {
     }
 
     // ================= MASK AUDIT OVERLAY (readability_debug only) ============
-    // Lab diagnostic: rain protection zones (red) vs readability protection
-    // zones (blue). Never part of the UI.
+    // Lab diagnostic: auto-generated rain protection zones (red) vs
+    // readability protection zones (blue) + mask texture resolution report.
+    // Zones are drawn from ProtectionRegistry (REAL Item geometry). Never
+    // part of the UI.
     Item {
         id: maskAudit
         anchors.fill: parent
         visible: root.readDebug
 
-        Repeater {
-            model: [
-                { x: 96,   y: 6,   w: 340, h: 86 },  // rain: title +20px
-                { x: 1100, y: 14,  w: 310, h: 74 },  // rain: chip +20px
-                { x: 114,  y: 107, w: 156, h: 84 },  // rain: card 1 value +28px
-                { x: 445,  y: 107, w: 156, h: 84 },  // rain: card 2
-                { x: 776,  y: 107, w: 156, h: 84 },  // rain: card 3
-                { x: 1107, y: 107, w: 156, h: 84 }   // rain: card 4
-            ]
-            delegate: Rectangle {
-                x: modelData.x; y: modelData.y
-                width: modelData.w; height: modelData.h
-                radius: 8
-                color: Qt.rgba(1, 0.36, 0.36, 0.18)
-                border.width: 1
-                border.color: Qt.rgba(1, 0.36, 0.36, 0.70)
+        Canvas {
+            id: auditCanvas
+            anchors.fill: parent
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                const src = protectionRegistry.sources
+                // readability zones (blue): critical +32, normal +24
+                for (let i = 0; i < src.length; ++i) {
+                    const pad = src[i].level === "critical" ? 32 : 24
+                    ctx.fillStyle = Qt.rgba(0.30, 0.64, 1.0, 0.14)
+                    ctx.strokeStyle = Qt.rgba(0.30, 0.64, 1.0, 0.65)
+                    ctx.lineWidth = 1
+                    ctx.fillRect(src[i].x - pad, src[i].y - pad, src[i].w + 2 * pad, src[i].h + 2 * pad)
+                    ctx.strokeRect(src[i].x - pad, src[i].y - pad, src[i].w + 2 * pad, src[i].h + 2 * pad)
+                }
+                // rain zones (red): critical +28, normal +20
+                for (let j = 0; j < src.length; ++j) {
+                    const pad = src[j].level === "critical" ? 28 : 20
+                    ctx.fillStyle = Qt.rgba(1, 0.36, 0.36, 0.16)
+                    ctx.strokeStyle = Qt.rgba(1, 0.36, 0.36, 0.70)
+                    ctx.lineWidth = 1
+                    ctx.fillRect(src[j].x - pad, src[j].y - pad, src[j].w + 2 * pad, src[j].h + 2 * pad)
+                    ctx.strokeRect(src[j].x - pad, src[j].y - pad, src[j].w + 2 * pad, src[j].h + 2 * pad)
+                }
             }
+            Connections {
+                target: protectionRegistry
+                function onSourcesChanged() { auditCanvas.requestPaint() }
+            }
+            Component.onCompleted: requestPaint()
         }
 
-        Repeater {
-            model: [
-                { x: 92,   y: 2,   w: 348, h: 94 },  // readability: title +24px
-                { x: 1096, y: 10,  w: 318, h: 82 },  // readability: chip +24px
-                { x: 110,  y: 103, w: 164, h: 92 },  // readability: card 1 value +32px
-                { x: 441,  y: 103, w: 164, h: 92 },  // readability: card 2
-                { x: 772,  y: 103, w: 164, h: 92 },  // readability: card 3
-                { x: 1103, y: 103, w: 164, h: 92 }   // readability: card 4
-            ]
-            delegate: Rectangle {
-                x: modelData.x; y: modelData.y
-                width: modelData.w; height: modelData.h
-                radius: 8
-                color: Qt.rgba(0.30, 0.64, 1.0, 0.14)
-                border.width: 1
-                border.color: Qt.rgba(0.30, 0.64, 1.0, 0.65)
+        // mask texture resolution report (launcher diagnostics in-image)
+        Column {
+            x: 16
+            y: parent.height - 64
+            spacing: 2
+            Text {
+                text: "MASK AUDIT  red=rain zone  blue=readability zone"
+                color: "#cfd6e0"
+                font.pixelSize: 12
+                font.family: "monospace"
+            }
+            Text {
+                text: "scene " + surface.captureTextureSize.x + "x" + surface.captureTextureSize.y
+                      + "  rain-mask " + surface.rainMaskTextureSize.x + "x" + surface.rainMaskTextureSize.y
+                      + "  readability-mask " + readMaskCapture.textureSize.width + "x" + readMaskCapture.textureSize.height
+                color: "#9aa3b2"
+                font.pixelSize: 12
+                font.family: "monospace"
             }
         }
     }

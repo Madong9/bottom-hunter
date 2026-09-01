@@ -308,5 +308,7 @@ void main() {
         color = mix(color, debugDot, debugDotA * 0.95);
     }
 
-    fragColor = vec4(color, 1.0);
+    // Qt ShaderEffect contract: premultiplied alpha output honoring
+    // qt_Opacity (identical to vec4(color, 1.0) at opacity 1.0)
+    fragColor = vec4(color * qt_Opacity, qt_Opacity);
 }

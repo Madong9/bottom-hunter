@@ -97,5 +97,7 @@ void main() {
     float grain = hash11(fragPx.x * 12.9 + fragPx.y * 78.2 + 7.7) - 0.5;
     col += grain * 0.004;
 
-    fragColor = vec4(col, 1.0);
+    // Qt ShaderEffect contract: premultiplied alpha output honoring
+    // qt_Opacity (identical to vec4(col, 1.0) at opacity 1.0)
+    fragColor = vec4(col * qt_Opacity, qt_Opacity);
 }

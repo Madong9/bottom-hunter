@@ -14,6 +14,12 @@ Rectangle {
     property string hint: ""
     property color accent: "#2BD576"
 
+    // real content geometry (card-local coords) — consumed by
+    // ProtectionRegistry via mapToItem; masks follow these automatically
+    readonly property rect labelRect: Qt.rect(labelText.x, labelText.y, labelText.width, labelText.height)
+    readonly property rect valueRect: Qt.rect(valueText.x, valueText.y, valueText.width, valueText.height)
+    readonly property rect hintRect: Qt.rect(hintText.x, hintText.y, hintText.width, hintText.height)
+
     radius: 16
     color: Qt.rgba(1, 1, 1, 0.035)   // clear neutral tint (target 0.025-0.050)
 
@@ -102,18 +108,21 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
 
             Text {
+                id: labelText
                 text: root.label
                 color: "#828A98"
                 font.pixelSize: 12
                 font.family: "Noto Sans CJK SC"
             }
             Text {
+                id: valueText
                 text: root.value
                 color: "#EEF3F6"
                 font.pixelSize: 24
                 font.weight: Font.DemiBold
             }
             Text {
+                id: hintText
                 text: root.hint
                 color: "#626D78"
                 font.pixelSize: 11

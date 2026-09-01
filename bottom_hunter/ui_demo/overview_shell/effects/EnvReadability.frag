@@ -3,14 +3,20 @@
 // Overview shell — environment readability attenuation (NOT the rain shader;
 // the rain material stays frozen). Last step of the environment layer:
 //   base sky/city -> light streaks -> warm/cool highlights -> THIS
-// Attenuates high-brightness environment features behind critical financial
-// content, driven by a feathered readabilityMask (R channel = protection
-// strength 0..1):
-//   bright highlights (moon/halo/glows):  up to 90% reduction
-//   thin vertical streaks / glows:        strongly reduced
-//   base city/background:                 only ~10% dim at full mask
-// Soft by construction: attenuation is proportional to the feathered mask,
-// so no visible rectangles or halos. Runs BEFORE the glass panels and UI
+//
+// EXCESS-ATTENUATION MODEL (v2, fixes the "black hole" artifact):
+//   localBase = darkest wide-ring neighbourhood estimate (rings r=12 / r=34,
+//               8 directions each) — the ambient environment level WITHOUT
+//               the local light feature
+//   excess    = max(source - localBase, 0) — the light feature itself
+//   result    = localBase * (1 - 0.10*m) + excess * (1 - 0.90*m)
+//
+// Inside a readability zone a protected light reads as "this light never
+// existed": its excess is removed while the ambient base (sky/city/grain)
+// stays — only ~10% dimmed. The final pixel NEVER mixes toward pure black.
+// Outside zones (m = 0): result == source, bit-for-bit.
+// Soft by construction: attenuation is proportional to the feathered mask;
+// no visible rectangles or halos. Runs BEFORE the glass panels and UI
 // chrome are composited — it never touches text.
 //
 // Inputs (ShaderEffect):
@@ -31,15 +37,31 @@ layout(std140, binding = 0) uniform buf {
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 
+// darkest wide-ring neighbourhood estimate: rings r=12 and r=34, 8 directions
+// each. r=34 exceeds the largest local light feature radius (~30px), so at
+// least one ring always samples the ambient environment.
+vec3 localBase(vec2 uv) {
+    vec2 px = 1.0 / resolution;
+    vec3 mn = vec3(1.0);
+    for (int i = 0; i < 8; ++i) {
+        float a = 6.2831 * (float(i) + 0.5) / 8.0;
+        vec2 d = vec2(cos(a), sin(a));
+        mn = min(mn, texture(source, uv + d * 12.0 * px).rgb);
+        mn = min(mn, texture(source, uv + d * 34.0 * px).rgb);
+    }
+    return mn;
+}
+
 void main() {
-    vec3 c = texture(source, qt_TexCoord0).rgb;
-    float m = texture(u_mask, qt_TexCoord0).r;   // feathered protection 0..1
+    vec2 uv = qt_TexCoord0;
+    vec3 c = texture(source, uv).rgb;
+    float m = texture(u_mask, uv).r;   // feathered protection 0..1
 
-    float luma = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    // highlight component: 0 on the dark city base, ->1 on bright features
-    float bright = smoothstep(0.06, 0.25, luma);
+    vec3 base = localBase(uv);
+    vec3 excess = max(c - base, vec3(0.0));
 
-    // full mask: bright highlights -90%, base city -10% (5-12% range)
-    float atten = m * (0.10 + 0.80 * bright);
-    fragColor = vec4(c * (1.0 - atten), 1.0);
+    // full mask: light feature -90%, ambient base -10% (5-12% range)
+    vec3 result = base * (1.0 - 0.10 * m) + excess * (1.0 - 0.90 * m);
+
+    fragColor = vec4(result * qt_Opacity, qt_Opacity);
 }

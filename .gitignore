@@ -13,6 +13,11 @@ __pycache__/
 # Temporary files
 tmp/
 
+# UI demo runtime screenshots (phase-acceptance reference shots stay in git;
+# per-iteration runs go to ignored runtime dirs)
+ui_demo/**/shots/runtime/
+ui_demo/**/shots/tmp/
+
 # Runtime/cache data
 bottom_hunter/state/research_cache/
 bottom_hunter/state/chart_drawings.json
