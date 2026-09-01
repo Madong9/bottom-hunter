@@ -1,0 +1,5 @@
+module bottom_hunter.ui_demo.primitives
+GlassSurface 1.0 GlassSurface.qml
+GlassCard 1.0 GlassCard.qml
+GlassButton 1.0 GlassButton.qml
+GlassText 1.0 GlassText.qml
