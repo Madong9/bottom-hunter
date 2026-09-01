@@ -1,11 +1,14 @@
-"""PHASE 2-B — product-grade QObject ViewModel for the OverviewShell.
+"""PHASE 2-C — product-grade QObject ViewModel for the OverviewShell.
 
-Architecture (no business migration, no async system):
+Architecture (DTO contract frozen; no business migration, no async system):
 
     Python / QtWidgets backend (read-only helpers)
             |
+            v  (host app builds the DTO via loader adapters)
+    OverviewDTO  (contracts/ — pure data, no business, no Qt)
+            |
             v
-    OverviewBridge (adapter: converts backend data -> state transitions)
+    OverviewBridge (DTO -> state transitions + lifecycle)
             |
             v
     OverviewState (QObject, display state only, notify signals)
@@ -23,10 +26,16 @@ QML never imports Python business modules; business logic is untouched.
 
 from __future__ import annotations
 
-import time
 from datetime import datetime
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
+
+from ..contracts import (
+    HEALTH_ERROR,
+    HEALTH_OK,
+    HEALTH_UNKNOWN,
+    HEALTH_WARNING,
+)
 
 # Lifecycle states
 LIFECYCLE_INIT = "INIT"
@@ -36,12 +45,6 @@ LIFECYCLE_STALE = "STALE"
 LIFECYCLE_ERROR = "ERROR"
 LIFECYCLES = (LIFECYCLE_INIT, LIFECYCLE_LOADING, LIFECYCLE_READY,
               LIFECYCLE_STALE, LIFECYCLE_ERROR)
-
-# data-health levels
-HEALTH_OK = "OK"
-HEALTH_WARNING = "WARNING"
-HEALTH_ERROR = "ERROR"
-HEALTH_UNKNOWN = "UNKNOWN"
 
 
 class OverviewState(QObject):
@@ -282,6 +285,114 @@ class OverviewState(QObject):
         self._last_error = ""
         self.lastErrorChanged.emit()
 
+    # ================= DTO contract (PHASE 2-C) =================
+
+    def apply(self, dto) -> None:  # noqa: N802
+        """Apply an OverviewDTO — one DTO == one atomic state update.
+
+        Accepts an OverviewDTO instance OR a plain mapping with the same
+        shape (tests/builders may construct dicts). Never imports business
+        code; only maps the frozen contract onto display properties.
+        """
+        market = getattr(dto, "market", dto.get("market", {})) if hasattr(dto, "get") else dto.market
+        scan = getattr(dto, "scan", dto.get("scan", {})) if hasattr(dto, "get") else dto.scan
+        opportunity = getattr(dto, "opportunity", dto.get("opportunity", {})) if hasattr(dto, "get") else dto.opportunity
+        health = getattr(dto, "health", dto.get("health", {})) if hasattr(dto, "get") else dto.health
+        validation = getattr(dto, "validation", dto.get("validation", {})) if hasattr(dto, "get") else dto.validation
+        portfolio = getattr(dto, "portfolio", dto.get("portfolio", {})) if hasattr(dto, "get") else dto.portfolio
+
+        if isinstance(opportunity, dict):
+            self.setOpportunity(
+                str(opportunity.get("count", "--")),
+                opportunity.get("hint"),
+                opportunity.get("updated", ""))
+        else:
+            self.setOpportunity(str(opportunity.count), opportunity.hint, opportunity.updated)
+
+        if isinstance(health, dict):
+            self.setDataHealth(str(health.get("level", HEALTH_UNKNOWN)), str(health.get("text", "--")))
+        else:
+            self.setDataHealth(str(health.level), str(health.text))
+
+        if isinstance(validation, dict):
+            self.setValidation(str(validation.get("value", "--")), validation.get("hint"))
+        else:
+            self.setValidation(str(validation.value), validation.hint)
+
+        if isinstance(portfolio, dict):
+            self.setPortfolio(str(portfolio.get("value", "1.0000")), portfolio.get("hint"))
+        else:
+            self.setPortfolio(str(portfolio.value), portfolio.hint)
+
+        if isinstance(market, dict):
+            self.setMarketStatus(str(market.get("status", "--")), market.get("detail"))
+        else:
+            self.setMarketStatus(str(market.status), market.detail)
+
+        if isinstance(scan, dict):
+            self.setScanStatus(str(scan.get("status", "--")), scan.get("detail", "等待最新扫描"))
+        else:
+            self.setScanStatus(str(scan.status), scan.detail)
+
+
+class OverviewBridge(QObject):
+    """Adapter: Backend -> OverviewDTO -> OverviewState transitions.
+
+    PHASE 2-C: the bridge now depends on a SINGLE DTO provider callable
+    (``setDtorovider`` -> ``() -> OverviewDTO``) instead of per-field backend
+    loaders. It holds no backend detail: the host app builds the DTO (via
+    loader adapters) and the bridge only maps DTO -> state + lifecycle.
+
+    State machine:
+      INIT --refresh()--> LOADING
+        -- success --> READY
+        -- first failure --> ERROR (fallback data)
+      READY -- refresh failure --> STALE (OLD DATA PRESERVED, no "--" flicker)
+      STALE -- refresh success --> READY
+    """
+
+    refreshed = Signal()
+
+    def __init__(self, state: OverviewState, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self._state = state
+        self._dto_provider = None   # () -> OverviewDTO | dict | None
+
+    # ---- data contract wiring (host app only, NOT QML) ---------------------
+
+    def setDtoProvider(self, provider) -> None:  # noqa: N802
+        """Provider: callable returning an OverviewDTO (or dict) or None."""
+        self._dto_provider = provider
+
+    # ---- refresh (QML-invokable) -------------------------------------------
+
+    @Slot()
+    def refresh(self) -> None:
+        had_data = self._state.lifecycle in (LIFECYCLE_READY, LIFECYCLE_STALE)
+        self._state.markLoading()
+
+        if self._dto_provider is None:
+            self._state.markError("no DTO provider wired")
+            self.refreshed.emit()
+            return
+
+        try:
+            dto = self._dto_provider()
+        except Exception as exc:  # capture, never raise into QML
+            dto = None
+            error = str(exc)
+
+        if dto is None:
+            if had_data:
+                self._state.markStale(error or "backend returned no data")
+            else:
+                self._state.markError(error or "backend returned no data")
+        else:
+            self._state.apply(dto)
+            self._state.markReady()
+
+        self.refreshed.emit()
+
 
 class OverviewRefreshController(QObject):
     """Unified refresh trigger — `refreshRequested` signal ONLY.
@@ -300,108 +411,3 @@ class OverviewRefreshController(QObject):
     def requestRefresh(self) -> None:  # noqa: N802
         self.refreshRequested.emit()
 
-
-class OverviewBridge(QObject):
-    """Adapter: backend data -> OverviewState transitions.
-
-    Owns the injected loaders; converts their results into state updates and
-    drives the lifecycle state machine. No metric computation. Exceptions
-    are captured into `lastError` — never raised into QML.
-
-    State machine:
-      INIT --refresh()--> LOADING
-        -- all success --> READY
-        -- first failure --> ERROR (fallback data)
-      READY -- refresh failure --> STALE (OLD DATA PRESERVED, no "--" flicker)
-      STALE -- refresh success --> READY
-    """
-
-    refreshed = Signal()
-
-    def __init__(self, state: OverviewState, parent: QObject | None = None) -> None:
-        super().__init__(parent)
-        self._state = state
-        self._opportunity_loader = None
-        self._market_loader = None
-        self._health_loader = None
-        self._validation_loader = None
-        self._paper_loader = None
-
-    # ---- backend wiring (host app only, NOT QML) ---------------------------
-
-    def setOpportunityLoader(self, loader) -> None:  # noqa: N802
-        self._opportunity_loader = loader
-
-    def setMarketLoader(self, loader) -> None:  # noqa: N802
-        self._market_loader = loader
-
-    def setHealthLoader(self, loader) -> None:  # noqa: N802
-        self._health_loader = loader
-
-    def setValidationLoader(self, loader) -> None:  # noqa: N802
-        self._validation_loader = loader
-
-    def setPaperLoader(self, loader) -> None:  # noqa: N802
-        self._paper_loader = loader
-
-    # ---- refresh (QML-invokable) -------------------------------------------
-
-    @Slot()
-    def refresh(self) -> None:
-        had_data = self._state.lifecycle in (LIFECYCLE_READY, LIFECYCLE_STALE)
-        self._state.markLoading()
-
-        errors: list[str] = []
-
-        # opportunity
-        if self._opportunity_loader is not None:
-            data = self._safe(self._opportunity_loader, errors, "今日机会")
-            if data is not None:
-                self._state.setOpportunity(
-                    str(data.get("value", "--")), data.get("hint"),
-                    data.get("report_date", ""))
-                self._state.setScanStatus("就绪", f"报告 {data.get('report_date', '--')}")
-
-        # market
-        if self._market_loader is not None:
-            data = self._safe(self._market_loader, errors, "市场状态")
-            if data is not None:
-                self._state.setMarketStatus(str(data.get("value", "--")), data.get("detail"))
-
-        # data health
-        if self._health_loader is not None:
-            data = self._safe(self._health_loader, errors, "数据健康")
-            if data is not None:
-                self._state.setDataHealth(
-                    str(data.get("level", HEALTH_OK)),
-                    str(data.get("text", "--")))
-
-        # validation
-        if self._validation_loader is not None:
-            data = self._safe(self._validation_loader, errors, "信号验证")
-            if data is not None:
-                self._state.setValidation(str(data.get("value", "--")), data.get("hint"))
-
-        # portfolio
-        if self._paper_loader is not None:
-            data = self._safe(self._paper_loader, errors, "模拟组合")
-            if data is not None:
-                self._state.setPortfolio(str(data.get("value", "1.0000")), data.get("hint"))
-
-        if errors:
-            if had_data:
-                self._state.markStale("; ".join(errors))
-            else:
-                self._state.markError("; ".join(errors))
-        else:
-            self._state.markReady()
-
-        self.refreshed.emit()
-
-    @staticmethod
-    def _safe(loader, errors: list[str], label: str):
-        try:
-            return loader()
-        except Exception as exc:  # capture, never raise into QML
-            errors.append(f"{label}: {exc}")
-            return None

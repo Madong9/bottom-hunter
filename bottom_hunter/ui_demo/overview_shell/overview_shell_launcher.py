@@ -28,6 +28,7 @@ import argparse
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 LAB_DIR = Path(__file__).resolve().parent
@@ -142,16 +143,26 @@ def _make_view(qml_path: Path, width: int = WIDTH, height: int = HEIGHT):
 
 
 def _wire_overview_state(view) -> None:
-    """PHASE 2-B: create OverviewState + OverviewBridge + RefreshController
-    and expose state/bridge to QML as context properties. Initialization
-    load + manual refresh() only — no async system, no business imports in
-    QML. Loaders mirror the read-only helpers the QtWidgets dashboard
-    already uses, injected into the bridge — the shell stays isolated.
+    """PHASE 2-C: create OverviewState + OverviewBridge + RefreshController
+    and expose state/bridge to QML as context properties. The bridge depends
+    on a single DTO provider (contract: OverviewDTO) rather than per-field
+    backend loaders — the host app builds the DTO from read-only backend
+    helpers, the shell itself stays isolated. Initialization load + manual
+    refresh() only — no async system, no business imports in QML.
     """
+    from bottom_hunter.ui_demo.overview_shell.contracts import (
+        HealthDTO,
+        MarketDTO,
+        OpportunityDTO,
+        OverviewDTO,
+        PortfolioDTO,
+        ScanDTO,
+        ValidationDTO,
+    )
     from bottom_hunter.ui_demo.overview_shell.viewmodel import (
         HEALTH_OK,
-        HEALTH_WARNING,
         HEALTH_UNKNOWN,
+        HEALTH_WARNING,
         OverviewBridge,
         OverviewRefreshController,
         OverviewState,
@@ -161,79 +172,61 @@ def _wire_overview_state(view) -> None:
     bridge = OverviewBridge(state, view)
     controller = OverviewRefreshController(view)
 
-    def _opportunity_loader():
+    def _dto_provider():
+        """Build an OverviewDTO from the read-only backend helpers. Returns
+        None when no backend data is available (state keeps fallback)."""
         from bottom_hunter.src import gui_core
 
         reports = gui_core.list_reports()
         if not reports:
             return None
+
         summary = gui_core.load_report_summary(reports[-1])
-        return {
-            "value": str(summary.opportunity_count),
-            "hint": f"有效观察 {summary.signal_count} 个",
-            "report_date": summary.report_date,
-        }
 
-    def _market_loader():
-        from bottom_hunter.src import gui_core
-
-        reports = gui_core.list_reports()
-        if not reports:
-            return None
-        summary = gui_core.load_report_summary(reports[-1])
-        sessions = summary.market_sessions or {}
-        parts = [f"{k} {v}" for k, v in sessions.items()]
-        return {
-            "value": " · ".join(parts) if parts else "--",
-            "detail": f"环境 {len(summary.environments or {})} 项",
-        }
-
-    def _health_loader():
-        from bottom_hunter.src import gui_core
-
-        reports = gui_core.list_reports()
-        if not reports:
-            return None
-        summary = gui_core.load_report_summary(reports[-1])
+        opportunity = OpportunityDTO(
+            count=str(summary.opportunity_count),
+            hint=f"有效观察 {summary.signal_count} 个",
+            updated=summary.report_date,
+        )
+        scan = ScanDTO(status="就绪", detail=f"报告 {summary.report_date}",
+                       report_date=summary.report_date)
+        market = MarketDTO(
+            status=" · ".join(f"{k} {v}" for k, v in (summary.market_sessions or {}).items()) or "--",
+            detail=f"环境 {len(summary.environments or {})} 项",
+        )
         if summary.error_count:
-            return {"level": HEALTH_WARNING, "text": f"需关注 · {summary.error_count} 项异常"}
-        return {"level": HEALTH_OK, "text": "正常 · 本次行情完整"}
+            health = HealthDTO(level=HEALTH_WARNING, text=f"需关注 · {summary.error_count} 项异常")
+        else:
+            health = HealthDTO(level=HEALTH_OK, text="正常 · 本次行情完整")
 
-    def _validation_loader():
+        validation = ValidationDTO(value="--", hint="近30天5日持有胜率")
+        portfolio = PortfolioDTO(value="1.0000", hint="三阶段框架净值")
+
         from bottom_hunter.src.storage import StateStore
 
         database = Path(os.environ.get("BH_PACKAGE_DIR", ".")) / "state" / "signals.db"
-        if not database.exists():
-            return None
-        store = StateStore(database)
-        summary = store.outcome_summary(window_days=30, horizon=5)
-        if not summary.get("sample_size"):
-            return None
-        return {
-            "value": f"{summary['win_rate']:.0%}",
-            "hint": f"{summary['sample_size']} 样本 · {summary['average_return']:+.2%}",
-        }
+        if database.exists():
+            store = StateStore(database)
+            vsum = store.outcome_summary(window_days=30, horizon=5)
+            if vsum.get("sample_size"):
+                validation = ValidationDTO(
+                    value=f"{vsum['win_rate']:.0%}",
+                    hint=f"{vsum['sample_size']} 样本 · {vsum['average_return']:+.2%}",
+                )
+            paper = store.paper_history_summary()
+            if paper is not None and paper.get("latest") is not None:
+                portfolio = PortfolioDTO(
+                    value=f"{float(paper['latest']):.4f}",
+                    hint=f"{len(paper['points'])} 个交易日",
+                )
 
-    def _paper_loader():
-        from bottom_hunter.src.storage import StateStore
+        return OverviewDTO(
+            market=market, scan=scan, opportunity=opportunity,
+            health=health, validation=validation, portfolio=portfolio,
+            timestamp=datetime.now().isoformat(timespec="seconds"),
+        )
 
-        database = Path(os.environ.get("BH_PACKAGE_DIR", ".")) / "state" / "signals.db"
-        if not database.exists():
-            return None
-        store = StateStore(database)
-        paper = store.paper_history_summary()
-        if paper is None or paper.get("latest") is None:
-            return None
-        return {
-            "value": f"{float(paper['latest']):.4f}",
-            "hint": f"{len(paper['points'])} 个交易日",
-        }
-
-    bridge.setOpportunityLoader(_opportunity_loader)
-    bridge.setMarketLoader(_market_loader)
-    bridge.setHealthLoader(_health_loader)
-    bridge.setValidationLoader(_validation_loader)
-    bridge.setPaperLoader(_paper_loader)
+    bridge.setDtoProvider(_dto_provider)
 
     # unified refresh: controller.requestRefresh -> bridge.refresh
     controller.refreshRequested.connect(bridge.refresh)
