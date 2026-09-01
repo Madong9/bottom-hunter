@@ -142,24 +142,24 @@ def _make_view(qml_path: Path, width: int = WIDTH, height: int = HEIGHT):
 
 
 def _wire_overview_state(view) -> None:
-    """PHASE 2-A: create the OverviewState/OverviewBridge pair and expose the
-    state to QML as a context property. Initialization load + manual
-    refresh() only — no async system, no business imports in QML.
-
-    Loaders mirror the read-only helpers the QtWidgets dashboard already
-    uses (gui_core.load_report_summary / StateStore outcome + paper
-    summaries), injected into the bridge — the shell itself stays isolated.
+    """PHASE 2-B: create OverviewState + OverviewBridge + RefreshController
+    and expose state/bridge to QML as context properties. Initialization
+    load + manual refresh() only — no async system, no business imports in
+    QML. Loaders mirror the read-only helpers the QtWidgets dashboard
+    already uses, injected into the bridge — the shell stays isolated.
     """
-    from PySide6.QtCore import QObject
-    from PySide6.QtQml import QQmlEngine
-
     from bottom_hunter.ui_demo.overview_shell.viewmodel import (
+        HEALTH_OK,
+        HEALTH_WARNING,
+        HEALTH_UNKNOWN,
         OverviewBridge,
+        OverviewRefreshController,
         OverviewState,
     )
 
     state = OverviewState(view)
     bridge = OverviewBridge(state, view)
+    controller = OverviewRefreshController(view)
 
     def _opportunity_loader():
         from bottom_hunter.src import gui_core
@@ -173,6 +173,31 @@ def _wire_overview_state(view) -> None:
             "hint": f"有效观察 {summary.signal_count} 个",
             "report_date": summary.report_date,
         }
+
+    def _market_loader():
+        from bottom_hunter.src import gui_core
+
+        reports = gui_core.list_reports()
+        if not reports:
+            return None
+        summary = gui_core.load_report_summary(reports[-1])
+        sessions = summary.market_sessions or {}
+        parts = [f"{k} {v}" for k, v in sessions.items()]
+        return {
+            "value": " · ".join(parts) if parts else "--",
+            "detail": f"环境 {len(summary.environments or {})} 项",
+        }
+
+    def _health_loader():
+        from bottom_hunter.src import gui_core
+
+        reports = gui_core.list_reports()
+        if not reports:
+            return None
+        summary = gui_core.load_report_summary(reports[-1])
+        if summary.error_count:
+            return {"level": HEALTH_WARNING, "text": f"需关注 · {summary.error_count} 项异常"}
+        return {"level": HEALTH_OK, "text": "正常 · 本次行情完整"}
 
     def _validation_loader():
         from bottom_hunter.src.storage import StateStore
@@ -205,13 +230,19 @@ def _wire_overview_state(view) -> None:
         }
 
     bridge.setOpportunityLoader(_opportunity_loader)
+    bridge.setMarketLoader(_market_loader)
+    bridge.setHealthLoader(_health_loader)
     bridge.setValidationLoader(_validation_loader)
     bridge.setPaperLoader(_paper_loader)
+
+    # unified refresh: controller.requestRefresh -> bridge.refresh
+    controller.refreshRequested.connect(bridge.refresh)
 
     engine = view.engine()
     engine.rootContext().setContextProperty("overviewState", state)
     engine.rootContext().setContextProperty("overviewBridge", bridge)
-    # initialization load (Phase 2-A: pull once)
+    engine.rootContext().setContextProperty("overviewRefreshController", controller)
+    # initialization load
     bridge.refresh()
     return state, bridge
 

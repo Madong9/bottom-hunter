@@ -332,8 +332,8 @@ Item {
                     id: cardsRepeater
                     model: [
                         { label: "今日机会", stateProp: "opportunityCount",       stateHint: "opportunityHint",       fallback: "--",     fallbackHint: "等待最新扫描",      accent: "#07C160" },
-                        { label: "数据健康", stateProp: "dataHealth",             stateHint: "dataHealthHint",        fallback: "--",     fallbackHint: "行情完整度",        accent: "#F3BA2F" },
-                        { label: "信号验证", stateProp: "signalValidation",       stateHint: "signalValidationHint",  fallback: "--",     fallbackHint: "近30天5日持有胜率", accent: "#2D8CF0" },
+                        { label: "数据健康", stateProp: "dataHealthText",         stateHint: "scanStatusDetail",      fallback: "--",     fallbackHint: "行情完整度",        accent: "#F3BA2F" },
+                        { label: "信号验证", stateProp: "validation",             stateHint: "validationHint",        fallback: "--",     fallbackHint: "近30天5日持有胜率", accent: "#2D8CF0" },
                         { label: "模拟组合", stateProp: "portfolioValue",         stateHint: "portfolioHint",         fallback: "1.0000", fallbackHint: "三阶段框架净值",    accent: "#8854D0" }
                     ]
                     delegate: GlassMetricCard {

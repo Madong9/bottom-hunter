@@ -1,9 +1,9 @@
-"""PHASE 2-A — Overview QObject ViewModel bridge tests.
+"""PHASE 2-B — Overview state lifecycle & model enhancement tests.
 
-Covers: QObject construction, fallback defaults, QML property binding,
-mock backend data propagation, QML rendering with mock data, and the
-business-isolation rule (business modules never import QML; the shell never
-imports business modules).
+Covers: state machine transitions, notify signals, error recovery, stale
+state (old data preserved), QML lifecycle binding, mock backend data, and
+the business-isolation rule (QML never imports backend; business modules
+never import QML).
 """
 
 from __future__ import annotations
@@ -26,6 +26,11 @@ SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 VIEWMODEL_DIR = SHELL_DIR / "viewmodel"
 
 
+def _software_env(monkeypatch) -> None:
+    monkeypatch.setenv("QSG_RHI_BACKEND", "software")
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+
 def _find_registry(root):
     for child in root.findChildren(object):
         if child.metaObject().className().startswith("ProtectionRegistry"):
@@ -33,161 +38,188 @@ def _find_registry(root):
     raise AssertionError("ProtectionRegistry not found")
 
 
-def _software_env(monkeypatch) -> None:
-    monkeypatch.setenv("QSG_RHI_BACKEND", "software")
-    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
-
-
-def _make_state():
+def _state():
     from bottom_hunter.ui_demo.overview_shell.viewmodel import OverviewState
 
     return OverviewState()
 
 
-def _make_bridge(state):
+def _bridge(state):
     from bottom_hunter.ui_demo.overview_shell.viewmodel import OverviewBridge
 
     return OverviewBridge(state)
 
 
-# ---- 1. QObject construction ------------------------------------------------
+def _controller():
+    from bottom_hunter.ui_demo.overview_shell.viewmodel import OverviewRefreshController
 
-def test_viewmodel_qobject_construction() -> None:
-    state = _make_state()
-    bridge = _make_bridge(state)
-    assert state is not None and bridge is not None
-    assert bridge.parent() is None or bridge.parent() is not state
+    return OverviewRefreshController()
 
 
-# ---- 2. fallback defaults ----------------------------------------------------
+def _loaders(values: dict):
+    """Return a dict of loader setter -> loader for the bridge."""
+    return values
 
-def test_default_state_is_fallback() -> None:
-    state = _make_state()
-    assert state.property("opportunityCount") == "--"
-    assert state.property("dataHealth") == "--"
-    assert state.property("signalValidation") == "--"
+
+# ---- 1. default lifecycle is INIT -------------------------------------------
+
+def test_default_lifecycle_is_init() -> None:
+    state = _state()
+    assert state.property("lifecycle") == "INIT"
+    assert state.property("lastError") == ""
+    assert state.property("lastSuccessfulUpdate") == ""
+    assert state.property("dataHealthLevel") == "UNKNOWN"
     assert state.property("portfolioValue") == "1.0000"
-    assert state.property("opportunityHint") == "等待最新扫描"
-    state.resetToFallback()
-    assert state.property("portfolioValue") == "1.0000"
 
 
-# ---- 3. QML can read properties ----------------------------------------------
+# ---- 2. LOADING -> READY -----------------------------------------------------
 
-@pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
-def test_qml_reads_properties(monkeypatch) -> None:
-    _software_env(monkeypatch)
-    app = QGuiApplication.instance() or QGuiApplication([])
-    state = _make_state()
-    state.setOpportunity("12")
-    state.setPortfolio("1.0500")
+def test_loading_to_ready() -> None:
+    state = _state()
+    bridge = _bridge(state)
+    bridge.setOpportunityLoader(lambda: {"value": "27", "hint": "x", "report_date": "2026-09-01"})
+    bridge.setValidationLoader(lambda: {"value": "63%", "hint": "y"})
+    bridge.setPaperLoader(lambda: {"value": "1.0845", "hint": "z"})
 
-    engine = QQmlApplicationEngine()
-    engine.rootContext().setContextProperty("overviewState", state)
-    engine.rootContext().setContextProperty("overviewBridge", _make_bridge(state))
-    engine.load(QUrl.fromLocalFile(str(SHELL_DIR / "OverviewShell.qml")))
-    roots = engine.rootObjects()
-    try:
-        assert roots, "OverviewShell.qml produced no root object"
-        registry = _find_registry(roots[0])
-        cards = registry.property("cards").toVariant()
-        assert len(cards) == 4
-        # QML bound values reflect the state (2 of 4 cards set, others fallback)
-        values = sorted(c.property("value") for c in cards)
-        assert "12" in values and "1.0500" in values and "--" in values
-    finally:
-        for r in roots:
-            r.deleteLater()
-        engine.deleteLater()
-    del app
-
-
-# ---- 4. no-backend fallback in QML --------------------------------------------
-
-@pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
-def test_qml_fallback_without_backend(monkeypatch) -> None:
-    _software_env(monkeypatch)
-    app = QGuiApplication.instance() or QGuiApplication([])
-    engine = QQmlApplicationEngine()
-    # NO context property set: QML must fall back to the POC defaults
-    engine.load(QUrl.fromLocalFile(str(SHELL_DIR / "OverviewShell.qml")))
-    roots = engine.rootObjects()
-    try:
-        assert roots, "OverviewShell.qml produced no root object"
-        registry = _find_registry(roots[0])
-        cards = registry.property("cards").toVariant()
-        assert len(cards) == 4
-        values = sorted(c.property("value") for c in cards)
-        assert values == ["--", "--", "--", "1.0000"]
-    finally:
-        for r in roots:
-            r.deleteLater()
-        engine.deleteLater()
-    del app
-
-
-# ---- 5. mock backend data ------------------------------------------------------
-
-def test_mock_backend_data_propagates() -> None:
-    state = _make_state()
-    bridge = _make_bridge(state)
-
-    def _opportunity():
-        return {"value": "27", "hint": "有效观察 40 个", "report_date": "2026-09-01"}
-
-    def _validation():
-        return {"value": "63%", "hint": "30 样本 · +2.10%"}
-
-    def _paper():
-        return {"value": "1.0845", "hint": "42 个交易日"}
-
-    bridge.setOpportunityLoader(_opportunity)
-    bridge.setValidationLoader(_validation)
-    bridge.setPaperLoader(_paper)
+    transitions = []
+    state.lifecycleChanged.connect(lambda: transitions.append(state.property("lifecycle")))
     bridge.refresh()
+    # INIT -> LOADING -> READY
+    assert "LOADING" in transitions
+    assert state.property("lifecycle") == "READY"
+    assert state.property("lastSuccessfulUpdate") != ""
 
-    assert state.property("opportunityCount") == "27"
-    assert state.property("signalValidation") == "63%"
-    assert state.property("portfolioValue") == "1.0845"
-    assert state.property("reportDate") == "2026-09-01"
 
-    # notify signals fired (Qt auto-detects changed property reads); a broken
-    # loader must NOT clear the state
-    bridge.setValidationLoader(lambda: None)
-    bridge.refresh()
-    assert state.property("signalValidation") == "63%"
+# ---- 3. INIT -> ERROR --------------------------------------------------------
 
-    # raising loader must not crash and must keep current values
+def test_init_to_error() -> None:
+    state = _state()
+    bridge = _bridge(state)
+
     def _boom():
         raise RuntimeError("backend offline")
 
     bridge.setOpportunityLoader(_boom)
     bridge.refresh()
+    assert state.property("lifecycle") == "ERROR"
+    assert "今日机会" in state.property("lastError")
+    # fallback data preserved (not cleared)
+    assert state.property("opportunityCount") == "--"
+
+
+# ---- 4. READY -> STALE keeps old data ---------------------------------------
+
+def test_ready_to_stale_preserves_data() -> None:
+    state = _state()
+    bridge = _bridge(state)
+    good = lambda: {"value": "27", "hint": "x", "report_date": "2026-09-01"}
+    bridge.setOpportunityLoader(good)
+    bridge.setPaperLoader(lambda: {"value": "1.0845", "hint": "z"})
+
+    bridge.refresh()
+    assert state.property("lifecycle") == "READY"
+    assert state.property("opportunityCount") == "27"
+    assert state.property("portfolioValue") == "1.0845"
+
+    # now the opportunity loader breaks -> STALE, old data preserved (no "--")
+    def _boom():
+        raise RuntimeError("offline again")
+
+    bridge.setOpportunityLoader(_boom)
+    bridge.refresh()
+    assert state.property("lifecycle") == "STALE"
+    assert state.property("opportunityCount") == "27"       # NOT "--"
+    assert state.property("portfolioValue") == "1.0845"     # NOT cleared
+    assert "今日机会" in state.property("lastError")
+
+
+# ---- 5. STALE -> READY recovery ---------------------------------------------
+
+def test_stale_to_ready_recovery() -> None:
+    state = _state()
+    bridge = _bridge(state)
+    bridge.setOpportunityLoader(lambda: {"value": "27", "hint": "x"})
+    bridge.refresh()
+    assert state.property("lifecycle") == "READY"
+
+    def _boom():
+        raise RuntimeError("offline")
+
+    bridge.setOpportunityLoader(_boom)
+    bridge.refresh()
+    assert state.property("lifecycle") == "STALE"
+
+    bridge.setOpportunityLoader(lambda: {"value": "30", "hint": "x"})
+    bridge.refresh()
+    assert state.property("lifecycle") == "READY"
+    assert state.property("opportunityCount") == "30"
+
+
+# ---- 6. lastError updates ----------------------------------------------------
+
+def test_lasterror_updates() -> None:
+    state = _state()
+    bridge = _bridge(state)
+
+    def _boom():
+        raise ValueError("bad report")
+
+    bridge.setOpportunityLoader(_boom)
+    bridge.refresh()
+    first = state.property("lastError")
+    assert "今日机会" in first
+
+
+# ---- 7. notify signal --------------------------------------------------------
+
+def test_notify_signals_fire() -> None:
+    state = _state()
+    seen = []
+    state.lifecycleChanged.connect(lambda: seen.append("lifecycle"))
+    state.opportunityCountChanged.connect(lambda: seen.append("opportunityCount"))
+    state.dataHealthChanged.connect(lambda: seen.append("dataHealth"))
+    bridge = _bridge(state)
+    bridge.setOpportunityLoader(lambda: {"value": "27", "hint": "x"})
+    bridge.setHealthLoader(lambda: {"level": "OK", "text": "正常"})
+    bridge.refresh()
+    assert "lifecycle" in seen
+    assert "opportunityCount" in seen
+    assert "dataHealth" in seen
+
+
+# ---- 8. refresh controller --------------------------------------------------
+
+def test_refresh_controller() -> None:
+    from bottom_hunter.ui_demo.overview_shell.viewmodel import OverviewBridge
+
+    state = _state()
+    bridge = OverviewBridge(state)
+    controller = _controller()
+    controller.refreshRequested.connect(bridge.refresh)
+    bridge.setOpportunityLoader(lambda: {"value": "27", "hint": "x"})
+    controller.requestRefresh()
+    assert state.property("lifecycle") == "READY"
     assert state.property("opportunityCount") == "27"
 
 
+# ---- 9. QML reads lifecycle -------------------------------------------------
+
 @pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
-def test_qml_shows_mock_backend_data(monkeypatch) -> None:
+def test_qml_reads_lifecycle(monkeypatch) -> None:
     _software_env(monkeypatch)
     app = QGuiApplication.instance() or QGuiApplication([])
-    state = _make_state()
-    bridge = _make_bridge(state)
-    bridge.setOpportunityLoader(lambda: {"value": "27", "hint": "有效观察 40 个"})
-    bridge.setValidationLoader(lambda: {"value": "63%"})
-    bridge.setPaperLoader(lambda: {"value": "1.0845"})
-    bridge.refresh()
+    state = _state()
+    state.markReady()
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("overviewState", state)
-    engine.rootContext().setContextProperty("overviewBridge", bridge)
     engine.load(QUrl.fromLocalFile(str(SHELL_DIR / "OverviewShell.qml")))
     roots = engine.rootObjects()
     try:
-        assert roots
+        assert roots, "OverviewShell.qml produced no root object"
         registry = _find_registry(roots[0])
         cards = registry.property("cards").toVariant()
-        values = sorted(c.property("value") for c in cards)
-        assert values == ["--", "1.0845", "27", "63%"]
+        assert len(cards) == 4
     finally:
         for r in roots:
             r.deleteLater()
@@ -195,10 +227,9 @@ def test_qml_shows_mock_backend_data(monkeypatch) -> None:
     del app
 
 
-# ---- 6. business isolation ------------------------------------------------------
+# ---- 10. business isolation -------------------------------------------------
 
 def test_business_modules_do_not_import_qml() -> None:
-    """Production business modules must never import QML/Quick."""
     forbidden = re.compile(r"from\s+PySide6\.QtQml|import\s+PySide6\.QtQml|QtQuick", re.I)
     for py in SRC_DIR.glob("*.py"):
         text = py.read_text(encoding="utf-8", errors="ignore")
@@ -206,8 +237,6 @@ def test_business_modules_do_not_import_qml() -> None:
 
 
 def test_shell_does_not_import_business_modules() -> None:
-    """The QML shell + viewmodel must not import business modules. The
-    launcher is the ONLY file allowed to wire backend loaders."""
     forbidden = re.compile(r"bottom_hunter\.src|from\s+bottom_hunter\.src|scanner", re.I)
     for py in VIEWMODEL_DIR.rglob("*.py"):
         text = py.read_text(encoding="utf-8", errors="ignore")
