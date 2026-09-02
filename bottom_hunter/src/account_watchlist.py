@@ -15,11 +15,13 @@ from threading import Lock
 from typing import Any
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
 import pandas as pd
 import yaml
 
 from .config import PROJECT_DIR
+from .import_lock import ImportProcessLock
 from .import_transaction import (
     ImportConflict,
     ImportVerificationResult,
@@ -27,6 +29,11 @@ from .import_transaction import (
     PreparedFileFingerprint,
     PreparedImport,
     PreparedPathBaseline,
+)
+from .import_transaction_workspace import (
+    ImportConflictError,
+    ImportTransactionWorkspace,
+    commit_prepared_import,
 )
 from .io_utils import EASTMONEY_SEARCH_TOKEN
 from .io_utils import atomic_json as _atomic_json
@@ -1036,9 +1043,8 @@ class AccountWatchlistRepository:
 
         industry_cache_payload: dict[str, Any] | None = None
         if resolve_industries:
-            assets, resolver, cache_changed = self._resolve_industries_in_memory(assets)
-            if cache_changed:
-                industry_cache_payload = dict(resolver.cache)
+            assets, resolver, _cache_changed = self._resolve_industries_in_memory(assets)
+            industry_cache_payload = dict(resolver.cache)
 
         source_payloads = {item_source: self._load_source_payload(item_source) for item_source in SUPPORTED_SOURCES}
         previous = source_payloads[source]
@@ -1246,42 +1252,35 @@ class AccountWatchlistRepository:
         *,
         resolve_industries: bool = True,
     ) -> ImportResult:
-        source = _normalize_source(source)
-        file_path = Path(path).expanduser().resolve()
-        import_warnings: list[str] = []
-        assets = parse_watchlist_file(file_path, source, failures_out=import_warnings)
-        if resolve_industries:
-            assets = self._resolve_industries(assets)
-        previous = self._load_source_payload(source)
-        manual_assets = {
-            asset.canonical_id: asset
-            for asset in self.load_source_assets(source)
-            if _clean(asset.metadata.get("entry_method")) == "manual"
-        }
-        combined = {asset.canonical_id: asset for asset in assets}
-        combined.update(manual_assets)
-        snapshot = {
-            "schema_version": 2,
-            "source": source,
-            "source_label": SOURCE_LABELS[source],
-            "account_alias": account_alias.strip() or _clean(previous.get("account_alias")),
-            "import_file": str(file_path),
-            "file_signature": _file_signature(file_path),
-            "imported_at": _utc_now(),
-            "items": [asset.to_dict() for asset in combined.values()],
-        }
-        _atomic_json(self.source_snapshot_path(source), snapshot)
-        summary = self.rebuild_active_watchlist()
+        transaction_id = f"legacy-{uuid4().hex}"
+        with ImportProcessLock(self.state_dir, transaction_id):
+            prepared = self.prepare_import(
+                source,
+                path,
+                account_alias,
+                resolve_industries=resolve_industries,
+                transaction_id=transaction_id,
+            )
+            verification = self.verify_import(prepared)
+            if not verification.valid:
+                raise ImportConflictError(verification)
+            workspace = ImportTransactionWorkspace(
+                self.state_dir,
+                transaction_id,
+                allowed_target_roots=(self.state_dir, self.config_dir),
+            )
+            commit_prepared_import(self, prepared, workspace)
+        self._summary_cache = None
         return ImportResult(
-            source=source,
-            imported_count=len(assets),
-            merged_count=int(summary["asset_count"]),
-            duplicate_count=int(summary["overlap_count"]),
-            unresolved_industry_count=int(summary["unresolved_industry_count"]),
-            generated_sector_count=int(summary["sector_count"]),
+            source=prepared.source,
+            imported_count=prepared.imported_count,
+            merged_count=prepared.merged_count,
+            duplicate_count=prepared.duplicate_count,
+            unresolved_industry_count=prepared.unresolved_industry_count,
+            generated_sector_count=prepared.generated_sector_count,
             active_watchlist=self.active_watchlist_path,
-            skipped_count=len(import_warnings),
-            warnings=tuple(import_warnings[:20]),
+            skipped_count=len(prepared.warnings),
+            warnings=prepared.warnings[:20],
         )
 
     def add_manual_asset(

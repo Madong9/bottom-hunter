@@ -347,7 +347,15 @@ class ImportController(QObject):
             )
 
         self._set_state(ImportCommandState.SUCCESS)
-        result = self._map_result(command, staged, "SUCCESS", started_at, committed=True)
+        try:
+            workspace_result = workspace.result_dto
+        except AttributeError:
+            workspace_result = None
+        result = (
+            workspace_result
+            if isinstance(workspace_result, ImportResultDTO)
+            else self._map_result(command, staged, "SUCCESS", started_at, committed=True)
+        )
         return self._finish_terminal(command.command_id, result)
 
     def _finish_failure(

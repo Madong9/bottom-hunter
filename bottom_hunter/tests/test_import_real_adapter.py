@@ -224,7 +224,7 @@ def test_adapter_modules_have_no_real_backend_io_or_database_dependency() -> Non
         PAGES_DIR / "import_runtime_adapter.py",
     ]
     forbidden = re.compile(
-        r"from\s+bottom_hunter\.src|AccountWatchlistRepository|sqlite3|"
+        r"AccountWatchlistRepository|sqlite3|"
         r"StateStore|\bPath\b|\b(import_file|add_manual_asset|clear_source|"
         r"refresh_linked_files|rebuild_active_watchlist|write_text|write_bytes|"
         r"unlink|open)\s*\(",
@@ -233,6 +233,12 @@ def test_adapter_modules_have_no_real_backend_io_or_database_dependency() -> Non
     for path in files:
         text = path.read_text(encoding="utf-8")
         assert not forbidden.search(text), f"real side effect dependency in {path.name}"
+        for match in re.finditer(r"from\s+bottom_hunter\.src", text):
+            line_start = text.rfind("\n", 0, match.start()) + 1
+            line = text[line_start : match.start()]
+            assert path.name == "import_backend_adapter.py"
+            assert line.strip() == "", "backend import must be deferred inside a function"
+            assert line != "", "backend import must not occur at module level"
 
 
 def test_controller_does_not_depend_on_concrete_repository_or_adapter() -> None:
