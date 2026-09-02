@@ -2,7 +2,8 @@
 //
 // Reuses the FROZEN GlassNavRail for navigation visual and drives routing
 // from the NavigationController (context property `navController`). Every
-// page is an empty placeholder at this stage — no business data yet.
+// Research is a read-only migrated page; remaining unmigrated routes keep
+// their existing placeholders.
 //
 // No new shaders, no layout redesign: nav rail + a single placeholder pane.
 import QtQuick
@@ -46,7 +47,7 @@ Item {
         }
     }
 
-    // ---- content pane (placeholder; replaced per-page in later phases) ----
+    // ---- content pane -----------------------------------------------------
     Item {
         id: content
         x: navRail.x + navRail.width + 20
@@ -54,7 +55,16 @@ Item {
         width: parent.width - x - 20
         height: parent.height - 40
 
+        Loader {
+            id: researchPageLoader
+            objectName: "researchPageLoader"
+            anchors.fill: parent
+            active: root.pageIds[root.currentIndex] === "research"
+            source: active ? Qt.resolvedUrl("research/Research.qml") : ""
+        }
+
         Column {
+            visible: !researchPageLoader.active
             anchors.left: parent.left
             anchors.top: parent.top
             spacing: 8
