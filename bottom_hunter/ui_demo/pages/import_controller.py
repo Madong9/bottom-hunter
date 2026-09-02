@@ -15,7 +15,7 @@ from pathlib import PurePath
 from threading import Lock
 from typing import Protocol
 
-from PySide6.QtCore import Property, QObject, Signal
+from PySide6.QtCore import Property, QObject, QThread, QTimer, Signal, Slot
 
 from .import_contracts import (
     FileFingerprintDTO,
@@ -77,6 +77,10 @@ class TransactionWorkspace(Protocol):
 
     def verify(self, staged: StagedImportDTO) -> None: ...
 
+    def release_for_review(self) -> None: ...
+
+    def reacquire_for_commit(self) -> None: ...
+
     def commit(self, staged: StagedImportDTO) -> None: ...
 
     def rollback(self) -> None: ...
@@ -88,6 +92,28 @@ class RuntimeActivityPort(Protocol):
     """Reports a conflicting scan/backtest/sync operation, if any."""
 
     def active_operation(self) -> str: ...
+
+
+class _ImportWorker(QObject):
+    completed = Signal(object, object, object)
+
+    def __init__(
+        self,
+        operation: Callable[[], ImportResultDTO | None],
+        command: ImportCommandDTO,
+    ) -> None:
+        super().__init__()
+        self._operation = operation
+        self._command = command
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            result = self._operation()
+        except Exception as exc:  # final worker boundary
+            self.completed.emit(None, exc, self._command)
+        else:
+            self.completed.emit(result, None, self._command)
 
 
 class ImportCommandGate:
@@ -128,6 +154,10 @@ class ImportController(QObject):
 
     stateChanged = Signal(str)
     resultReady = Signal(object)
+    progressChanged = Signal()
+    progressEvent = Signal(int, str)
+    asyncRunningChanged = Signal()
+    asyncFinished = Signal(object)
 
     def __init__(
         self,
@@ -136,6 +166,8 @@ class ImportController(QObject):
         runtime_activity: RuntimeActivityPort,
         gate: ImportCommandGate,
         parent: QObject | None = None,
+        *,
+        command_factory: Callable[[str, str, FileFingerprintDTO], ImportCommandDTO] | None = None,
     ) -> None:
         super().__init__(parent)
         self._mutation_port = mutation_port
@@ -146,6 +178,15 @@ class ImportController(QObject):
         self._active_command_id = ""
         self._cancel_requested = False
         self._pending: _PendingCommand | None = None
+        self._command_factory = command_factory
+        self._last_request: tuple[str, str, FileFingerprintDTO] | None = None
+        self._worker_thread: QThread | None = None
+        self._worker: _ImportWorker | None = None
+        self._async_running = False
+        self._deferred_partial_accept = False
+        self._deferred_retry = False
+        self._progress = 0
+        self._progress_message = ""
 
     @Property(str, notify=stateChanged)
     def state(self) -> str:
@@ -154,6 +195,69 @@ class ImportController(QObject):
     @Property(str, notify=stateChanged)
     def activeCommandId(self) -> str:  # noqa: N802
         return self._active_command_id
+
+    @Property(bool, notify=asyncRunningChanged)
+    def asyncRunning(self) -> bool:  # noqa: N802
+        return self._async_running
+
+    @Property(int, notify=progressChanged)
+    def progress(self) -> int:
+        return self._progress
+
+    @Property(str, notify=progressChanged)
+    def progressMessage(self) -> str:  # noqa: N802
+        return self._progress_message
+
+    @Slot(object, result=bool)
+    def submitAsync(self, command: ImportCommandDTO) -> bool:  # noqa: N802
+        return self._start_async(lambda: self.submit(command), command)
+
+    @Slot(str, str, object, result=bool)
+    def requestImport(  # noqa: N802
+        self,
+        selection: str,
+        source: str,
+        fingerprint: FileFingerprintDTO,
+    ) -> bool:
+        if not isinstance(fingerprint, FileFingerprintDTO):
+            self._emit_factory_error("PREVIEW_FINGERPRINT_MISSING", "预览指纹无效，请重新选择文件。")
+            return False
+        self._last_request = (str(selection), str(source), fingerprint)
+        if self._command_factory is None:
+            self._emit_factory_error("IMPORT_FACTORY_MISSING", "导入命令工厂未配置。")
+            return False
+        try:
+            command = self._command_factory(str(selection), str(source), fingerprint)
+        except Exception:
+            self._emit_factory_error("IMPORT_COMMAND_FAILED", "无法准备导入命令，请重新预览。")
+            return False
+        return self.submitAsync(command)
+
+    @Slot(result=bool)
+    def retryAsync(self) -> bool:  # noqa: N802
+        if self._last_request is None:
+            return False
+        if self._async_running:
+            self._deferred_retry = True
+            return True
+        return self.requestImport(*self._last_request)
+
+    @Slot(result=bool)
+    def cancelActive(self) -> bool:  # noqa: N802
+        return self.cancel(self._active_command_id)
+
+    @Slot(result=bool)
+    def acceptPartialAsync(self) -> bool:  # noqa: N802
+        pending = self._pending
+        if pending is None:
+            return False
+        if self._async_running:
+            self._deferred_partial_accept = True
+            return True
+        return self._start_async(
+            lambda: self.accept_partial(pending.command.command_id),
+            pending.command,
+        )
 
     def submit(self, command: ImportCommandDTO) -> ImportResultDTO:
         """Run synchronously through abstract ports; a host may place this on a worker."""
@@ -257,6 +361,24 @@ class ImportController(QObject):
             return self._finish_cancelled(command, started_at, staged)
 
         if staged.partial and not command.allow_partial:
+            try:
+                workspace.release_for_review()
+            except AttributeError:
+                pass
+            except Exception:
+                _safe_discard(workspace)
+                return self._finish_failure(
+                    command,
+                    started_at,
+                    _error(
+                        command,
+                        "REVIEW_RELEASE_FAILED",
+                        ImportCommandState.VERIFYING,
+                        "无法安全进入部分结果确认，未修改当前数据。",
+                        True,
+                    ),
+                    staged,
+                )
             self._pending = _PendingCommand(command, workspace, staged, started_at)
             self._set_state(ImportCommandState.PARTIAL_REVIEW)
             result = self._map_result(command, staged, "PARTIAL_REVIEW", started_at)
@@ -270,6 +392,24 @@ class ImportController(QObject):
         if pending is None or pending.command.command_id != command_id:
             return None
         self._pending = None
+        try:
+            pending.workspace.reacquire_for_commit()
+        except AttributeError:
+            pass
+        except Exception:
+            _safe_discard(pending.workspace)
+            return self._finish_failure(
+                pending.command,
+                pending.started_at,
+                _error(
+                    pending.command,
+                    "PREPARED_CONFLICT",
+                    ImportCommandState.VERIFYING,
+                    "确认期间导入数据已变化，请重新预览。",
+                    True,
+                ),
+                pending.staged,
+            )
         return self._commit(pending.command, pending.workspace, pending.staged, pending.started_at)
 
     def cancel(self, command_id: str) -> bool:
@@ -439,6 +579,91 @@ class ImportController(QObject):
         if state != self._state:
             self._state = state
             self.stateChanged.emit(state.value)
+        progress, message = _progress_for_state(state)
+        if progress != self._progress or message != self._progress_message:
+            self._progress = progress
+            self._progress_message = message
+            self.progressChanged.emit()
+            self.progressEvent.emit(progress, message)
+
+    def _start_async(
+        self,
+        operation: Callable[[], ImportResultDTO | None],
+        command: ImportCommandDTO,
+    ) -> bool:
+        if self._async_running:
+            return False
+        thread = QThread(self)
+        worker = _ImportWorker(operation, command)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.completed.connect(self._on_async_completed)
+        worker.completed.connect(thread.quit)
+        worker.completed.connect(worker.deleteLater)
+        thread.finished.connect(self._on_worker_thread_finished)
+        self._worker_thread = thread
+        self._worker = worker
+        self._async_running = True
+        self.asyncRunningChanged.emit()
+        thread.start()
+        return True
+
+    @Slot(object, object, object)
+    def _on_async_completed(
+        self,
+        result: ImportResultDTO | None,
+        error: Exception | None,
+        command: ImportCommandDTO,
+    ) -> None:
+        if error is not None:
+            self._gate.release(command.command_id)
+            self._active_command_id = ""
+            self._pending = None
+            self._set_state(ImportCommandState.FAILED)
+            result = ImportResultDTO(
+                command_id=command.command_id,
+                source=command.source,
+                filename=PurePath(command.file_path).name,
+                status="FAILED",
+                error=ImportErrorDTO(
+                    code="UNEXPECTED_ERROR",
+                    stage=self._state.value,
+                    message="导入任务异常终止，未确认任何新数据。",
+                    retryable=True,
+                    technical_reference=command.command_id,
+                ),
+                finished_at=_now(),
+            )
+            self.resultReady.emit(result)
+        self.asyncFinished.emit(result)
+
+    @Slot()
+    def _on_worker_thread_finished(self) -> None:
+        thread = self._worker_thread
+        self._worker = None
+        self._worker_thread = None
+        self._async_running = False
+        self.asyncRunningChanged.emit()
+        if thread is not None:
+            thread.deleteLater()
+        if self._deferred_partial_accept:
+            self._deferred_partial_accept = False
+            QTimer.singleShot(0, self.acceptPartialAsync)
+        elif self._deferred_retry:
+            self._deferred_retry = False
+            QTimer.singleShot(0, self.retryAsync)
+
+    def _emit_factory_error(self, code: str, message: str) -> None:
+        self._set_state(ImportCommandState.FAILED)
+        result = ImportResultDTO(
+            command_id="",
+            source="",
+            filename="",
+            status="FAILED",
+            error=ImportErrorDTO(code=code, stage="VALIDATING", message=message, retryable=True),
+            finished_at=_now(),
+        )
+        self.resultReady.emit(result)
 
 
 def _error(
@@ -466,3 +691,19 @@ def _safe_discard(workspace: TransactionWorkspace) -> None:
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _progress_for_state(state: ImportCommandState) -> tuple[int, str]:
+    return {
+        ImportCommandState.IDLE: (0, ""),
+        ImportCommandState.QUEUED: (5, "导入任务已排队"),
+        ImportCommandState.VALIDATING: (15, "正在验证文件"),
+        ImportCommandState.STAGING: (35, "正在生成暂存数据"),
+        ImportCommandState.VERIFYING: (60, "正在校验暂存结果"),
+        ImportCommandState.PARTIAL_REVIEW: (70, "等待确认部分结果"),
+        ImportCommandState.COMMITTING: (85, "正在安全提交"),
+        ImportCommandState.SUCCESS: (100, "导入完成"),
+        ImportCommandState.FAILED: (100, "导入失败"),
+        ImportCommandState.CANCELLED: (100, "已取消导入"),
+        ImportCommandState.RECOVERY_REQUIRED: (100, "需要人工恢复"),
+    }[state]

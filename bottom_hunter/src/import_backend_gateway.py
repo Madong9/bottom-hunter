@@ -111,6 +111,28 @@ class AccountWatchlistTransactionGateway:
         if not verification.valid:
             raise ImportConflictError(verification)
 
+    def release_for_review(self, command_id: str) -> None:
+        self._require_prepared(command_id, self.staging_location(command_id))
+        process_lock = self._locks.pop(command_id)
+        process_lock.release()
+
+    def reacquire_for_commit(self, command_id: str) -> None:
+        if command_id in self._locks:
+            return
+        if command_id not in self._prepared:
+            raise RuntimeError("导入命令尚未 prepare")
+        process_lock = ImportProcessLock(self._repository.state_dir, command_id)
+        process_lock.acquire()
+        self._locks[command_id] = process_lock
+        try:
+            verification = self._repository.verify_import(self._prepared[command_id])
+            if not verification.valid:
+                raise ImportConflictError(verification)
+        except Exception:
+            self._locks.pop(command_id, None)
+            process_lock.release()
+            raise
+
     def commit_prepared(self, command_id: str) -> BackendCommittedResult:
         prepared = self._require_prepared(command_id, self.staging_location(command_id))
         workspace = ImportTransactionWorkspace(

@@ -6,10 +6,11 @@ does not construct the repository and never calls a persistence operation.
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from .import_contracts import ImportPreviewDTO, ImportPreviewItemDTO
+from .import_contracts import FileFingerprintDTO, ImportPreviewDTO, ImportPreviewItemDTO
 
 SUPPORTED_SOURCES = frozenset({"tonghuashun", "binance", "okx"})
 PREVIEW_LIMIT = 50
@@ -29,7 +30,9 @@ class ImportPreviewError(ValueError):
     """The selected file could not produce a safe preview."""
 
 
-def _local_path(selection: str | Path) -> Path:
+def normalize_import_selection(selection: str | Path) -> Path:
+    """Return the local path represented by a QML file selection."""
+
     value = str(selection).strip()
     if value.startswith("file:"):
         parsed = urlsplit(value)
@@ -42,6 +45,13 @@ def _format_label(path: Path) -> str:
     return FORMAT_LABELS.get(suffix, suffix.removeprefix(".").upper() or "UNKNOWN")
 
 
+def _fingerprint(path: Path) -> FileFingerprintDTO:
+    stat = path.stat()
+    with path.open("rb") as source:
+        digest = hashlib.file_digest(source, "sha256").hexdigest()
+    return FileFingerprintDTO(size=stat.st_size, mtime_ns=stat.st_mtime_ns, sha256=digest)
+
+
 def build_import_preview_dto(
     selection: str | Path,
     source: str,
@@ -52,15 +62,17 @@ def build_import_preview_dto(
     if normalized_source not in SUPPORTED_SOURCES:
         raise ImportPreviewError(f"不支持的自选来源：{source}")
 
-    path = _local_path(selection)
+    path = normalize_import_selection(selection)
     if not path.is_file():
         raise ImportPreviewError(f"文件不存在：{path.name or path}")
     file_format = _format_label(path)
+    preview_fingerprint = _fingerprint(path)
     if path.stat().st_size == 0:
         return ImportPreviewDTO(
             filename=path.name,
             format=file_format,
             warnings=("文件为空，没有可预览的记录。",),
+            file_fingerprint=preview_fingerprint,
         )
 
     # Deferred import keeps the DTO module pure. parse_watchlist_file reads
@@ -72,6 +84,8 @@ def build_import_preview_dto(
         assets = parse_watchlist_file(path, normalized_source, failures_out=failures)
     except (OSError, ValueError) as exc:
         raise ImportPreviewError(str(exc)) from exc
+    if _fingerprint(path) != preview_fingerprint:
+        raise ImportPreviewError("文件在预览期间发生变化，请重新选择。")
 
     warnings = list(failures)
     if len(assets) > PREVIEW_LIMIT:
@@ -96,4 +110,5 @@ def build_import_preview_dto(
         invalid_count=invalid_count,
         warnings=tuple(warnings),
         preview_items=preview_items,
+        file_fingerprint=preview_fingerprint,
     )

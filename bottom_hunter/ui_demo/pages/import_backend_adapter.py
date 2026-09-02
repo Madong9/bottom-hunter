@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Protocol
+from uuid import uuid4
 
 from .import_contracts import FileFingerprintDTO, ImportCommandDTO, ImportResultDTO
 from .import_controller import StagedImportDTO, TransactionWorkspace
@@ -26,6 +28,14 @@ class BackendPreparedImportDTO:
     unresolved_industry_count: int = 0
     generated_sector_count: int = 0
     warnings: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class ProductionImportFlow:
+    """QML-facing objects; backend gateway instances remain private."""
+
+    view_model: object
+    controller: object
 
 
 class BackendPreparationPort(Protocol):
@@ -50,6 +60,10 @@ class BackendTransactionPort(BackendPreparationPort, Protocol):
     def staging_location(self, command_id: str) -> str: ...
 
     def commit_prepared(self, command_id: str) -> object: ...
+
+    def release_for_review(self, command_id: str) -> None: ...
+
+    def reacquire_for_commit(self, command_id: str) -> None: ...
 
     def rollback_prepared(self, command_id: str) -> None: ...
 
@@ -146,6 +160,16 @@ class ProductionTransactionWorkspace:
             self._gateway.discard_prepared(self._command.command_id)
             self._finished = True
 
+    def release_for_review(self) -> None:
+        if self._command is None or self._finished:
+            raise RuntimeError("导入 workspace 不能进入 partial review")
+        self._gateway.release_for_review(self._command.command_id)
+
+    def reacquire_for_commit(self) -> None:
+        if self._command is None or self._finished:
+            raise RuntimeError("导入 workspace 不能继续 commit")
+        self._gateway.reacquire_for_commit(self._command.command_id)
+
 
 class RealMutationPort:
     """Concrete adapter mapping backend preparation into transport DTOs."""
@@ -215,3 +239,60 @@ def build_production_import_stack(
     )
     mutation_port = RealMutationPort(gateway, ProductionFingerprintReader(gateway))
     return mutation_port, lambda: ProductionTransactionWorkspace(gateway)
+
+
+def build_production_import_flow(
+    runtime_activity: object,
+    project_dir: str | None = None,
+    *,
+    state_dir: str | None = None,
+    config_dir: str | None = None,
+    workspace_failure_injector: Callable[[str, int], None] | None = None,
+) -> ProductionImportFlow:
+    """Wire the QML-facing flow while retaining the backend adapter boundary."""
+
+    from .import_controller import ImportCommandGate, ImportController
+    from .import_preview_adapter import normalize_import_selection
+    from .import_viewmodel import ImportViewModel
+
+    mutation_port, workspace_factory = build_production_import_stack(
+        project_dir,
+        state_dir=state_dir,
+        config_dir=config_dir,
+        workspace_failure_injector=workspace_failure_injector,
+    )
+
+    def command_factory(
+        selection: str,
+        source: str,
+        preview_fingerprint: FileFingerprintDTO,
+    ) -> ImportCommandDTO:
+        file_path = str(normalize_import_selection(selection))
+        command_id = f"import-{uuid4().hex}"
+        return ImportCommandDTO(
+            command_id=command_id,
+            preview_id=f"preview-{uuid4().hex}",
+            source=str(source).strip().casefold(),
+            file_path=file_path,
+            file_fingerprint=preview_fingerprint,
+            resolve_industries=True,
+            allow_partial=False,
+            requested_at=datetime.now(UTC).isoformat(),
+        )
+
+    controller = ImportController(
+        mutation_port,
+        workspace_factory,
+        runtime_activity,
+        ImportCommandGate(),
+        command_factory=command_factory,
+    )
+    view_model = ImportViewModel()
+    view_model.importRequested.connect(controller.requestImport)
+    view_model.cancelRequested.connect(controller.cancelActive)
+    view_model.partialAccepted.connect(controller.acceptPartialAsync)
+    view_model.retryRequested.connect(controller.retryAsync)
+    controller.stateChanged.connect(view_model.applyControllerState)
+    controller.progressEvent.connect(view_model.applyProgress)
+    controller.resultReady.connect(view_model.applyResult)
+    return ProductionImportFlow(view_model=view_model, controller=controller)

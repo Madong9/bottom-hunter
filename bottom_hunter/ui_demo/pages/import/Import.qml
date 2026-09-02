@@ -11,9 +11,15 @@ GlassSurface {
     readonly property var vm: (typeof importVm !== "undefined") ? importVm : null
     property string selectedSource: "tonghuashun"
 
+    function resultValue(key, fallbackValue) {
+        if (root.vm === null || !root.vm.result || root.vm.result[key] === undefined)
+            return fallbackValue
+        return root.vm.result[key]
+    }
+
     FileDialog {
         id: fileDialog
-        title: "选择自选文件用于预览"
+        title: "选择自选文件"
         nameFilters: [
             "自选文件 (*.xlsx *.xls *.xlsm *.csv *.json *.txt *.sel *.ini)",
             "所有文件 (*)"
@@ -30,13 +36,13 @@ GlassSurface {
         spacing: 14
 
         GlassText {
-            text: "导入预览"
+            text: "自选导入"
             tone: "primary"
             sizeHint: 23
         }
 
         GlassText {
-            text: "只读取并预览文件；本页不会导入、保存或修改任何数据。"
+            text: "先预览并校验文件，确认后才会安全导入。"
             tone: "muted"
             sizeHint: 13
         }
@@ -114,16 +120,102 @@ GlassSurface {
         }
 
         GlassCard {
-            visible: root.vm !== null && root.vm.lifecycle === "ERROR"
+            visible: root.vm !== null && ["IMPORTING", "SUCCESS", "PARTIAL_REVIEW", "ERROR"].indexOf(root.vm.lifecycle) >= 0
             width: parent.width
-            height: 64
+            height: 96
             interactive: false
 
-            GlassText {
-                anchors.centerIn: parent
-                text: root.vm !== null ? root.vm.error : ""
-                tone: "secondary"
-                sizeHint: 14
+            Column {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 7
+
+                GlassText {
+                    text: root.vm.lifecycle === "IMPORTING" ? "正在导入"
+                          : root.vm.lifecycle === "SUCCESS" ? "导入完成"
+                          : root.vm.lifecycle === "PARTIAL_REVIEW" ? "部分结果需要确认"
+                          : "导入失败"
+                    tone: "primary"
+                    sizeHint: 16
+                }
+                GlassText {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    text: root.vm.lifecycle === "IMPORTING"
+                          ? root.vm.progressMessage + " · " + root.vm.progress + "%"
+                          : root.vm.lifecycle === "SUCCESS"
+                            ? "新增 " + root.resultValue("importedCount", 0)
+                              + " · 合并后 " + root.resultValue("mergedCount", 0)
+                              + " · 生成板块 " + root.resultValue("generatedSectorCount", 0)
+                          : root.vm.lifecycle === "PARTIAL_REVIEW"
+                            ? "待分类 " + root.resultValue("unresolvedIndustryCount", 0)
+                              + " · 无效 " + root.resultValue("invalidCount", 0)
+                              + "；确认期间不占用导入锁。"
+                          : root.vm.error
+                    tone: "secondary"
+                    sizeHint: 13
+                }
+            }
+        }
+
+        Row {
+            visible: root.vm !== null && ["READY", "IMPORTING", "PARTIAL_REVIEW", "ERROR"].indexOf(root.vm.lifecycle) >= 0
+            height: 40
+            spacing: 10
+
+            GlassSurface {
+                objectName: "confirmImportButton"
+                visible: root.vm !== null && root.vm.lifecycle === "READY"
+                width: 132
+                height: 38
+                tintAlpha: root.vm !== null && root.vm.validCount > 0 ? 0.10 : 0.025
+                surfaceRadius: 10
+                GlassText {
+                    anchors.centerIn: parent
+                    text: "确认导入"
+                    tone: root.vm !== null && root.vm.validCount > 0 ? "primary" : "muted"
+                    sizeHint: 13
+                }
+                MouseArea {
+                    objectName: "confirmImportMouseArea"
+                    anchors.fill: parent
+                    enabled: root.vm !== null && root.vm.validCount > 0
+                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: root.vm.confirmImport()
+                }
+            }
+
+            GlassSurface {
+                objectName: "acceptPartialButton"
+                visible: root.vm !== null && root.vm.lifecycle === "PARTIAL_REVIEW"
+                width: 132
+                height: 38
+                tintAlpha: 0.10
+                surfaceRadius: 10
+                GlassText { anchors.centerIn: parent; text: "接受并导入"; tone: "primary"; sizeHint: 13 }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.vm.acceptPartial() }
+            }
+
+            GlassSurface {
+                objectName: "cancelImportButton"
+                visible: root.vm !== null && ["IMPORTING", "PARTIAL_REVIEW"].indexOf(root.vm.lifecycle) >= 0
+                width: 108
+                height: 38
+                tintAlpha: 0.035
+                surfaceRadius: 10
+                GlassText { anchors.centerIn: parent; text: "取消"; tone: "secondary"; sizeHint: 13 }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.vm.cancelImport() }
+            }
+
+            GlassSurface {
+                objectName: "retryImportButton"
+                visible: root.vm !== null && root.vm.lifecycle === "ERROR"
+                width: 108
+                height: 38
+                tintAlpha: 0.08
+                surfaceRadius: 10
+                GlassText { anchors.centerIn: parent; text: "重试"; tone: "primary"; sizeHint: 13 }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.vm.retryImport() }
             }
         }
 

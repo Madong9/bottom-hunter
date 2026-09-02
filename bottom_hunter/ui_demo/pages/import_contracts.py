@@ -27,6 +27,15 @@ class ImportPreviewItemDTO:
 
 
 @dataclass(frozen=True)
+class FileFingerprintDTO:
+    """Fingerprint captured when a preview was produced."""
+
+    size: int
+    mtime_ns: int
+    sha256: str
+
+
+@dataclass(frozen=True)
 class ImportPreviewDTO:
     """Complete result of reading a selected file without persistence."""
 
@@ -37,8 +46,10 @@ class ImportPreviewDTO:
     invalid_count: int = 0
     warnings: tuple[str, ...] = field(default_factory=tuple)
     preview_items: tuple[ImportPreviewItemDTO, ...] = field(default_factory=tuple)
+    file_fingerprint: FileFingerprintDTO | None = None
 
     def as_dict(self) -> dict[str, Any]:
+        fingerprint = self.file_fingerprint
         return {
             "filename": self.filename,
             "format": self.format,
@@ -47,16 +58,16 @@ class ImportPreviewDTO:
             "invalid_count": self.invalid_count,
             "warnings": list(self.warnings),
             "preview_items": [item.as_dict() for item in self.preview_items],
+            "file_fingerprint": (
+                {
+                    "size": fingerprint.size,
+                    "mtime_ns": fingerprint.mtime_ns,
+                    "sha256": fingerprint.sha256,
+                }
+                if fingerprint is not None
+                else None
+            ),
         }
-
-
-@dataclass(frozen=True)
-class FileFingerprintDTO:
-    """Fingerprint captured when a preview was produced."""
-
-    size: int
-    mtime_ns: int
-    sha256: str
 
 
 @dataclass(frozen=True)
