@@ -63,8 +63,16 @@ Item {
             source: active ? Qt.resolvedUrl("research/Research.qml") : ""
         }
 
+        Loader {
+            id: importPageLoader
+            objectName: "importPageLoader"
+            anchors.fill: parent
+            active: root.pageIds[root.currentIndex] === "import"
+            source: active ? Qt.resolvedUrl("import/Import.qml") : ""
+        }
+
         Column {
-            visible: !researchPageLoader.active
+            visible: !researchPageLoader.active && !importPageLoader.active
             anchors.left: parent.left
             anchors.top: parent.top
             spacing: 8

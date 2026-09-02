@@ -36,7 +36,12 @@ FROZEN_COMMIT = os.environ.get("BH_FROZEN_COMMIT", "785e08f")
 
 # The two sanctioned adapter boundaries (allowed to reference the backend
 # inside function bodies only — never at module import time).
-SANCTIONED_ADAPTERS = {"overview_shell_launcher.py", "contracts.py"}
+SANCTIONED_ADAPTERS = {
+    "overview_shell_launcher.py",
+    "contracts.py",
+    "import_preview_adapter.py",
+    "import_backend_adapter.py",
+}
 
 
 def _ui_py_files():
@@ -90,6 +95,7 @@ def test_dto_contracts_are_pure() -> None:
     contract_files = [
         UI_DEMO / "overview_shell" / "contracts" / "__init__.py",
         UI_DEMO / "pages" / "contracts.py",
+        UI_DEMO / "pages" / "import_contracts.py",
     ]
     forbidden = re.compile(r"PySide6|QtQuick|QObject", re.I)
     for path in contract_files:
@@ -143,3 +149,50 @@ def test_qml_import_boundary() -> None:
             if line.startswith("import "):
                 assert allowed.match(line), (
                     f"{qml.name}: unexpected QML import: {line}")
+
+
+# ---- 8. import command mutation boundary -----------------------------------
+
+def test_import_adapter_is_the_only_allowed_mutation_boundary() -> None:
+    adapter = UI_DEMO / "pages" / "import_backend_adapter.py"
+    assert adapter.exists(), "Import mutation adapter boundary is missing"
+
+    mutation_calls = re.compile(
+        r"\b(import_file|add_manual_asset|clear_source|refresh_linked_files|"
+        r"rebuild_active_watchlist)\s*\(",
+    )
+    allowed = {adapter.resolve()}
+    for path in UI_DEMO.rglob("*"):
+        if path.suffix not in {".py", ".qml"}:
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if mutation_calls.search(text):
+            assert path.resolve() in allowed, (
+                f"backend mutation outside import adapter: {path.name}"
+            )
+
+
+def test_import_ui_cannot_depend_on_mutation_adapter() -> None:
+    files = [
+        UI_DEMO / "pages" / "import_viewmodel.py",
+        UI_DEMO / "pages" / "import" / "Import.qml",
+    ]
+    forbidden = re.compile(
+        r"import_backend_adapter|RealMutationPort|BackendPreparationPort|"
+        r"AccountWatchlistRepository|bottom_hunter\.src",
+    )
+    for path in files:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        assert not forbidden.search(text), (
+            f"{path.name}: UI must not depend on the mutation adapter"
+        )
+
+
+def test_controller_depends_only_on_command_protocols() -> None:
+    controller = UI_DEMO / "pages" / "import_controller.py"
+    text = controller.read_text(encoding="utf-8", errors="ignore")
+    forbidden = re.compile(
+        r"import_backend_adapter|RealMutationPort|AccountWatchlistRepository|"
+        r"bottom_hunter\.src",
+    )
+    assert not forbidden.search(text)

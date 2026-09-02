@@ -20,6 +20,7 @@ import pandas as pd
 import yaml
 
 from .config import PROJECT_DIR
+from .import_transaction import PlannedImportArtifact, PreparedFileFingerprint, PreparedImport
 from .io_utils import EASTMONEY_SEARCH_TOKEN
 from .io_utils import atomic_json as _atomic_json
 from .network_config import apply_urllib
@@ -89,6 +90,19 @@ def _utc_now() -> str:
 def _file_signature(path: Path) -> dict[str, int]:
     stat = path.stat()
     return {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
+
+
+def _prepared_file_fingerprint(path: Path) -> PreparedFileFingerprint:
+    stat = path.stat()
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return PreparedFileFingerprint(
+        size=stat.st_size,
+        mtime_ns=stat.st_mtime_ns,
+        sha256=digest.hexdigest(),
+    )
 
 
 def _atomic_yaml(path: Path, payload: Any) -> None:
@@ -972,6 +986,117 @@ class AccountWatchlistRepository:
             }
         return result
 
+    def prepare_import(
+        self,
+        source: str,
+        path: str | Path,
+        account_alias: str = "",
+        *,
+        resolve_industries: bool = True,
+        transaction_id: str,
+    ) -> PreparedImport:
+        """Build a complete import plan without mutating repository state."""
+
+        normalized_transaction_id = transaction_id.strip()
+        if not normalized_transaction_id:
+            raise ValueError("prepare_import 缺少 transaction_id")
+        source = _normalize_source(source)
+        file_path = Path(path).expanduser().resolve()
+        fingerprint = _prepared_file_fingerprint(file_path)
+        import_warnings: list[str] = []
+        assets = parse_watchlist_file(file_path, source, failures_out=import_warnings)
+        if _prepared_file_fingerprint(file_path) != fingerprint:
+            raise ValueError("导入文件在解析期间已变化，请重新预览")
+
+        industry_cache_payload: dict[str, Any] | None = None
+        if resolve_industries:
+            assets, resolver, cache_changed = self._resolve_industries_in_memory(assets)
+            if cache_changed:
+                industry_cache_payload = dict(resolver.cache)
+
+        source_payloads = {item_source: self._load_source_payload(item_source) for item_source in SUPPORTED_SOURCES}
+        previous = source_payloads[source]
+        previous_assets = [WatchAsset.from_dict(item) for item in previous.get("items") or []]
+        manual_assets = {
+            asset.canonical_id: asset
+            for asset in previous_assets
+            if _clean(asset.metadata.get("entry_method")) == "manual"
+        }
+        combined = {asset.canonical_id: asset for asset in assets}
+        combined.update(manual_assets)
+        generated_at = _utc_now()
+        source_snapshot = {
+            "schema_version": 2,
+            "source": source,
+            "source_label": SOURCE_LABELS[source],
+            "account_alias": account_alias.strip() or _clean(previous.get("account_alias")),
+            "import_file": str(file_path),
+            "file_signature": {
+                "size": fingerprint.size,
+                "mtime_ns": fingerprint.mtime_ns,
+            },
+            "imported_at": generated_at,
+            "items": [asset.to_dict() for asset in combined.values()],
+        }
+        source_payloads[source] = source_snapshot
+        assets_by_source = {
+            item_source: [WatchAsset.from_dict(item) for item in payload.get("items") or []]
+            for item_source, payload in source_payloads.items()
+        }
+        merged_assets = self._merge_assets(assets_by_source, self._industry_overrides())
+        source_counts = {item_source: len(items) for item_source, items in assets_by_source.items()}
+        watchlist, summary = self._build_active_watchlist_payloads(
+            merged_assets,
+            source_counts,
+            generated_at,
+        )
+
+        artifacts: list[PlannedImportArtifact] = []
+        if industry_cache_payload is not None:
+            artifacts.append(
+                PlannedImportArtifact(
+                    kind="industry_cache",
+                    target=str(self.industry_cache_path),
+                    format="json",
+                    payload=industry_cache_payload,
+                )
+            )
+        artifacts.extend(
+            (
+                PlannedImportArtifact(
+                    kind="source_snapshot",
+                    target=str(self.source_snapshot_path(source)),
+                    format="json",
+                    payload=source_snapshot,
+                ),
+                PlannedImportArtifact(
+                    kind="active_watchlist",
+                    target=str(self.active_watchlist_path),
+                    format="yaml",
+                    payload=watchlist,
+                ),
+                PlannedImportArtifact(
+                    kind="watchlist_summary",
+                    target=str(self.summary_path),
+                    format="json",
+                    payload=summary,
+                ),
+            )
+        )
+        return PreparedImport(
+            transaction_id=normalized_transaction_id,
+            source=source,
+            fingerprint=fingerprint,
+            parsed_assets=tuple(assets),
+            warnings=tuple(import_warnings),
+            imported_count=len(assets),
+            merged_count=int(summary["asset_count"]),
+            duplicate_count=int(summary["overlap_count"]),
+            unresolved_industry_count=int(summary["unresolved_industry_count"]),
+            generated_sector_count=int(summary["sector_count"]),
+            planned_artifacts=tuple(artifacts),
+        )
+
     def import_file(
         self,
         source: str,
@@ -1065,7 +1190,18 @@ class AccountWatchlistRepository:
         return asset, summary
 
     def _resolve_industries(self, assets: list[WatchAsset]) -> list[WatchAsset]:
+        prepared_assets, resolver, _cache_changed = self._resolve_industries_in_memory(assets)
+        resolver.save()
+        return prepared_assets
+
+    def _resolve_industries_in_memory(
+        self,
+        assets: list[WatchAsset],
+    ) -> tuple[list[WatchAsset], IndustryResolver, bool]:
+        """Resolve profiles and return a cache plan without persisting it."""
+
         resolver = IndustryResolver(self.industry_cache_path)
+        original_cache = dict(resolver.cache)
         unresolved = [
             asset
             for asset in assets
@@ -1084,8 +1220,7 @@ class AccountWatchlistRepository:
                         "industry": asset.industry,
                         "source": "unresolved",
                     }
-        resolver.save()
-        return [
+        prepared_assets = [
             WatchAsset(
                 **{
                     **asdict(asset),
@@ -1103,6 +1238,7 @@ class AccountWatchlistRepository:
             )
             for asset in assets
         ]
+        return prepared_assets, resolver, resolver.cache != original_cache
 
     def _industry_overrides(self) -> dict[str, str]:
         try:
@@ -1195,11 +1331,16 @@ class AccountWatchlistRepository:
                 refreshed.append(source)
         return self.summary(), refreshed, errors
 
-    def merged_assets(self) -> list[dict[str, Any]]:
-        overrides = self._industry_overrides()
+    @staticmethod
+    def _merge_assets(
+        assets_by_source: Mapping[str, list[WatchAsset]],
+        overrides: Mapping[str, str],
+    ) -> list[dict[str, Any]]:
+        """Pure cross-source merge used by preparation and legacy rebuilds."""
+
         merged: dict[str, dict[str, Any]] = {}
         for source in SUPPORTED_SOURCES:
-            for asset in self.load_source_assets(source):
+            for asset in assets_by_source.get(source, []):
                 key = asset.canonical_id
                 current = merged.get(key)
                 if current is None:
@@ -1250,6 +1391,10 @@ class AccountWatchlistRepository:
             ),
         )
 
+    def merged_assets(self) -> list[dict[str, Any]]:
+        assets_by_source = {source: self.load_source_assets(source) for source in SUPPORTED_SOURCES}
+        return self._merge_assets(assets_by_source, self._industry_overrides())
+
     @staticmethod
     def _sector_id(category: str, industry: str) -> str:
         if category == "crypto":
@@ -1258,8 +1403,15 @@ class AccountWatchlistRepository:
         prefix = "cn" if category == "cn_equity" else "global"
         return f"{prefix}_industry_{digest}"
 
-    def rebuild_active_watchlist(self) -> dict[str, Any]:
-        assets = self.merged_assets()
+    @classmethod
+    def _build_active_watchlist_payloads(
+        cls,
+        assets: list[dict[str, Any]],
+        source_counts: Mapping[str, int],
+        generated_at: str,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Pure builder for active-watchlist and summary payloads."""
+
         markets: dict[str, dict[str, Any]] = {
             "CN": {
                 "name": "A股",
@@ -1304,7 +1456,7 @@ class AccountWatchlistRepository:
             grouped.setdefault((asset["category"], industry), []).append(asset)
         sectors: dict[str, dict[str, Any]] = {}
         for (category, industry), items in sorted(grouped.items()):
-            sector_id = self._sector_id(category, industry)
+            sector_id = cls._sector_id(category, industry)
             category_label = CATEGORY_LABELS[category]
             sector_name = category_label if category == "crypto" else f"{category_label} · {industry}"
             sector_assets: list[dict[str, Any]] = []
@@ -1334,13 +1486,12 @@ class AccountWatchlistRepository:
         watchlist = {
             "schema_version": 2,
             "mode": "account_watchlists",
-            "generated_at": _utc_now(),
+            "generated_at": generated_at,
             "description": "由同花顺、币安和欧易账号自选快照生成；不含内置公司列表。",
             "markets": markets,
             "sectors": sectors,
             "risk_appetite": [],
         }
-        _atomic_yaml(self.active_watchlist_path, watchlist)
         category_counts = {
             category: sum(item["category"] == category for item in assets) for category in CATEGORY_LABELS
         }
@@ -1354,7 +1505,7 @@ class AccountWatchlistRepository:
                 item["category"] != "crypto" and item["industry"] == UNKNOWN_INDUSTRY for item in assets
             ),
             "category_counts": category_counts,
-            "source_counts": {source: len(self.load_source_assets(source)) for source in SUPPORTED_SOURCES},
+            "source_counts": {source: int(source_counts.get(source, 0)) for source in SUPPORTED_SOURCES},
             "assets": assets,
             "sectors": [
                 {
@@ -1367,6 +1518,17 @@ class AccountWatchlistRepository:
                 for sector_id, sector in sectors.items()
             ],
         }
+        return watchlist, summary
+
+    def rebuild_active_watchlist(self) -> dict[str, Any]:
+        assets = self.merged_assets()
+        source_counts = {source: len(self.load_source_assets(source)) for source in SUPPORTED_SOURCES}
+        watchlist, summary = self._build_active_watchlist_payloads(
+            assets,
+            source_counts,
+            _utc_now(),
+        )
+        _atomic_yaml(self.active_watchlist_path, watchlist)
         _atomic_json(self.summary_path, summary)
         self._summary_cache = None
         return summary
