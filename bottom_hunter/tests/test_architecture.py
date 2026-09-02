@@ -41,6 +41,8 @@ SANCTIONED_ADAPTERS = {
     "contracts.py",
     "import_preview_adapter.py",
     "import_backend_adapter.py",
+    "overview_adapter.py",
+    "status_adapter.py",
 }
 
 

@@ -5,9 +5,14 @@ import "../../components"
 
 GlassCard {
     id: root
+    objectName: "watchlistPage"
 
-    readonly property bool hasData: watchlistVm !== undefined && watchlistVm !== null
-                                    && watchlistVm.items.length > 0
+    readonly property var vm: (typeof watchlistVm !== "undefined") ? watchlistVm : null
+    readonly property bool hasData: vm !== null && vm.items.length > 0
+
+    Component.onCompleted: {
+        if (vm !== null && vm.lifecycle === "INIT") vm.refresh()
+    }
 
     Column {
         anchors.fill: parent
@@ -19,13 +24,13 @@ GlassCard {
             spacing: 12
 
             GlassText {
-                text: watchlistVm ? watchlistVm.title : "自选"
+                text: root.vm !== null ? root.vm.title : "自选"
                 tone: "primary"
                 sizeHint: 23
             }
 
             GlassText {
-                text: (watchlistVm && watchlistVm.count > 0) ? watchlistVm.count + " 个标的" : ""
+                text: (root.vm !== null && root.vm.count > 0) ? root.vm.count + " 个标的" : ""
                 tone: "muted"
                 sizeHint: 13
                 anchors.verticalCenter: parent.verticalCenter
@@ -34,8 +39,8 @@ GlassCard {
             StatusBadge {
                 anchors.verticalCenter: parent.verticalCenter
                 text: {
-                    if (!watchlistVm) return "加载中"
-                    switch (watchlistVm.lifecycle) {
+                    if (root.vm === null) return "未连接"
+                    switch (root.vm.lifecycle) {
                     case "LOADING": return "加载中"
                     case "READY": return "已就绪"
                     case "EMPTY": return "空自选"
@@ -44,8 +49,8 @@ GlassCard {
                     }
                 }
                 tone: {
-                    if (!watchlistVm) return "idle"
-                    switch (watchlistVm.lifecycle) {
+                    if (root.vm === null) return "warning"
+                    switch (root.vm.lifecycle) {
                     case "READY": return "idle"
                     case "LOADING": return "running"
                     case "ERROR": return "danger"
@@ -57,28 +62,26 @@ GlassCard {
         }
 
         GlassText {
-            visible: watchlistVm && watchlistVm.generatedAt !== ""
-            text: "快照更新 · " + (watchlistVm ? watchlistVm.generatedAt : "")
+            visible: root.vm !== null && root.vm.generatedAt !== ""
+            text: "快照更新 · " + (root.vm !== null ? root.vm.generatedAt : "")
             tone: "muted"
             sizeHint: 12
         }
 
         GlassText {
-            visible: watchlistVm && watchlistVm.lifecycle === "ERROR"
-            text: watchlistVm ? watchlistVm.error : ""
+            visible: root.vm !== null && root.vm.lifecycle === "ERROR"
+            text: root.vm !== null ? root.vm.error : ""
             tone: "secondary"
             sizeHint: 14
         }
 
         GlassText {
-            visible: watchlistVm && (watchlistVm.lifecycle === "EMPTY"
-                                    || watchlistVm.lifecycle === "INIT"
-                                    || (watchlistVm.lifecycle === "ERROR"))
+            visible: root.vm === null || root.vm.lifecycle === "EMPTY"
+                     || root.vm.lifecycle === "INIT" || root.vm.lifecycle === "LOADING"
             text: {
-                if (!watchlistVm) return "自选为空"
-                if (watchlistVm.lifecycle === "EMPTY") return "自选为空"
-                if (watchlistVm.lifecycle === "INIT") return "正在加载自选数据…"
-                return ""
+                if (root.vm === null) return "自选 ViewModel 未连接"
+                if (root.vm.lifecycle === "EMPTY") return "自选为空"
+                return "正在加载自选数据…"
             }
             tone: "muted"
             sizeHint: 14
@@ -118,7 +121,7 @@ GlassCard {
             clip: true
             spacing: 8
             interactive: false
-            model: watchlistVm ? watchlistVm.items : []
+            model: root.vm !== null ? root.vm.items : []
 
             delegate: GlassCard {
                 width: list.width

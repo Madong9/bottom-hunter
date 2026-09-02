@@ -30,12 +30,7 @@ from datetime import datetime
 
 from PySide6.QtCore import Property, QObject, Signal, Slot
 
-from ..contracts import (
-    HEALTH_ERROR,
-    HEALTH_OK,
-    HEALTH_UNKNOWN,
-    HEALTH_WARNING,
-)
+from ..contracts import HEALTH_UNKNOWN
 
 # Lifecycle states
 LIFECYCLE_INIT = "INIT"
@@ -296,7 +291,11 @@ class OverviewState(QObject):
         """
         market = getattr(dto, "market", dto.get("market", {})) if hasattr(dto, "get") else dto.market
         scan = getattr(dto, "scan", dto.get("scan", {})) if hasattr(dto, "get") else dto.scan
-        opportunity = getattr(dto, "opportunity", dto.get("opportunity", {})) if hasattr(dto, "get") else dto.opportunity
+        opportunity = (
+            getattr(dto, "opportunity", dto.get("opportunity", {}))
+            if hasattr(dto, "get")
+            else dto.opportunity
+        )
         health = getattr(dto, "health", dto.get("health", {})) if hasattr(dto, "get") else dto.health
         validation = getattr(dto, "validation", dto.get("validation", {})) if hasattr(dto, "get") else dto.validation
         portfolio = getattr(dto, "portfolio", dto.get("portfolio", {})) if hasattr(dto, "get") else dto.portfolio
@@ -376,6 +375,7 @@ class OverviewBridge(QObject):
             self.refreshed.emit()
             return
 
+        error = ""
         try:
             dto = self._dto_provider()
         except Exception as exc:  # capture, never raise into QML
@@ -410,4 +410,3 @@ class OverviewRefreshController(QObject):
     @Slot()
     def requestRefresh(self) -> None:  # noqa: N802
         self.refreshRequested.emit()
-

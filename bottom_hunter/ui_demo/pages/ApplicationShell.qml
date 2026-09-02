@@ -1,21 +1,13 @@
-// ApplicationShell — PHASE 3-A multi-page shell + native routing.
-//
-// Reuses the FROZEN GlassNavRail for navigation visual and drives routing
-// from the NavigationController (context property `navController`). Every
-// Research is a read-only migrated page; remaining unmigrated routes keep
-// their existing placeholders.
-//
-// No new shaders, no layout redesign: nav rail + a single placeholder pane.
+// PHASE 5 product shell. Routing and presentation only; no backend access.
 import QtQuick
-import QtQuick.Controls.Basic
 import "../components"
 
 Item {
     id: root
+    objectName: "applicationShell"
     width: 1440
     height: 900
 
-    // page ids in the same order as GlassNavRail's built-in model
     readonly property var pageIds: [
         "overview", "watchlist", "research", "report",
         "import", "status", "chart"
@@ -23,13 +15,23 @@ Item {
     readonly property var pageTitles: [
         "总览", "自选", "研究", "报告", "导入", "状态", "K线"
     ]
-
-    // index of the current page in pageIds
-    readonly property int currentIndex: {
-        const id = (typeof navController !== "undefined" && navController !== null)
+    readonly property string currentPage: {
+        const requested = (typeof navController !== "undefined" && navController !== null)
             ? navController.currentPage : "overview"
-        const i = pageIds.indexOf(id)
-        return i >= 0 ? i : 0
+        return pageIds.indexOf(requested) >= 0 ? requested : "overview"
+    }
+    readonly property int currentIndex: pageIds.indexOf(currentPage)
+    readonly property bool currentPageLoaded: {
+        switch (currentPage) {
+        case "overview": return overviewPageLoader.item !== null
+        case "watchlist": return watchlistPageLoader.item !== null
+        case "research": return researchPageLoader.item !== null
+        case "report": return reportPageLoader.item !== null
+        case "import": return importPageLoader.item !== null
+        case "status": return statusPageLoader.item !== null
+        case "chart": return chartPageLoader.item !== null
+        default: return false
+        }
     }
 
     GlassNavRail {
@@ -41,13 +43,11 @@ Item {
         currentIndex: root.currentIndex
         onNavigate: (index) => {
             if (index >= 0 && index < root.pageIds.length
-                && typeof navController !== "undefined" && navController !== null) {
+                    && typeof navController !== "undefined" && navController !== null)
                 navController.navigate(root.pageIds[index])
-            }
         }
     }
 
-    // ---- content pane -----------------------------------------------------
     Item {
         id: content
         x: navRail.x + navRail.width + 20
@@ -56,28 +56,61 @@ Item {
         height: parent.height - 40
 
         Loader {
+            id: overviewPageLoader
+            objectName: "overviewPageLoader"
+            anchors.fill: parent
+            active: root.currentPage === "overview"
+            source: active ? Qt.resolvedUrl("overview/Overview.qml") : ""
+        }
+        Loader {
+            id: watchlistPageLoader
+            objectName: "watchlistPageLoader"
+            anchors.fill: parent
+            active: root.currentPage === "watchlist"
+            source: active ? Qt.resolvedUrl("watchlist/Watchlist.qml") : ""
+        }
+        Loader {
             id: researchPageLoader
             objectName: "researchPageLoader"
             anchors.fill: parent
-            active: root.pageIds[root.currentIndex] === "research"
+            active: root.currentPage === "research"
             source: active ? Qt.resolvedUrl("research/Research.qml") : ""
         }
-
+        Loader {
+            id: reportPageLoader
+            objectName: "reportPageLoader"
+            anchors.fill: parent
+            active: root.currentPage === "report"
+            source: active ? Qt.resolvedUrl("report/Report.qml") : ""
+        }
         Loader {
             id: importPageLoader
             objectName: "importPageLoader"
             anchors.fill: parent
-            active: root.pageIds[root.currentIndex] === "import"
+            active: root.currentPage === "import"
             source: active ? Qt.resolvedUrl("import/Import.qml") : ""
+        }
+        Loader {
+            id: statusPageLoader
+            objectName: "statusPageLoader"
+            anchors.fill: parent
+            active: root.currentPage === "status"
+            source: active ? Qt.resolvedUrl("status/Status.qml") : ""
+        }
+        Loader {
+            id: chartPageLoader
+            objectName: "chartPageLoader"
+            anchors.fill: parent
+            active: root.currentPage === "chart"
+            source: active ? Qt.resolvedUrl("chart/Chart.qml") : ""
         }
 
         Column {
-            visible: !researchPageLoader.active && !importPageLoader.active
-            anchors.left: parent.left
-            anchors.top: parent.top
+            visible: !root.currentPageLoaded
+            anchors.centerIn: parent
             spacing: 8
-
             Text {
+                anchors.horizontalCenter: parent.horizontalCenter
                 text: root.pageTitles[root.currentIndex]
                 color: "#f2f4f8"
                 font.pixelSize: 23
@@ -85,15 +118,10 @@ Item {
                 font.family: "Noto Sans CJK SC"
             }
             Text {
-                text: root.pageTitles[root.currentIndex] + " module ready"
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "页面正在加载，如持续显示请检查 ViewModel 注入。"
                 color: "#8b93a2"
-                font.pixelSize: 14
-                font.family: "Noto Sans CJK SC"
-            }
-            Text {
-                text: "PHASE 3-A placeholder — no business data wired yet"
-                color: "#5b6270"
-                font.pixelSize: 12
+                font.pixelSize: 13
                 font.family: "Noto Sans CJK SC"
             }
         }

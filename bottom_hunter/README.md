@@ -147,6 +147,18 @@ python gui.py --check
 
 Linux 桌面需要 X11/Wayland 图形会话。极简系统如果缺少 Qt xcb 运行库，Debian/Ubuntu 可安装 `libxcb-cursor0`，Conda 环境可安装 `xcb-util-cursor`。命令行扫描和回测不依赖图形桌面。
 
+### QML 产品外壳
+
+PHASE 5 的 QtQuick/QML 产品外壳可独立启动：
+
+```bash
+bottom-hunter-qml
+# 或
+python -m bottom_hunter.ui_demo.pages.application_shell_launcher
+```
+
+该入口通过 `build_production_flow()` 统一注入总览、自选、研究、报告、导入、状态和 K 线七个路由的 ViewModel。导入页已接入异步事务链；K 线页为安全占位，不调用、不复制现有 K 线后端。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
+
 ## 研究中心
 
 在左侧点“研究”，再选择自选股或“宏观经济”。首次选择会自动后台加载，之后先显示 SQLite 缓存；点“刷新研究数据”可强制增量更新。所有表格的行都可双击打开原始来源。
