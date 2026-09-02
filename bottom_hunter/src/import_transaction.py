@@ -23,6 +23,32 @@ class PreparedFileFingerprint:
 
 
 @dataclass(frozen=True)
+class PreparedPathBaseline:
+    """Hash captured for one repository dependency or future target."""
+
+    kind: str
+    path: str
+    existed: bool
+    sha256: str = ""
+
+
+@dataclass(frozen=True)
+class ImportConflict:
+    code: str
+    message: str
+    path: str = ""
+    expected: str = ""
+    actual: str = ""
+
+
+@dataclass(frozen=True)
+class ImportVerificationResult:
+    transaction_id: str
+    valid: bool
+    conflicts: tuple[ImportConflict, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
 class PlannedImportArtifact:
     """One candidate payload; writing it belongs to a later phase."""
 
@@ -46,7 +72,10 @@ class PreparedImport:
 
     transaction_id: str
     source: str
+    source_file: str
+    prepared_at: str
     fingerprint: PreparedFileFingerprint
+    baselines: tuple[PreparedPathBaseline, ...] = field(default_factory=tuple)
     parsed_assets: tuple[WatchAsset, ...] = field(default_factory=tuple)
     warnings: tuple[str, ...] = field(default_factory=tuple)
     imported_count: int = 0
@@ -60,7 +89,10 @@ class PreparedImport:
         return {
             "transaction_id": self.transaction_id,
             "source": self.source,
+            "source_file": self.source_file,
+            "prepared_at": self.prepared_at,
             "fingerprint": asdict(self.fingerprint),
+            "baselines": [asdict(baseline) for baseline in self.baselines],
             "parsed_assets": [asset.to_dict() for asset in self.parsed_assets],
             "warnings": list(self.warnings),
             "imported_count": self.imported_count,

@@ -20,7 +20,14 @@ import pandas as pd
 import yaml
 
 from .config import PROJECT_DIR
-from .import_transaction import PlannedImportArtifact, PreparedFileFingerprint, PreparedImport
+from .import_transaction import (
+    ImportConflict,
+    ImportVerificationResult,
+    PlannedImportArtifact,
+    PreparedFileFingerprint,
+    PreparedImport,
+    PreparedPathBaseline,
+)
 from .io_utils import EASTMONEY_SEARCH_TOKEN
 from .io_utils import atomic_json as _atomic_json
 from .network_config import apply_urllib
@@ -103,6 +110,14 @@ def _prepared_file_fingerprint(path: Path) -> PreparedFileFingerprint:
         mtime_ns=stat.st_mtime_ns,
         sha256=digest.hexdigest(),
     )
+
+
+def _path_baseline(kind: str, path: Path) -> PreparedPathBaseline:
+    try:
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    except FileNotFoundError:
+        return PreparedPathBaseline(kind=kind, path=str(path), existed=False)
+    return PreparedPathBaseline(kind=kind, path=str(path), existed=True, sha256=digest)
 
 
 def _atomic_yaml(path: Path, payload: Any) -> None:
@@ -952,6 +967,16 @@ class AccountWatchlistRepository:
     def source_snapshot_path(self, source: str) -> Path:
         return self.snapshot_dir / f"{_normalize_source(source)}.json"
 
+    def _capture_import_baselines(self) -> tuple[PreparedPathBaseline, ...]:
+        paths = [
+            *((f"source_snapshot:{source}", self.source_snapshot_path(source)) for source in SUPPORTED_SOURCES),
+            ("industry_overrides", self.override_path),
+            ("industry_cache", self.industry_cache_path),
+            ("active_watchlist", self.active_watchlist_path),
+            ("watchlist_summary", self.summary_path),
+        ]
+        return tuple(_path_baseline(kind, path) for kind, path in paths)
+
     def _load_source_payload(self, source: str) -> dict[str, Any]:
         path = self.source_snapshot_path(source)
         try:
@@ -1003,6 +1028,7 @@ class AccountWatchlistRepository:
         source = _normalize_source(source)
         file_path = Path(path).expanduser().resolve()
         fingerprint = _prepared_file_fingerprint(file_path)
+        baselines = self._capture_import_baselines()
         import_warnings: list[str] = []
         assets = parse_watchlist_file(file_path, source, failures_out=import_warnings)
         if _prepared_file_fingerprint(file_path) != fingerprint:
@@ -1050,6 +1076,8 @@ class AccountWatchlistRepository:
             source_counts,
             generated_at,
         )
+        if self._capture_import_baselines() != baselines:
+            raise RuntimeError("导入准备期间 repository 状态已变化，请重试")
 
         artifacts: list[PlannedImportArtifact] = []
         if industry_cache_payload is not None:
@@ -1086,7 +1114,10 @@ class AccountWatchlistRepository:
         return PreparedImport(
             transaction_id=normalized_transaction_id,
             source=source,
+            source_file=str(file_path),
+            prepared_at=generated_at,
             fingerprint=fingerprint,
+            baselines=baselines,
             parsed_assets=tuple(assets),
             warnings=tuple(import_warnings),
             imported_count=len(assets),
@@ -1095,6 +1126,116 @@ class AccountWatchlistRepository:
             unresolved_industry_count=int(summary["unresolved_industry_count"]),
             generated_sector_count=int(summary["sector_count"]),
             planned_artifacts=tuple(artifacts),
+        )
+
+    def verify_import(
+        self,
+        prepared: PreparedImport,
+        *,
+        max_age_seconds: int = 900,
+        now: datetime | None = None,
+    ) -> ImportVerificationResult:
+        """Validate a prepared plan against current read-only repository state."""
+
+        conflicts: list[ImportConflict] = []
+        try:
+            actual_fingerprint = _prepared_file_fingerprint(Path(prepared.source_file))
+        except OSError as exc:
+            conflicts.append(
+                ImportConflict(
+                    code="SOURCE_FILE_UNAVAILABLE",
+                    message=f"无法读取导入源文件：{exc}",
+                    path=prepared.source_file,
+                    expected=prepared.fingerprint.sha256,
+                    actual="unavailable",
+                )
+            )
+        else:
+            if actual_fingerprint != prepared.fingerprint:
+                conflicts.append(
+                    ImportConflict(
+                        code="SOURCE_FILE_CHANGED",
+                        message="导入源文件在 prepare 后已变化。",
+                        path=prepared.source_file,
+                        expected=prepared.fingerprint.sha256,
+                        actual=actual_fingerprint.sha256,
+                    )
+                )
+
+        current_time = now or datetime.now(UTC)
+        try:
+            prepared_time = datetime.fromisoformat(prepared.prepared_at)
+            if prepared_time.tzinfo is None:
+                prepared_time = prepared_time.replace(tzinfo=UTC)
+            age_seconds = (current_time - prepared_time).total_seconds()
+        except (TypeError, ValueError):
+            conflicts.append(
+                ImportConflict(
+                    code="INVALID_PREPARED_AT",
+                    message="PreparedImport 的准备时间无效。",
+                    actual=prepared.prepared_at,
+                )
+            )
+        else:
+            if age_seconds > max_age_seconds:
+                conflicts.append(
+                    ImportConflict(
+                        code="TRANSACTION_EXPIRED",
+                        message="导入准备结果已过期，请重新预览。",
+                        expected=f"<={max_age_seconds}s",
+                        actual=f"{int(age_seconds)}s",
+                    )
+                )
+
+        baseline_paths = {baseline.path for baseline in prepared.baselines}
+        for artifact in prepared.planned_artifacts:
+            if artifact.target not in baseline_paths:
+                conflicts.append(
+                    ImportConflict(
+                        code="MISSING_TARGET_BASELINE",
+                        message="候选产物缺少目标文件基线。",
+                        path=artifact.target,
+                    )
+                )
+
+        for baseline in prepared.baselines:
+            try:
+                actual = _path_baseline(baseline.kind, Path(baseline.path))
+            except OSError as exc:
+                conflicts.append(
+                    ImportConflict(
+                        code="BASELINE_UNAVAILABLE",
+                        message=f"无法验证 repository 基线：{exc}",
+                        path=baseline.path,
+                        expected=baseline.sha256 if baseline.existed else "missing",
+                        actual="unavailable",
+                    )
+                )
+                continue
+            if actual.existed == baseline.existed and actual.sha256 == baseline.sha256:
+                continue
+            if baseline.kind == f"source_snapshot:{prepared.source}":
+                code = "SOURCE_SNAPSHOT_CHANGED"
+            elif baseline.kind == "industry_overrides":
+                code = "INDUSTRY_OVERRIDE_CHANGED"
+            elif baseline.kind in {"industry_cache", "active_watchlist", "watchlist_summary"}:
+                code = "TARGET_CHANGED"
+            else:
+                code = "DEPENDENCY_CHANGED"
+            conflicts.append(
+                ImportConflict(
+                    code=code,
+                    message=f"{baseline.kind} 在 prepare 后已变化。",
+                    path=baseline.path,
+                    expected=baseline.sha256 if baseline.existed else "missing",
+                    actual=actual.sha256 if actual.existed else "missing",
+                )
+            )
+
+        return ImportVerificationResult(
+            transaction_id=prepared.transaction_id,
+            valid=not conflicts,
+            conflicts=tuple(conflicts),
         )
 
     def import_file(
