@@ -94,7 +94,7 @@ Rectangle {
                     text: modelData.icon
                     color: index === root.currentIndex
                            ? "#2BD576"
-                           : hover.hovered ? "#C8CDD6" : "#6F7683"
+                           : hover.hovered ? "#F2F6FA" : "#C3CDD8"
                     font.pixelSize: 19
                 }
 

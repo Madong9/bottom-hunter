@@ -47,13 +47,14 @@ Item {
         id: sceneContent
         anchors.fill: parent
 
-        // Accepted PHASE 1 material-lab environment. Its tonal variation is
+        // Bright overcast daylight environment. Its tonal variation is
         // essential: transparent glass and water refraction cannot read over
-        // a flat black background.
+        // a flat background. Foreground droplets are intentionally absent
+        // from this image; the live GPU surface below provides them.
         Image {
             id: environment
             anchors.fill: parent
-            source: Qt.resolvedUrl("../material_lab/shots/background_only.png")
+            source: Qt.resolvedUrl("../assets/daylight_city_after_rain.png")
             fillMode: Image.PreserveAspectCrop
             horizontalAlignment: Image.AlignHCenter
             verticalAlignment: Image.AlignVCenter
@@ -61,11 +62,11 @@ Item {
             mipmap: true
         }
 
-        // Very light readability veil; the environment remains visible through
-        // every clear-glass page and card.
+        // Daylight exposure control: preserves a recognisably daytime scene
+        // while maintaining contrast for the existing light financial text.
         Rectangle {
             anchors.fill: parent
-            color: Qt.rgba(0.01, 0.02, 0.035, 0.12)
+            color: Qt.rgba(0.025, 0.055, 0.085, 0.60)
         }
 
         GlassNavRail {
@@ -176,7 +177,7 @@ Item {
             y: content.y
             width: content.width
             height: content.height
-            color: "#707070"
+            color: "#A8A8A8"
         }
     }
 

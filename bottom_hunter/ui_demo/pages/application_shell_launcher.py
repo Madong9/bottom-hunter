@@ -35,7 +35,9 @@ def main(argv: list[str] | None = None) -> int:
     view.setTitle(WINDOW_TITLE)
     flow.install_context(view.engine())
     view.setResizeMode(QQuickView.ResizeMode.SizeRootObjectToView)
-    view.setColor(QColor("#04070E"))
+    # Match the daylight scene during the first frame; avoids a dark flash
+    # before the QML environment texture is ready.
+    view.setColor(QColor("#C9D4DC"))
     view.setSource(QUrl.fromLocalFile(str(SHELL_PATH)))
     if view.status() == QQuickView.Status.Error:
         return 2
