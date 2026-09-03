@@ -14,7 +14,7 @@ import pytest
 
 QML_AVAILABLE = True
 try:
-    from PySide6.QtCore import QUrl
+    from PySide6.QtCore import QObject, QUrl
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtQml import QQmlApplicationEngine
 except ImportError:  # pragma: no cover - PySide6 always present in this venv
@@ -169,6 +169,40 @@ def test_qml_load_smoke(monkeypatch) -> None:
             r.deleteLater()
         engine.deleteLater()
     del app
+
+
+@pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
+def test_qml_watchlist_rows_have_readable_height_and_scroll(monkeypatch) -> None:
+    """Guard against compressing a populated watchlist into unreadable bars."""
+    _software_env(monkeypatch)
+    app = QGuiApplication.instance() or QGuiApplication([])
+    vm = _make_vm_with_rows()
+
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("watchlistVm", vm)
+    engine.load(QUrl.fromLocalFile(str(PAGES_DIR / "watchlist" / "Watchlist.qml")))
+    roots = engine.rootObjects()
+    try:
+        assert roots, "Watchlist.qml produced no root object"
+        root = roots[0]
+        watchlist = root.findChild(QObject, "watchlistList")
+        assert root.property("tableRowHeight") >= 48
+        assert watchlist is not None
+        assert watchlist.property("interactive") is True
+    finally:
+        for r in roots:
+            r.deleteLater()
+        engine.deleteLater()
+    del app
+
+
+def test_watchlist_uses_unambiguous_glass_card_import() -> None:
+    text = (PAGES_DIR / "watchlist" / "Watchlist.qml").read_text(encoding="utf-8")
+    assert 'import "../../components" as Components' in text
+    assert "Components.StatusBadge" in text
+    for column in range(5):
+        assert f"width: tableHeader.col{column}W" in text
+        assert f"width: row.col{column}W" in text
 
 
 # ---- 7. business isolation ---------------------------------------------------

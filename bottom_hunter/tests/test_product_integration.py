@@ -165,6 +165,20 @@ def test_application_shell_loads_all_seven_product_routes(monkeypatch, tmp_path:
         app.processEvents()
 
 
+def test_application_shell_connects_accepted_rain_glass_pipeline() -> None:
+    qml = (PAGES_DIR / "ApplicationShell.qml").read_text(encoding="utf-8")
+    environment = PAGES_DIR.parent / "material_lab" / "shots" / "background_only.png"
+    rain_shader = PAGES_DIR.parent / "overview_shell" / "effects" / "StaticRainUI.qsb"
+    assert 'import "../overview_shell"' in qml
+    assert "RainGlassSurface" in qml
+    assert "sourceItem: sceneContent" in qml
+    assert "maskSource: importanceMask" in qml
+    assert "rainEnabled: root.rainEnabled" in qml
+    assert "background_only.png" in qml
+    assert environment.is_file()
+    assert rain_shader.is_file()
+
+
 def test_status_qml_error_and_fallback_load(monkeypatch) -> None:
     _software_env(monkeypatch)
     app = QGuiApplication.instance() or QGuiApplication([])

@@ -7,11 +7,21 @@ import sys
 from pathlib import Path
 
 SHELL_PATH = Path(__file__).resolve().parent / "ApplicationShell.qml"
+WINDOW_TITLE = "Bottom Hunter · 板块超跌反弹狩猎系统"
+
+
+def rain_effect_supported() -> bool:
+    """Return whether the selected RHI can render the qsb rain surface."""
+    backend = os.environ.get("QSG_RHI_BACKEND", "").strip().casefold()
+    return backend not in {"software", "null"}
 
 
 def main(argv: list[str] | None = None) -> int:
     os.environ.setdefault("QT_SCALE_FACTOR", "1")
     os.environ.setdefault("QT_AUTO_SCREEN_SCALE_FACTOR", "0")
+    # The production shell uses the accepted qsb rain/glass pipeline. OpenGL
+    # is the verified Linux backend; callers may still override it explicitly.
+    os.environ.setdefault("QSG_RHI_BACKEND", "opengl")
 
     from PySide6.QtCore import QUrl
     from PySide6.QtGui import QColor, QGuiApplication
@@ -22,12 +32,18 @@ def main(argv: list[str] | None = None) -> int:
     app = QGuiApplication(argv if argv is not None else sys.argv)
     flow = build_production_flow()
     view = QQuickView()
+    view.setTitle(WINDOW_TITLE)
     flow.install_context(view.engine())
     view.setResizeMode(QQuickView.ResizeMode.SizeRootObjectToView)
     view.setColor(QColor("#04070E"))
     view.setSource(QUrl.fromLocalFile(str(SHELL_PATH)))
     if view.status() == QQuickView.Status.Error:
         return 2
+    root = view.rootObject()
+    if root is not None and not rain_effect_supported():
+        # Software RHI cannot display ShaderEffect reliably. Keep the captured
+        # transparent product scene visible instead of presenting a blank UI.
+        root.setProperty("rainEnabled", False)
     view.resize(1440, 900)
     view.show()
     # ``flow`` remains strongly referenced by this stack frame until app.exec returns.

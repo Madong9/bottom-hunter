@@ -1,14 +1,18 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import "../../primitives"
-import "../../components"
+import "../../components" as Components
 
-GlassCard {
+GlassSurface {
     id: root
     objectName: "watchlistPage"
+    tintAlpha: 0.02
+    surfaceRadius: 16
 
     readonly property var vm: (typeof watchlistVm !== "undefined") ? watchlistVm : null
     readonly property bool hasData: vm !== null && vm.items.length > 0
+    readonly property int tableHeaderHeight: 40
+    readonly property int tableRowHeight: 52
 
     Component.onCompleted: {
         if (vm !== null && vm.lifecycle === "INIT") vm.refresh()
@@ -36,7 +40,7 @@ GlassCard {
                 anchors.verticalCenter: parent.verticalCenter
             }
 
-            StatusBadge {
+            Components.StatusBadge {
                 anchors.verticalCenter: parent.verticalCenter
                 text: {
                     if (root.vm === null) return "未连接"
@@ -87,9 +91,11 @@ GlassCard {
             sizeHint: 14
         }
 
-        GlassCard {
+        GlassSurface {
             width: parent.width
-            height: tableHeader.implicitHeight + 20
+            height: root.tableHeaderHeight
+            tintAlpha: 0.025
+            surfaceRadius: 10
 
             Row {
                 id: tableHeader
@@ -106,26 +112,35 @@ GlassCard {
                 property real col4W: (tableHeader.width - tableHeader.col0W - tableHeader.col1W
                                      - tableHeader.col2W - tableHeader.col3W)
 
-                GlassText { width: col0W; text: "代码 / 资产"; tone: "muted"; sizeHint: 12 }
-                GlassText { width: col1W; text: "名称"; tone: "muted"; sizeHint: 12 }
-                GlassText { width: col2W; text: "最新价"; tone: "muted"; sizeHint: 12 }
-                GlassText { width: col3W; text: "涨跌幅"; tone: "muted"; sizeHint: 12 }
-                GlassText { width: col4W; text: "信号状态"; tone: "muted"; sizeHint: 12 }
+                GlassText { width: tableHeader.col0W; text: "代码 / 资产"; tone: "muted"; sizeHint: 12 }
+                GlassText { width: tableHeader.col1W; text: "名称"; tone: "muted"; sizeHint: 12 }
+                GlassText { width: tableHeader.col2W; text: "最新价"; tone: "muted"; sizeHint: 12 }
+                GlassText { width: tableHeader.col3W; text: "涨跌幅"; tone: "muted"; sizeHint: 12 }
+                GlassText { width: tableHeader.col4W; text: "信号状态"; tone: "muted"; sizeHint: 12 }
             }
         }
 
         ListView {
             id: list
+            objectName: "watchlistList"
             width: parent.width
             height: parent.height - list.y
             clip: true
             spacing: 8
-            interactive: false
+            interactive: true
+            boundsBehavior: Flickable.StopAtBounds
+            cacheBuffer: root.tableRowHeight * 4
             model: root.vm !== null ? root.vm.items : []
 
-            delegate: GlassCard {
+            ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AsNeeded
+            }
+
+            delegate: GlassSurface {
                 width: list.width
-                height: row.implicitHeight + 16
+                height: root.tableRowHeight
+                tintAlpha: 0.035
+                surfaceRadius: 10
 
                 property string up: modelData.change_percent.startsWith("+") ? "#E05C5C" : "#2BD58F"
                 property string down: "#2BD58F"
@@ -145,11 +160,11 @@ GlassCard {
                     property real col4W: (row.width - row.col0W - row.col1W
                                          - row.col2W - row.col3W)
 
-                    GlassText { width: col0W; text: modelData.symbol; tone: "primary"; sizeHint: 14 }
-                    GlassText { width: col1W; text: modelData.name; tone: "secondary"; sizeHint: 14 }
-                    GlassText { width: col2W; text: modelData.price; tone: "secondary"; sizeHint: 14 }
-                    GlassText { width: col3W; text: modelData.change_percent; tone: "secondary"; sizeHint: 14 }
-                    GlassText { width: col4W; text: modelData.signal; tone: "muted"; sizeHint: 13 }
+                    GlassText { width: row.col0W; text: modelData.symbol; tone: "primary"; sizeHint: 14 }
+                    GlassText { width: row.col1W; text: modelData.name; tone: "secondary"; sizeHint: 14 }
+                    GlassText { width: row.col2W; text: modelData.price; tone: "secondary"; sizeHint: 14 }
+                    GlassText { width: row.col3W; text: modelData.change_percent; tone: "secondary"; sizeHint: 14 }
+                    GlassText { width: row.col4W; text: modelData.signal; tone: "muted"; sizeHint: 13 }
                 }
             }
         }
