@@ -183,10 +183,10 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     surface = (PAGES_DIR.parent / "primitives" / "GlassSurface.qml").read_text(
         encoding="utf-8"
     )
-    assert "property real tintAlpha: 0.16" in surface
+    assert "property real tintAlpha: 0.24" in surface
     assert "Pointer-driven reflection" in surface
     assert "Short lower caustic band" in surface
-    assert "border.color: Qt.rgba(1, 1, 1, 0.52)" in surface
+    assert "border.color: Qt.rgba(1, 1, 1, 0.66)" in surface
 
     nav_symbol = PAGES_DIR.parent / "components" / "NavSymbol.qml"
     nav_rail = (PAGES_DIR.parent / "components" / "GlassNavRail.qml").read_text(
@@ -206,7 +206,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         "chart/Chart.qml",
     ):
         page = (PAGES_DIR / relative).read_text(encoding="utf-8")
-        assert "tintAlpha: 0.16" in page
+        assert "tintAlpha: 0.34" in page
         assert "surfaceRadius: 24" in page
 
 

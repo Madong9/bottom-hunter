@@ -8,10 +8,10 @@ Rectangle {
     property int currentIndex: 0
     signal navigate(int index)
 
-    color: Qt.rgba(0.94, 0.98, 1.0, 0.20)
-    radius: 24
+    color: Qt.rgba(0.92, 0.97, 1.0, 0.38)
+    radius: 26
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.54)
+    border.color: Qt.rgba(1, 1, 1, 0.70)
 
     Rectangle {
         anchors.fill: parent
@@ -19,29 +19,29 @@ Rectangle {
         radius: parent.radius - 1
         color: "transparent"
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.18)
+        border.color: Qt.rgba(1, 1, 1, 0.28)
     }
 
     // 顶部内高光（Level A 明显）
     Rectangle {
         anchors { top: parent.top; left: parent.left; right: parent.right }
         anchors.margins: 1
-        height: 1
-        color: Qt.rgba(1, 1, 1, 0.62)
+        height: 2
+        color: Qt.rgba(1, 1, 1, 0.82)
     }
 
     // thick-glass slab edges: subtle darker bottom / right refraction edge
     Rectangle {
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         anchors.margins: 1
-        height: 1
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.13)
+        height: 3
+        color: Qt.rgba(0.18, 0.34, 0.46, 0.17)
     }
     Rectangle {
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
         anchors.margins: 1
-        width: 1
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.10)
+        width: 3
+        color: Qt.rgba(0.18, 0.34, 0.46, 0.13)
     }
 
     Column {

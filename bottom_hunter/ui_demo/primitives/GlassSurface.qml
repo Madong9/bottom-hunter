@@ -9,8 +9,8 @@ import QtQuick.Effects
 Rectangle {
     id: root
 
-    property real tintAlpha: 0.16
-    property color tint: "#F4FAFF"
+    property real tintAlpha: 0.24
+    property color tint: "#EEF7FD"
     property real surfaceRadius: 20
     property bool reactive: false
     readonly property bool materialHovered: liquidHover.hovered
@@ -19,7 +19,18 @@ Rectangle {
     clip: true
     color: Qt.rgba(tint.r, tint.g, tint.b, tintAlpha)
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.52)
+    border.color: Qt.rgba(1, 1, 1, 0.66)
+
+    // Secondary internal contour makes the rounded edge read as a thick lens
+    // instead of a one-pixel outline painted on transparent plastic.
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 2
+        radius: Math.max(0, root.surfaceRadius - 2)
+        color: "transparent"
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.24)
+    }
 
     // Pointer-driven reflection. This mirrors Liquid Glass's interactive
     // material response without moving static/non-interactive containers.
@@ -55,11 +66,11 @@ Rectangle {
     // Soft liquid sheen immediately below the upper lens edge.
     Rectangle {
         anchors { top: parent.top; left: parent.left; right: parent.right }
-        height: Math.min(72, Math.max(18, parent.height * 0.20))
+        height: Math.min(92, Math.max(24, parent.height * 0.22))
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Vertical
-            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.18) }
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.30) }
             GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
         }
     }
@@ -68,12 +79,12 @@ Rectangle {
     // quantisation bands across a large transparent native window.
     Rectangle {
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-        height: Math.min(54, Math.max(14, parent.height * 0.14))
+        height: Math.min(72, Math.max(20, parent.height * 0.18))
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0.0; color: Qt.rgba(0.72, 0.88, 1.0, 0.0) }
-            GradientStop { position: 1.0; color: Qt.rgba(0.72, 0.88, 1.0, 0.09) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.72, 0.88, 1.0, 0.16) }
         }
     }
 
@@ -81,12 +92,12 @@ Rectangle {
     Rectangle {
         x: root.surfaceRadius
         y: 1
-        width: Math.max(0, root.width * 0.48 - root.surfaceRadius)
+        width: Math.max(0, root.width * 0.62 - root.surfaceRadius)
         height: 2
         radius: 1
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.76) }
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.92) }
             GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.02) }
         }
     }
@@ -95,20 +106,20 @@ Rectangle {
     Rectangle {
         anchors { top: parent.top; left: parent.left; bottom: parent.bottom }
         anchors.margins: 1
-        width: 1
-        color: Qt.rgba(1, 1, 1, 0.34)
+        width: 2
+        color: Qt.rgba(1, 1, 1, 0.44)
     }
     Rectangle {
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         anchors.margins: 1
-        height: 2
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.12)
+        height: 3
+        color: Qt.rgba(0.18, 0.34, 0.46, 0.17)
     }
     Rectangle {
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
         anchors.margins: 1
-        width: 2
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.09)
+        width: 3
+        color: Qt.rgba(0.18, 0.34, 0.46, 0.13)
     }
 
     HoverHandler {

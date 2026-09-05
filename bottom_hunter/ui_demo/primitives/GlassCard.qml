@@ -6,15 +6,15 @@ GlassSurface {
     id: root
 
     property bool interactive: true
-    property real shadowOpacity: 0.18
+    property real shadowOpacity: 0.24
     reactive: interactive
 
     layer.enabled: true
     layer.effect: MultiEffect {
         shadowEnabled: true
         shadowColor: "#000000"
-        shadowBlur: 0.42
-        shadowVerticalOffset: 8
+        shadowBlur: 0.52
+        shadowVerticalOffset: 10
         shadowOpacity: root.materialHovered
                        ? Math.min(0.30, root.shadowOpacity + 0.07)
                        : root.shadowOpacity
