@@ -1,8 +1,7 @@
-"""PHASE 3-B — glass primitives tests (abstraction only, no redesign).
+"""Glass primitive loading and architecture checks.
 
 Verifies the four abstract primitives load cleanly, and that they do not
-violate isolation (no business imports). They are pure visual abstractions
-of already-accepted values.
+violate isolation (no business imports).
 """
 
 from __future__ import annotations
@@ -14,7 +13,7 @@ import pytest
 
 QML_AVAILABLE = True
 try:
-    from PySide6.QtCore import QCoreApplication, QUrl
+    from PySide6.QtCore import QUrl
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtQml import QQmlApplicationEngine
 except ImportError:  # pragma: no cover - PySide6 always present in this venv

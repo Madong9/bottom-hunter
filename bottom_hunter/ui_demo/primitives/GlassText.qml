@@ -1,8 +1,8 @@
 // GlassText — abstract text with the accepted tone hierarchy (PHASE 3-B).
 //
-// Encodes the shared text color + size conventions. Bright neutral grays keep
-// information legible over varied desktop content without turning the
-// transparent glass into an opaque panel.
+// Encodes the daylight liquid-glass text hierarchy. The glass medium is pale,
+// so ink-like blue grays provide the Apple-style light appearance and remain
+// readable over varied desktop content.
 import QtQuick
 
 Text {
@@ -13,9 +13,9 @@ Text {
     property int sizeHint: 14
 
     readonly property var _tones: ({
-        "primary": "#F7FAFC",
-        "secondary": "#D2DAE3",
-        "muted": "#AAB6C3",
+        "primary": "#152330",
+        "secondary": "#34495C",
+        "muted": "#61778B",
     })
 
     property color toneColor: _tones[tone] !== undefined ? _tones[tone] : _tones.secondary

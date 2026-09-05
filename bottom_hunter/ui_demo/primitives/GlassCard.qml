@@ -1,8 +1,4 @@
-// GlassCard — abstract glass card (PHASE 3-B).
-//
-// GlassSurface + soft depth shadow (accepted visual values only). A neutral
-// container for page content in later phases; does not redesign the frozen
-// GlassMetricCard.
+// GlassCard — raised liquid-glass content lens.
 import QtQuick
 import QtQuick.Effects
 
@@ -10,14 +6,14 @@ GlassSurface {
     id: root
 
     property bool interactive: true
-    property real shadowOpacity: 0.26
+    property real shadowOpacity: 0.18
 
     layer.enabled: true
     layer.effect: MultiEffect {
         shadowEnabled: true
         shadowColor: "#000000"
-        shadowBlur: 0.30
-        shadowVerticalOffset: 6
+        shadowBlur: 0.42
+        shadowVerticalOffset: 8
         shadowOpacity: root.shadowOpacity
         autoPaddingEnabled: true
     }

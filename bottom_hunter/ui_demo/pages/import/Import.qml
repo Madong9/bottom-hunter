@@ -5,8 +5,8 @@ import "../../primitives"
 GlassSurface {
     id: root
     objectName: "importPage"
-    tintAlpha: 0.02
-    surfaceRadius: 16
+    tintAlpha: 0.16
+    surfaceRadius: 24
 
     readonly property var vm: (typeof importVm !== "undefined") ? importVm : null
     property string selectedSource: "tonghuashun"

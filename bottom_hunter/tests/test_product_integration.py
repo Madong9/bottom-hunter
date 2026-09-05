@@ -179,6 +179,28 @@ def test_application_shell_connects_accepted_rain_glass_pipeline() -> None:
     assert rain_shader.is_file()
 
 
+def test_product_pages_use_visible_daylight_liquid_glass() -> None:
+    surface = (PAGES_DIR.parent / "primitives" / "GlassSurface.qml").read_text(
+        encoding="utf-8"
+    )
+    assert "property real tintAlpha: 0.16" in surface
+    assert "gradient: Gradient" in surface
+    assert "border.color: Qt.rgba(1, 1, 1, 0.52)" in surface
+
+    for relative in (
+        "overview/Overview.qml",
+        "watchlist/Watchlist.qml",
+        "research/Research.qml",
+        "report/Report.qml",
+        "import/Import.qml",
+        "status/Status.qml",
+        "chart/Chart.qml",
+    ):
+        page = (PAGES_DIR / relative).read_text(encoding="utf-8")
+        assert "tintAlpha: 0.16" in page
+        assert "surfaceRadius: 24" in page
+
+
 def test_status_qml_error_and_fallback_load(monkeypatch) -> None:
     _software_env(monkeypatch)
     app = QGuiApplication.instance() or QGuiApplication([])

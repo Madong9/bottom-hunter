@@ -129,7 +129,7 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: root.pageTitles[root.currentIndex]
-                    color: "#f2f4f8"
+                    color: "#152330"
                     font.pixelSize: 23
                     font.weight: Font.Bold
                     font.family: "Noto Sans CJK SC"
@@ -137,7 +137,7 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "页面正在加载，如持续显示请检查 ViewModel 注入。"
-                    color: "#8b93a2"
+                    color: "#61778B"
                     font.pixelSize: 13
                     font.family: "Noto Sans CJK SC"
                 }

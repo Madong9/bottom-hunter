@@ -4,8 +4,8 @@ import "../../primitives"
 GlassSurface {
     id: root
     objectName: "overviewPage"
-    tintAlpha: 0.02
-    surfaceRadius: 16
+    tintAlpha: 0.16
+    surfaceRadius: 24
 
     readonly property var vm: (typeof overviewState !== "undefined") ? overviewState : null
     readonly property bool ready: vm !== null && (vm.lifecycle === "READY" || vm.lifecycle === "STALE")

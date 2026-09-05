@@ -4,8 +4,8 @@ import "../../primitives"
 GlassSurface {
     id: root
     objectName: "researchPage"
-    tintAlpha: 0.02
-    surfaceRadius: 16
+    tintAlpha: 0.16
+    surfaceRadius: 24
 
     readonly property var vm: (typeof researchVm !== "undefined") ? researchVm : null
     readonly property bool hasData: vm !== null && (vm.assetCount > 0 || vm.macroCount > 0)

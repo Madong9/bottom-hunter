@@ -1,5 +1,4 @@
-// GlassNavRail — Level A glass (most visible glass, MASTER_PROMPT §8/§12)。
-// 约 72px 浮动玻璃栏：图标为主，active 用克制 emerald 指示。
+// GlassNavRail — raised daylight liquid-glass navigation lens.
 import QtQuick
 import QtQuick.Controls.Basic
 
@@ -9,18 +8,26 @@ Rectangle {
     property int currentIndex: 0
     signal navigate(int index)
 
-    // Level A: clear glass (v2: neutral white tint 0.045, NOT dark plastic)
-    color: Qt.rgba(1, 1, 1, 0.045)
-    radius: 20
+    color: Qt.rgba(0.94, 0.98, 1.0, 0.20)
+    radius: 24
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.12)
+    border.color: Qt.rgba(1, 1, 1, 0.54)
+
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 1
+        radius: parent.radius - 1
+        color: "transparent"
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.18)
+    }
 
     // 顶部内高光（Level A 明显）
     Rectangle {
         anchors { top: parent.top; left: parent.left; right: parent.right }
         anchors.margins: 1
         height: 1
-        color: Qt.rgba(1, 1, 1, 0.16)
+        color: Qt.rgba(1, 1, 1, 0.62)
     }
 
     // thick-glass slab edges: subtle darker bottom / right refraction edge
@@ -28,13 +35,13 @@ Rectangle {
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         anchors.margins: 1
         height: 1
-        color: Qt.rgba(0, 0, 0, 0.10)
+        color: Qt.rgba(0.18, 0.34, 0.46, 0.13)
     }
     Rectangle {
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
         anchors.margins: 1
         width: 1
-        color: Qt.rgba(0, 0, 0, 0.08)
+        color: Qt.rgba(0.18, 0.34, 0.46, 0.10)
     }
 
     Column {
@@ -84,7 +91,7 @@ Rectangle {
                     radius: 14
                     color: index === root.currentIndex
                            ? Qt.rgba(0.169, 0.835, 0.463, 0.09)
-                           : hover.hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                           : hover.hovered ? Qt.rgba(1, 1, 1, 0.24) : "transparent"
                     border.width: index === root.currentIndex ? 1 : 0
                     border.color: Qt.rgba(0.169, 0.835, 0.463, 0.28)
                 }
@@ -93,8 +100,8 @@ Rectangle {
                     anchors.centerIn: parent
                     text: modelData.icon
                     color: index === root.currentIndex
-                           ? "#2BD576"
-                           : hover.hovered ? "#F2F6FA" : "#C3CDD8"
+                           ? "#128653"
+                           : hover.hovered ? "#152330" : "#465D70"
                     font.pixelSize: 19
                 }
 

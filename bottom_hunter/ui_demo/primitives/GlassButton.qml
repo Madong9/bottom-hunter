@@ -17,14 +17,16 @@ Rectangle {
 
     radius: 14
     color: active ? activeTint
-                  : hover.hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
-    border.width: active ? 1 : 0
-    border.color: Qt.rgba(0.169, 0.835, 0.463, 0.28)
+                  : hover.hovered ? Qt.rgba(1, 1, 1, 0.22)
+                                  : Qt.rgba(1, 1, 1, 0.07)
+    border.width: 1
+    border.color: active ? Qt.rgba(0.169, 0.835, 0.463, 0.32)
+                         : Qt.rgba(1, 1, 1, hover.hovered ? 0.46 : 0.22)
 
     Text {
         anchors.centerIn: parent
         text: root.glyph !== "" ? root.glyph : root.label
-        color: root.active ? "#2BD576" : (hover.hovered ? "#C8CDD6" : "#6F7683")
+        color: root.active ? "#128653" : (hover.hovered ? "#152330" : "#465D70")
         font.pixelSize: root.glyph !== "" ? 19 : 13
     }
 

@@ -4,8 +4,8 @@ import "../../primitives"
 GlassSurface {
     id: root
     objectName: "chartPage"
-    tintAlpha: 0.02
-    surfaceRadius: 16
+    tintAlpha: 0.16
+    surfaceRadius: 24
 
     readonly property var vm: (typeof chartVm !== "undefined") ? chartVm : null
 
