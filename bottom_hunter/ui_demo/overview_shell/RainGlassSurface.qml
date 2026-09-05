@@ -2,7 +2,7 @@
 // (overview shell v2 architecture).
 //
 // Accepted pipeline (frozen MaterialLab rain material):
-//   sceneContent (environment + glass panels + chrome/content)
+//   sceneContent (transparent window + glass panels + chrome/content)
 //   ↓ captured ONCE by srcCapture (ShaderEffectSource, hideSource = true)
 //   ↓ [optional ClearGlass pane when includeGlassPane = true]
 //   ↓ rainEffect = StaticRainUI (frozen droplet optics + importance mask)
@@ -19,7 +19,7 @@ import QtQuick.Effects
 Item {
     id: root
 
-    // composited scene (environment + glass panels + chrome) to cover
+    // composited transparent scene (glass panels + chrome) to cover
     property Item sourceItem: null
     // optional importance mask item (R channel = density factor, 0..1);
     // internal all-normal fallback is used when null

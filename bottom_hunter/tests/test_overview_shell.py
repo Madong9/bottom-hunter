@@ -43,7 +43,7 @@ def _software_env(monkeypatch) -> None:
 
 def _load_root(monkeypatch, qml: str):
     _software_env(monkeypatch)
-    app = QGuiApplication.instance() or QGuiApplication([])
+    _app = QGuiApplication.instance() or QGuiApplication([])
     engine = QQmlApplicationEngine()
     engine.load(QUrl.fromLocalFile(str(SHELL_DIR / qml)))
     roots = engine.rootObjects()
@@ -198,8 +198,19 @@ def test_shader_ubo_contract() -> None:
         members = [ln.strip() for ln in m.group(1).splitlines() if ln.strip()]
         assert members[0] == "mat4 qt_Matrix;", f"{frag.name}: UBO must start with qt_Matrix"
         assert members[1] == "float qt_Opacity;", f"{frag.name}: UBO[1] must be qt_Opacity"
-        # STEP 5: output must honor qt_Opacity (premultiplied contract)
-        assert re.search(r"fragColor\s*=\s*vec4\(\s*(\w+)\s*\*\s*qt_Opacity\s*,\s*qt_Opacity\s*\)", text), (
+        # STEP 5: output must honor qt_Opacity (premultiplied contract).
+        # StaticRainUI keeps source alpha for the desktop-transparent product
+        # window; the other frozen shaders remain fully opaque.
+        opaque_output = re.search(
+            r"fragColor\s*=\s*vec4\(\s*(\w+)\s*\*\s*qt_Opacity\s*,\s*qt_Opacity\s*\)",
+            text,
+        )
+        transparent_output = (
+            "float finalA = outputA * qt_Opacity;" in text
+            and "color * qt_Opacity" in text
+            and re.search(r"fragColor\s*=\s*vec4\(.*finalA\s*\)", text)
+        )
+        assert opaque_output or transparent_output, (
             f"{frag.name}: fragColor does not honor qt_Opacity (premultiplied)")
 
 

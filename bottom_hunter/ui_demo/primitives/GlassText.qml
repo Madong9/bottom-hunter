@@ -1,8 +1,8 @@
 // GlassText — abstract text with the accepted tone hierarchy (PHASE 3-B).
 //
-// Encodes the shared text color + size conventions. The daylight environment
-// uses brighter neutral grays so secondary information remains legible without
-// turning the transparent glass into an opaque dark panel.
+// Encodes the shared text color + size conventions. Bright neutral grays keep
+// information legible over varied desktop content without turning the
+// transparent glass into an opaque panel.
 import QtQuick
 
 Text {

@@ -17,6 +17,10 @@ PACKAGE = REPO / "bottom_hunter"
 UI = PACKAGE / "ui_demo"
 PAGES = UI / "pages"
 PHASE5_BASE = os.environ.get("BH_PHASE5_BASE", "39379b0")
+DESKTOP_ALPHA_SHADER = {
+    "bottom_hunter/ui_demo/overview_shell/effects/StaticRainUI.frag",
+    "bottom_hunter/ui_demo/overview_shell/effects/StaticRainUI.qsb",
+}
 
 DTO_MODULES = (
     "bottom_hunter.ui_demo.overview_shell.contracts",
@@ -131,5 +135,6 @@ def test_phase5_does_not_modify_frozen_backend_or_visual_files() -> None:
         "bottom_hunter/src/backtest.py",
     }
     assert not changed.intersection(frozen)
-    assert not any(path.endswith((".frag", ".qsb")) for path in changed)
+    changed_shaders = {path for path in changed if path.endswith((".frag", ".qsb"))}
+    assert changed_shaders <= DESKTOP_ALPHA_SHADER
     assert not any(path.startswith("bottom_hunter/src/") and "chart" in path.casefold() for path in changed)

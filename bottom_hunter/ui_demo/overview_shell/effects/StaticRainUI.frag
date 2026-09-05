@@ -50,8 +50,8 @@
 // All smoothstep calls use strictly increasing edges (edge0 < edge1).
 //
 // Inputs (ShaderEffect):
-//   source      — the COMPOSITED UI scene (environment + glass panels +
-//                 chrome/content), captured with hideSource = true
+//   source      — the COMPOSITED UI scene (transparent window + glass panels
+//                 + chrome/content), captured with hideSource = true
 //   u_mask      — importance mask (pre-dilated in QML beyond text bounds:
 //                 values +28px, text/chip +20px); R channel multiplies
 //                 droplet presence (white = normal, dark = protected);
@@ -291,7 +291,8 @@ void main() {
 
     vec2 refractedUv = baseUv + refractOffset / resolution;
     refractedUv = clamp(refractedUv, vec2(0.002), vec2(0.998));
-    vec3 color = texture(source, refractedUv).rgb;
+    vec4 scene = texture(source, refractedUv);
+    vec3 color = scene.rgb;
 
     // hierarchy: #1 refraction (above) · #2 glint · #3 dark edge · #4 body
     color *= 1.0 + innerLift * 0.012;
@@ -300,15 +301,34 @@ void main() {
     color += highlight * vec3(0.90, 0.95, 1.0) * 0.40;
 
     float grain = hash11(fragPx.x * 12.9 + fragPx.y * 78.2) - 0.5;
-    color += grain * 0.005;
+    // Grain belongs to application pixels only. Applying it to empty pixels
+    // would turn a transparent desktop-backed window into an opaque veil.
+    color += grain * 0.005 * scene.a;
+
+    // Transparent-window composition. The shader cannot sample pixels owned
+    // by the desktop compositor, so droplets above empty application space
+    // are represented by a restrained premultiplied water highlight/shadow.
+    // Application pixels retain lens refraction; all non-droplet empty pixels
+    // keep alpha zero and reveal the live desktop underneath.
+    float waterLightA = clamp(highlight * 0.24
+                            + caustic * 0.06
+                            + innerLift * 0.018, 0.0, 0.58);
+    float waterShadeA = clamp(rimShade * 0.12, 0.0, 0.20);
+    float waterA = clamp(waterLightA + waterShadeA, 0.0, 0.64);
+    vec3 waterPremul = vec3(0.90, 0.95, 1.0) * waterLightA;
+    color = waterPremul + color * (1.0 - waterA);
+    float outputA = waterA + scene.a * (1.0 - waterA);
 
     if (debug) {
         color *= 0.30; // dim the scene so the diameter proof reads clearly
         color = mix(color, debugRing, debugRingA * 0.95);
         color = mix(color, debugDot, debugDotA * 0.95);
+        float debugA = max(debugRingA, debugDotA) * 0.95;
+        outputA = debugA + outputA * (1.0 - debugA);
     }
 
-    // Qt ShaderEffect contract: premultiplied alpha output honoring
-    // qt_Opacity (identical to vec4(color, 1.0) at opacity 1.0)
-    fragColor = vec4(color * qt_Opacity, qt_Opacity);
+    // Qt ShaderEffect contract: premultiplied alpha. Clamping RGB to alpha
+    // avoids bright fringes at the boundary of the transparent native window.
+    float finalA = outputA * qt_Opacity;
+    fragColor = vec4(clamp(color * qt_Opacity, vec3(0.0), vec3(finalA)), finalA);
 }

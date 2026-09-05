@@ -24,3 +24,6 @@ def test_product_window_has_user_facing_title() -> None:
     source = getsource(main)
     assert "view.setTitle(WINDOW_TITLE)" in source
     assert 'os.environ.setdefault("QSG_RHI_BACKEND", "opengl")' in source
+    assert "QQuickWindow.setDefaultAlphaBuffer(True)" in source
+    assert "surface_format.setAlphaBufferSize(8)" in source
+    assert "view.setColor(QColor(0, 0, 0, 0))" in source

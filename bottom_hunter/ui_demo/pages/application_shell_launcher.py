@@ -25,19 +25,23 @@ def main(argv: list[str] | None = None) -> int:
 
     from PySide6.QtCore import QUrl
     from PySide6.QtGui import QColor, QGuiApplication
-    from PySide6.QtQuick import QQuickView
+    from PySide6.QtQuick import QQuickView, QQuickWindow
 
     from .product_flow import build_production_flow
 
+    # Request an alpha channel before constructing the native window. The
+    # compositor, rather than an application image, supplies the background.
+    QQuickWindow.setDefaultAlphaBuffer(True)
     app = QGuiApplication(argv if argv is not None else sys.argv)
     flow = build_production_flow()
     view = QQuickView()
+    surface_format = view.format()
+    surface_format.setAlphaBufferSize(8)
+    view.setFormat(surface_format)
     view.setTitle(WINDOW_TITLE)
     flow.install_context(view.engine())
     view.setResizeMode(QQuickView.ResizeMode.SizeRootObjectToView)
-    # Match the daylight scene during the first frame; avoids a dark flash
-    # before the QML environment texture is ready.
-    view.setColor(QColor("#C9D4DC"))
+    view.setColor(QColor(0, 0, 0, 0))
     view.setSource(QUrl.fromLocalFile(str(SHELL_PATH)))
     if view.status() == QQuickView.Status.Error:
         return 2

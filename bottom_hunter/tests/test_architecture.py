@@ -15,7 +15,8 @@ Rules asserted:
     adapter boundaries).
   - No reverse dependency: backend never imports QtQml/QtQuick.
   - No direct DB access from the UI layer.
-  - No shader/qsb change since the freeze (checked via git, when available).
+  - Frozen shader files stay unchanged except the explicitly authorized
+    desktop-alpha composition pair (checked via git, when available).
 """
 
 from __future__ import annotations
@@ -33,6 +34,10 @@ UI_DEMO = REPO / "bottom_hunter" / "ui_demo"
 SRC = REPO / "bottom_hunter" / "src"
 # PHASE 1.6 hardening commit — shaders/qsb frozen from here on
 FROZEN_COMMIT = os.environ.get("BH_FROZEN_COMMIT", "785e08f")
+DESKTOP_ALPHA_SHADER = {
+    "bottom_hunter/ui_demo/overview_shell/effects/StaticRainUI.frag",
+    "bottom_hunter/ui_demo/overview_shell/effects/StaticRainUI.qsb",
+}
 
 # The two sanctioned adapter boundaries (allowed to reference the backend
 # inside function bodies only — never at module import time).
@@ -135,7 +140,8 @@ def test_shader_freeze_since_phase16() -> None:
         line for line in r.stdout.splitlines()
         if line.endswith(".frag") or line.endswith(".qsb")
     ]
-    assert changed == [], f"shader/qsb files changed after freeze: {changed}"
+    unexpected = set(changed) - DESKTOP_ALPHA_SHADER
+    assert unexpected == set(), f"shader/qsb files changed after freeze: {sorted(unexpected)}"
 
 
 # ---- 7. QML imports nothing but QtQuick / local UI --------------------------

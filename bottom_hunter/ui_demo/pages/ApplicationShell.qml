@@ -1,6 +1,8 @@
 // PHASE 5 product shell. Routing and presentation only; no backend access.
-// The already-accepted Crystal Rain Glass pipeline is composited here as:
-// environment -> transparent product UI -> screen-space rain surface.
+// The Crystal Rain Glass pipeline is composited here as:
+// transparent product UI -> alpha-preserving screen-space rain surface.
+// There is intentionally no application background: the desktop is supplied
+// by the operating-system compositor through the transparent QQuickView.
 import QtQuick
 import "../components"
 import "../overview_shell"
@@ -41,33 +43,13 @@ Item {
         }
     }
 
-    // Everything the viewer sees is captured once by RainGlassSurface. The
-    // source item stays interactive even though its direct rendering is hidden.
+    // The product UI has no full-window fill. It is captured once by
+    // RainGlassSurface; the source remains interactive while its direct
+    // rendering is hidden. Empty pixels therefore stay transparent to the
+    // real desktop instead of revealing an application-owned image.
     Item {
         id: sceneContent
         anchors.fill: parent
-
-        // Bright overcast daylight environment. Its tonal variation is
-        // essential: transparent glass and water refraction cannot read over
-        // a flat background. Foreground droplets are intentionally absent
-        // from this image; the live GPU surface below provides them.
-        Image {
-            id: environment
-            anchors.fill: parent
-            source: Qt.resolvedUrl("../assets/daylight_city_after_rain.png")
-            fillMode: Image.PreserveAspectCrop
-            horizontalAlignment: Image.AlignHCenter
-            verticalAlignment: Image.AlignVCenter
-            smooth: true
-            mipmap: true
-        }
-
-        // Daylight exposure control: preserves a recognisably daytime scene
-        // while maintaining contrast for the existing light financial text.
-        Rectangle {
-            anchors.fill: parent
-            color: Qt.rgba(0.025, 0.055, 0.085, 0.60)
-        }
 
         GlassNavRail {
             id: navRail
@@ -181,8 +163,9 @@ Item {
         }
     }
 
-    // Physically last: transparent, screen-space water lenses refract the
-    // already-composited environment and live product UI.
+    // Physically last: screen-space water lenses refract application pixels;
+    // over empty space they render only translucent water highlights, leaving
+    // the live desktop visible. Qt never captures or stores desktop pixels.
     RainGlassSurface {
         id: rainSurface
         objectName: "productRainGlassSurface"

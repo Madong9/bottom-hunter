@@ -167,16 +167,15 @@ def test_application_shell_loads_all_seven_product_routes(monkeypatch, tmp_path:
 
 def test_application_shell_connects_accepted_rain_glass_pipeline() -> None:
     qml = (PAGES_DIR / "ApplicationShell.qml").read_text(encoding="utf-8")
-    environment = PAGES_DIR.parent / "assets" / "daylight_city_after_rain.png"
     rain_shader = PAGES_DIR.parent / "overview_shell" / "effects" / "StaticRainUI.qsb"
     assert 'import "../overview_shell"' in qml
     assert "RainGlassSurface" in qml
     assert "sourceItem: sceneContent" in qml
     assert "maskSource: importanceMask" in qml
     assert "rainEnabled: root.rainEnabled" in qml
-    assert "daylight_city_after_rain.png" in qml
+    assert "daylight_city_after_rain.png" not in qml
     assert "background_only.png" not in qml
-    assert environment.is_file()
+    assert "Image {" not in qml
     assert rain_shader.is_file()
 
 
