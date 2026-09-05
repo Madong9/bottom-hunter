@@ -25,5 +25,8 @@ def test_product_window_has_user_facing_title() -> None:
     assert "view.setTitle(WINDOW_TITLE)" in source
     assert 'os.environ.setdefault("QSG_RHI_BACKEND", "opengl")' in source
     assert "QQuickWindow.setDefaultAlphaBuffer(True)" in source
+    assert 'QGuiApplication.setApplicationName("Bottom Hunter")' in source
+    assert 'QGuiApplication.setDesktopFileName("bottom-hunter")' in source
     assert "surface_format.setAlphaBufferSize(8)" in source
     assert "view.setColor(QColor(0, 0, 0, 0))" in source
+    assert "apply_desktop_blur(int(view.winId()))" in source

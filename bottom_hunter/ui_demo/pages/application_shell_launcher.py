@@ -27,11 +27,14 @@ def main(argv: list[str] | None = None) -> int:
     from PySide6.QtGui import QColor, QGuiApplication
     from PySide6.QtQuick import QQuickView, QQuickWindow
 
+    from .desktop_blur import apply_desktop_blur
     from .product_flow import build_production_flow
 
     # Request an alpha channel before constructing the native window. The
     # compositor, rather than an application image, supplies the background.
     QQuickWindow.setDefaultAlphaBuffer(True)
+    QGuiApplication.setApplicationName("Bottom Hunter")
+    QGuiApplication.setDesktopFileName("bottom-hunter")
     app = QGuiApplication(argv if argv is not None else sys.argv)
     flow = build_production_flow()
     view = QQuickView()
@@ -52,6 +55,9 @@ def main(argv: list[str] | None = None) -> int:
         root.setProperty("rainEnabled", False)
     view.resize(1440, 900)
     view.show()
+    blur_result = apply_desktop_blur(int(view.winId()))
+    if not blur_result.active:
+        print(f"Bottom Hunter 桌面模糊：{blur_result.detail}", file=sys.stderr)
     # ``flow`` remains strongly referenced by this stack frame until app.exec returns.
     return app.exec()
 

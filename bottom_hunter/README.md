@@ -159,6 +159,24 @@ python -m bottom_hunter.ui_demo.pages.application_shell_launcher
 
 该入口通过 `build_production_flow()` 统一注入总览、自选、研究、报告、导入、状态和 K 线七个路由的 ViewModel。导入页已接入异步事务链；K 线页通过只读 Adapter 复用现有行情服务，支持后台加载、定时刷新、周期切换、MA/BOLL/MACD/RSI/KDJ、Ctrl+滚轮缩放和会话内画线。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
 
+### 真实桌面模糊
+
+QML 产品外壳会向桌面合成器请求整窗口背景模糊。模糊对象是窗口后方正在变化的桌面和其他应用，不是应用内置图片；桌面像素始终留在合成器中，Bottom Hunter 不截屏、不读取、不保存桌面内容。应用自身仍负责液态高光、边缘色散、材质 tint 和雨滴折射，因此文字与图标不会被背景模糊层一起模糊。
+
+Ubuntu 22.04 / GNOME 42 X11 首次使用运行：
+
+```bash
+python setup_desktop_blur.py
+```
+
+脚本从 GNOME 官方扩展站下载与当前 Shell 大版本匹配的 Blur My Shell，校验 UUID 和兼容版本，再将应用动态模糊设为 `sigma=52`、内容不降透明度。如 Shell 还没有发现新扩展，按 `Alt+F2`，输入 `r` 并回车即可，无需再运行脚本。检查当前能力：
+
+```bash
+python -m bottom_hunter.ui_demo.pages.desktop_blur
+```
+
+KDE Plasma X11 不需要 GNOME 扩展，程序会设置 KWin 标准的 `_KDE_NET_WM_BLUR_BEHIND_REGION` 窗口属性；需在“系统设置 → 桌面特效”中启用“模糊”。可用 `BOTTOM_HUNTER_DESKTOP_BLUR=0` 临时关闭原生合成器模糊。当前 GNOME Wayland 与 PySide6 组合不具备稳定的应用窗口模糊协议，需在登录画面选择 Ubuntu on Xorg/X11 会话。
+
 ## 研究中心
 
 在左侧点“研究”，再选择自选股或“宏观经济”。首次选择会自动后台加载，之后先显示 SQLite 缓存；点“刷新研究数据”可强制增量更新。所有表格的行都可双击打开原始来源。

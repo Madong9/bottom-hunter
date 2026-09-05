@@ -78,6 +78,20 @@ Indicators are calculated by the existing chart calculation function and
 transported as immutable values. QML owns only view controls, the visible-bar
 window and non-persistent session annotations.
 
+The transparent native product window has a separate presentation-only
+compositor boundary:
+
+```text
+QML alpha surface -> native window id -> compositor hint
+  GNOME/X11: _MUTTER_HINTS + Blur My Shell dynamic background blur
+  KWin/X11:  _KDE_NET_WM_BLUR_BEHIND_REGION
+```
+
+The compositor samples and blurs desktop pixels; they are never captured or
+transported into the Python/QML process. Unsupported sessions retain the
+existing translucent material as a safe fallback and report the missing
+capability on stderr.
+
 ## 4. AI-agent collaboration workflow
 
 The repository was migrated in bounded phases suitable for human and AI-agent
