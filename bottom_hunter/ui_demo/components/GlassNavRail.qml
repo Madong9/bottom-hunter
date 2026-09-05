@@ -8,7 +8,7 @@ Rectangle {
     property int currentIndex: 0
     signal navigate(int index)
 
-    color: Qt.rgba(0.92, 0.97, 1.0, 0.38)
+    color: Qt.rgba(0.92, 0.97, 1.0, 0.46)
     radius: 26
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.70)

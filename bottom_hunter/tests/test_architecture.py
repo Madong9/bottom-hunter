@@ -48,6 +48,7 @@ SANCTIONED_ADAPTERS = {
     "import_backend_adapter.py",
     "overview_adapter.py",
     "status_adapter.py",
+    "chart_adapter.py",
 }
 
 

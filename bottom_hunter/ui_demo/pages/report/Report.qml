@@ -4,7 +4,7 @@ import "../../primitives"
 GlassSurface {
     id: root
     objectName: "reportPage"
-    tintAlpha: 0.34
+    tintAlpha: 0.42
     surfaceRadius: 24
 
     readonly property var vm: (typeof reportVm !== "undefined") ? reportVm : null

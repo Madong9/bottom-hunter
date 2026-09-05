@@ -40,11 +40,12 @@ independent and frozen. The QML product shell is available through
 | `report` | `reportVm` | Latest JSON daily report | Read-only summary |
 | `import` | `importVm` | Preview adapter + transaction controller | Explicit command flow |
 | `status` | `statusVm` | Existing health checks and report snapshot | Read-only health |
-| `chart` | `chartVm` | No backend connection | Safe placeholder |
+| `chart` | `chartVm` | `ChartReadAdapter` + existing chart service | Read-only interactive K-line |
 
 Every route has a stable page ID, loader, injected ViewModel position and a
-Chinese loading, empty, error or fallback message. Chart deliberately remains
-unmigrated so the working K-line subsystem is not put at risk.
+Chinese loading, empty, error or fallback message. Chart reuses the existing
+market service behind a read-only adapter; the QML page never imports or
+mutates the chart backend.
 
 ## 3. Data flow
 
@@ -60,9 +61,22 @@ JSON snapshot / read helper
 ```
 
 Lifecycle states are explicit. Data pages use `INIT`, `LOADING`, `READY`,
-`EMPTY` and `ERROR`; Overview additionally supports `STALE`, Import has its
-transaction states, and Chart uses `PLACEHOLDER`. Adapter failures become safe
-Chinese UI messages instead of exceptions escaping into QML.
+`EMPTY` and `ERROR`; Overview additionally supports `STALE`, and Import has its
+transaction states. Adapter failures become safe Chinese UI messages instead
+of exceptions escaping into QML.
+
+Chart follows a dedicated read-only asynchronous path:
+
+```text
+watchlist_summary.json -> ChartAssetDTO
+user selection -> ChartViewModel intent -> ChartController / QThread
+-> ChartReadAdapter -> existing MarketChartService
+-> ChartDTO -> ChartViewModel -> QML Canvas
+```
+
+Indicators are calculated by the existing chart calculation function and
+transported as immutable values. QML owns only view controls, the visible-bar
+window and non-persistent session annotations.
 
 ## 4. AI-agent collaboration workflow
 
@@ -130,7 +144,7 @@ The following remain outside PHASE 5 changes:
 
 - `src/gui_qt.py` business logic;
 - scanner and backtest implementations;
-- K-line/chart backend;
+- K-line/chart backend business logic (consumed through the adapter only);
 - database schema;
 - shader source, `.qsb` binaries and Crystal Glass parameters;
 - live or automated trading.

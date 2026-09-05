@@ -23,6 +23,7 @@ Rectangle {
     border.color: active ? Qt.rgba(0.169, 0.835, 0.463, 0.32)
                          : Qt.rgba(1, 1, 1, hover.hovered ? 0.46 : 0.22)
     scale: tap.pressed ? 0.965 : hover.hovered ? 1.025 : 1.0
+    transformOrigin: Item.Center
 
     Rectangle {
         anchors { top: parent.top; left: parent.left; right: parent.right }
@@ -30,6 +31,20 @@ Rectangle {
         height: Math.max(1, parent.height * 0.42)
         radius: root.radius - 1
         color: Qt.rgba(1, 1, 1, hover.hovered ? 0.16 : 0.08)
+    }
+
+
+    Rectangle {
+        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+        anchors.margins: 2
+        width: 1
+        color: Qt.rgba(0.30, 0.82, 1.0, hover.hovered ? 0.34 : 0.14)
+    }
+    Rectangle {
+        anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+        anchors.margins: 2
+        width: 1
+        color: Qt.rgba(0.82, 0.46, 1.0, hover.hovered ? 0.25 : 0.09)
     }
 
     Text {

@@ -32,4 +32,19 @@ GlassSurface {
             PropertyChanges { target: root; scale: 1.012 }
         }
     ]
+
+    // Directional elasticity is intentionally restrained: the optical slab
+    // yields toward the pointer while text remains fully legible.
+    transform: Scale {
+        origin.x: root.width / 2
+        origin.y: root.height / 2
+        xScale: root.interactive && root.materialHovered
+                ? 1.0 + Math.abs(root.materialOffsetX) * 0.006
+                      - Math.abs(root.materialOffsetY) * 0.002 : 1.0
+        yScale: root.interactive && root.materialHovered
+                ? 1.0 + Math.abs(root.materialOffsetY) * 0.006
+                      - Math.abs(root.materialOffsetX) * 0.002 : 1.0
+        Behavior on xScale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+        Behavior on yScale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+    }
 }

@@ -6,7 +6,7 @@ import "../../components" as Components
 GlassSurface {
     id: root
     objectName: "watchlistPage"
-    tintAlpha: 0.34
+    tintAlpha: 0.42
     surfaceRadius: 24
 
     readonly property var vm: (typeof watchlistVm !== "undefined") ? watchlistVm : null

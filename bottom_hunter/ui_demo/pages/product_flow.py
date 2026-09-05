@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from .chart_viewmodel import ChartPlaceholderViewModel
+from .chart_adapter import ChartReadAdapter
+from .chart_contracts import ChartAssetDTO
+from .chart_controller import ChartController, ChartReadPort
+from .chart_viewmodel import ChartViewModel
 from .contracts import ReportDTO, build_report_dto
 from .import_backend_adapter import ProductionImportFlow, build_production_import_flow
 from .import_runtime_adapter import RealRuntimeActivityPort, RuntimeStatusDTO
@@ -37,7 +40,8 @@ class ProductFlow:
     report_view_model: ReportViewModel
     import_flow: ProductionImportFlow
     status_view_model: StatusViewModel
-    chart_view_model: ChartPlaceholderViewModel
+    chart_view_model: ChartViewModel
+    chart_controller: ChartController
 
     def context_properties(self) -> dict[str, object]:
         return {
@@ -80,6 +84,8 @@ def build_production_flow(
     research_provider: Callable[[], ResearchDTO | None] = build_research_dto,
     report_provider: Callable[[], ReportDTO | None] = build_report_dto,
     status_provider: Callable[[], StatusDTO] = build_status_dto,
+    chart_port: ChartReadPort | None = None,
+    chart_assets: tuple[ChartAssetDTO, ...] | None = None,
 ) -> ProductFlow:
     """Build adapters, DTO providers, ViewModels and QML context objects."""
 
@@ -113,6 +119,18 @@ def build_production_flow(
         state_dir=state_dir,
         config_dir=config_dir,
     )
+    resolved_chart_port = chart_port or ChartReadAdapter()
+    resolved_chart_assets = (
+        tuple(chart_assets)
+        if chart_assets is not None
+        else tuple(getattr(resolved_chart_port, "assets", ()))
+    )
+    chart_vm = ChartViewModel(resolved_chart_assets)
+    chart_controller = ChartController(resolved_chart_port)
+    chart_vm.loadRequested.connect(chart_controller.request)
+    chart_controller.loadStarted.connect(chart_vm.markLoading)
+    chart_controller.loadSucceeded.connect(chart_vm.apply)
+    chart_controller.loadFailed.connect(chart_vm.applyLoadError)
     return ProductFlow(
         navigation=navigation,
         overview_state=overview_state,
@@ -123,5 +141,6 @@ def build_production_flow(
         report_view_model=report_vm,
         import_flow=import_flow,
         status_view_model=status_vm,
-        chart_view_model=ChartPlaceholderViewModel(),
+        chart_view_model=chart_vm,
+        chart_controller=chart_controller,
     )

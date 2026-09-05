@@ -9,11 +9,15 @@ import QtQuick.Effects
 Rectangle {
     id: root
 
-    property real tintAlpha: 0.24
+    property real tintAlpha: 0.30
     property color tint: "#EEF7FD"
     property real surfaceRadius: 20
     property bool reactive: false
     readonly property bool materialHovered: liquidHover.hovered
+    readonly property real materialOffsetX: liquidHover.hovered && width > 0
+        ? Math.max(-1, Math.min(1, liquidHover.point.position.x / width * 2 - 1)) : -0.28
+    readonly property real materialOffsetY: liquidHover.hovered && height > 0
+        ? Math.max(-1, Math.min(1, liquidHover.point.position.y / height * 2 - 1)) : -0.42
 
     radius: surfaceRadius
     clip: true
@@ -73,6 +77,43 @@ Rectangle {
             GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.30) }
             GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
         }
+    }
+
+    // LiquidGlassVue keeps content sharp and applies chromatic separation only
+    // at the refracting boundary. These two sub-pixel colour rims follow that
+    // rule: the centre remains neutral while the lens edge gains optical depth.
+    Rectangle {
+        anchors { top: parent.top; left: parent.left; bottom: parent.bottom }
+        anchors.margins: 2
+        width: 1
+        color: Qt.rgba(0.30, 0.82, 1.0, root.reactive && root.materialHovered ? 0.34 : 0.17)
+    }
+    Rectangle {
+        anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
+        anchors.margins: 3
+        width: 1
+        color: Qt.rgba(0.82, 0.46, 1.0, root.reactive && root.materialHovered ? 0.24 : 0.11)
+    }
+
+    // A narrow moving specular ribbon provides the pointer-linked reflection
+    // used by liquid-glass controls, without tinting or blurring their content.
+    Rectangle {
+        visible: root.reactive
+        width: Math.max(18, Math.min(54, root.width * 0.08))
+        height: root.height * 1.5
+        x: (root.materialOffsetX * 0.5 + 0.5) * Math.max(0, root.width - width)
+        y: -root.height * 0.25
+        rotation: -12 + root.materialOffsetY * 5
+        opacity: root.materialHovered ? 0.34 : 0.0
+        color: Qt.rgba(1, 1, 1, 0.22)
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            blurEnabled: true
+            blur: 0.72
+            blurMax: 28
+        }
+        Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
     }
 
     // Short lower caustic band. Keeping gradients local avoids visible alpha

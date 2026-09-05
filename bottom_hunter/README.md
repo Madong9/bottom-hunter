@@ -157,7 +157,7 @@ bottom-hunter-qml
 python -m bottom_hunter.ui_demo.pages.application_shell_launcher
 ```
 
-该入口通过 `build_production_flow()` 统一注入总览、自选、研究、报告、导入、状态和 K 线七个路由的 ViewModel。导入页已接入异步事务链；K 线页为安全占位，不调用、不复制现有 K 线后端。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
+该入口通过 `build_production_flow()` 统一注入总览、自选、研究、报告、导入、状态和 K 线七个路由的 ViewModel。导入页已接入异步事务链；K 线页通过只读 Adapter 复用现有行情服务，支持后台加载、定时刷新、周期切换、MA/BOLL/MACD/RSI/KDJ、Ctrl+滚轮缩放和会话内画线。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
 
 ## 研究中心
 

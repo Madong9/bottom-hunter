@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from bottom_hunter.ui_demo.overview_shell.contracts import OverviewDTO
+from bottom_hunter.ui_demo.pages.chart_contracts import ChartDTO
 from bottom_hunter.ui_demo.pages.contracts import ReportDTO
 from bottom_hunter.ui_demo.pages.product_flow import build_production_flow
 from bottom_hunter.ui_demo.pages.research_contracts import ResearchDTO
@@ -82,6 +83,12 @@ def test_status_viewmodel_lifecycle() -> None:
 
 
 def _product_flow(tmp_path: Path):
+    class EmptyChartPort:
+        assets = ()
+
+        def fetch(self, _canonical_id: str, _timeframe: str, _limit: int) -> ChartDTO:
+            return ChartDTO()
+
     return build_production_flow(
         str(tmp_path / "project"),
         state_dir=str(tmp_path / "project" / "state"),
@@ -97,6 +104,8 @@ def _product_flow(tmp_path: Path):
             ok_count=1,
             total_count=1,
         ),
+        chart_port=EmptyChartPort(),
+        chart_assets=(),
     )
 
 
@@ -119,10 +128,16 @@ def test_build_production_flow_exposes_all_context_positions(tmp_path: Path) -> 
     assert flow.research_view_model.lifecycle == "EMPTY"
     assert flow.report_view_model.lifecycle == "READY"
     assert flow.status_view_model.lifecycle == "READY"
-    assert flow.chart_view_model.lifecycle == "PLACEHOLDER"
+    assert flow.chart_view_model.lifecycle == "EMPTY"
 
 
 def test_product_flow_uses_fallback_states_when_snapshots_are_missing(tmp_path: Path) -> None:
+    class EmptyChartPort:
+        assets = ()
+
+        def fetch(self, _canonical_id: str, _timeframe: str, _limit: int) -> ChartDTO:
+            return ChartDTO()
+
     flow = build_production_flow(
         str(tmp_path / "project"),
         state_dir=str(tmp_path / "project" / "state"),
@@ -132,6 +147,8 @@ def test_product_flow_uses_fallback_states_when_snapshots_are_missing(tmp_path: 
         research_provider=lambda: None,
         report_provider=lambda: None,
         status_provider=lambda: StatusDTO(),
+        chart_port=EmptyChartPort(),
+        chart_assets=(),
     )
 
     assert flow.overview_state.lifecycle == "ERROR"
@@ -183,7 +200,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     surface = (PAGES_DIR.parent / "primitives" / "GlassSurface.qml").read_text(
         encoding="utf-8"
     )
-    assert "property real tintAlpha: 0.24" in surface
+    assert "property real tintAlpha: 0.30" in surface
     assert "Pointer-driven reflection" in surface
     assert "Short lower caustic band" in surface
     assert "border.color: Qt.rgba(1, 1, 1, 0.66)" in surface
@@ -206,7 +223,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         "chart/Chart.qml",
     ):
         page = (PAGES_DIR / relative).read_text(encoding="utf-8")
-        assert "tintAlpha: 0.34" in page
+        assert "tintAlpha: 0.42" in page
         assert "surfaceRadius: 24" in page
 
 

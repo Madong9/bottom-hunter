@@ -136,6 +136,7 @@ def test_pages_do_not_import_business_modules() -> None:
         "import_runtime_adapter.py",
         "overview_adapter.py",
         "status_adapter.py",
+        "chart_adapter.py",
     }
     for py in PAGES_DIR.rglob("*.py"):
         if py.name in sanctioned_adapters:

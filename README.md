@@ -292,7 +292,7 @@ bottom-hunter/
 ## 已知边界
 
 - 不包含实盘交易、自动交易或券商下单功能。
-- QML K 线页目前是安全占位；完整 K 线和画线功能仍由 QtWidgets 操作台提供。
+- QML K 线页已接入只读行情 Adapter，支持后台加载、定时刷新、周期切换、常用指标、Ctrl+滚轮缩放与会话内趋势线/水平线；持久化画线仍由 QtWidgets 操作台提供。
 - GNOME/X11 没有通用的第三方窗口桌面模糊 API，因此 Liquid Glass 使用透明合成、材质 Tint、边缘光学和交互反射近似实现。
 - 免费财报、新闻、宏观和行情服务可能不可用，系统会显示错误或保留最后良好缓存。
 - 日 K 回测无法精确重建盘中成交顺序、涨跌停、汇率、税费和成交容量。
@@ -304,4 +304,3 @@ bottom-hunter/
 - [策略复核](bottom_hunter/docs/strategy_review_20260829.md)
 - [验证报告](bottom_hunter/docs/validation_20260828.md)
 - [QML / GPU 界面说明](bottom_hunter/ui_demo/README.md)
-
