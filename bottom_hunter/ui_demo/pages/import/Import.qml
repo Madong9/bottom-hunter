@@ -76,6 +76,7 @@ GlassSurface {
                         delegate: GlassSurface {
                             width: 108
                             height: 36
+                            reactive: true
                             tintAlpha: root.selectedSource === modelData.id ? 0.10 : 0.035
                             surfaceRadius: 10
 
@@ -96,6 +97,7 @@ GlassSurface {
                     GlassSurface {
                         width: 138
                         height: 36
+                        reactive: true
                         tintAlpha: 0.08
                         surfaceRadius: 10
 
@@ -168,6 +170,7 @@ GlassSurface {
                 visible: root.vm !== null && root.vm.lifecycle === "READY"
                 width: 132
                 height: 38
+                reactive: root.vm !== null && root.vm.validCount > 0
                 tintAlpha: root.vm !== null && root.vm.validCount > 0 ? 0.10 : 0.025
                 surfaceRadius: 10
                 GlassText {
@@ -190,6 +193,7 @@ GlassSurface {
                 visible: root.vm !== null && root.vm.lifecycle === "PARTIAL_REVIEW"
                 width: 132
                 height: 38
+                reactive: true
                 tintAlpha: 0.10
                 surfaceRadius: 10
                 GlassText { anchors.centerIn: parent; text: "接受并导入"; tone: "primary"; sizeHint: 13 }
@@ -201,6 +205,7 @@ GlassSurface {
                 visible: root.vm !== null && ["IMPORTING", "PARTIAL_REVIEW"].indexOf(root.vm.lifecycle) >= 0
                 width: 108
                 height: 38
+                reactive: true
                 tintAlpha: 0.035
                 surfaceRadius: 10
                 GlassText { anchors.centerIn: parent; text: "取消"; tone: "secondary"; sizeHint: 13 }
@@ -212,6 +217,7 @@ GlassSurface {
                 visible: root.vm !== null && root.vm.lifecycle === "ERROR"
                 width: 108
                 height: 38
+                reactive: true
                 tintAlpha: 0.08
                 surfaceRadius: 10
                 GlassText { anchors.centerIn: parent; text: "重试"; tone: "primary"; sizeHint: 13 }

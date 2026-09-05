@@ -184,8 +184,17 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         encoding="utf-8"
     )
     assert "property real tintAlpha: 0.16" in surface
-    assert "gradient: Gradient" in surface
+    assert "Pointer-driven reflection" in surface
+    assert "Short lower caustic band" in surface
     assert "border.color: Qt.rgba(1, 1, 1, 0.52)" in surface
+
+    nav_symbol = PAGES_DIR.parent / "components" / "NavSymbol.qml"
+    nav_rail = (PAGES_DIR.parent / "components" / "GlassNavRail.qml").read_text(
+        encoding="utf-8"
+    )
+    assert nav_symbol.is_file()
+    assert "NavSymbol {" in nav_rail
+    assert '⌂' not in nav_rail and '◆' not in nav_rail and '◎' not in nav_rail
 
     for relative in (
         "overview/Overview.qml",

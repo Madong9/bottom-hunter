@@ -71,19 +71,20 @@ Rectangle {
 
         Repeater {
             model: [
-                { icon: "⌂", tip: "总览" },
-                { icon: "◆", tip: "自选" },
-                { icon: "◎", tip: "研究" },
-                { icon: "▤", tip: "报告" },
-                { icon: "✚", tip: "导入" },
-                { icon: "◐", tip: "状态" },
-                { icon: "↗", tip: "K线" }
+                { icon: "overview", tip: "总览" },
+                { icon: "watchlist", tip: "自选" },
+                { icon: "research", tip: "研究" },
+                { icon: "report", tip: "报告" },
+                { icon: "import", tip: "导入" },
+                { icon: "status", tip: "状态" },
+                { icon: "chart", tip: "K线" }
             ]
 
             delegate: Item {
                 width: 52
                 height: 46
                 anchors.horizontalCenter: parent.horizontalCenter
+                scale: tap.pressed ? 0.94 : hover.hovered ? 1.04 : 1.0
 
                 // active 克制 emerald 药丸（very subtle tint + thin edge）
                 Rectangle {
@@ -96,19 +97,26 @@ Rectangle {
                     border.color: Qt.rgba(0.169, 0.835, 0.463, 0.28)
                 }
 
-                Text {
+                NavSymbol {
                     anchors.centerIn: parent
-                    text: modelData.icon
-                    color: index === root.currentIndex
-                           ? "#128653"
-                           : hover.hovered ? "#152330" : "#465D70"
-                    font.pixelSize: 19
+                    width: 21
+                    height: 21
+                    symbol: modelData.icon
+                    strokeWidth: index === root.currentIndex ? 2.25 : 1.85
+                    strokeColor: index === root.currentIndex
+                                 ? "#128653"
+                                 : hover.hovered ? "#152330" : "#465D70"
                 }
 
                 HoverHandler { id: hover }
 
                 TapHandler {
+                    id: tap
                     onTapped: root.navigate(index)
+                }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
                 }
 
                 ToolTip.visible: hover.hovered

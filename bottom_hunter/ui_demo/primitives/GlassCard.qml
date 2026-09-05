@@ -7,6 +7,7 @@ GlassSurface {
 
     property bool interactive: true
     property real shadowOpacity: 0.18
+    reactive: interactive
 
     layer.enabled: true
     layer.effect: MultiEffect {
@@ -14,7 +15,9 @@ GlassSurface {
         shadowColor: "#000000"
         shadowBlur: 0.42
         shadowVerticalOffset: 8
-        shadowOpacity: root.shadowOpacity
+        shadowOpacity: root.materialHovered
+                       ? Math.min(0.30, root.shadowOpacity + 0.07)
+                       : root.shadowOpacity
         autoPaddingEnabled: true
     }
 
@@ -23,15 +26,10 @@ GlassSurface {
         NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
     }
 
-    HoverHandler {
-        id: hover
-        cursorShape: root.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
-    }
-
     states: [
         State {
-            when: root.interactive && hover.hovered
-            PropertyChanges { target: root; scale: 1.006 }
+            when: root.interactive && root.materialHovered
+            PropertyChanges { target: root; scale: 1.012 }
         }
     ]
 }

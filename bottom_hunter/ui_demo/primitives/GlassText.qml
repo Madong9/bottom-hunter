@@ -23,4 +23,7 @@ Text {
     color: root.toneColor
     font.pixelSize: root.sizeHint
     font.family: "Noto Sans CJK SC"
+    font.weight: root.sizeHint >= 20 ? Font.DemiBold : Font.Medium
+    font.letterSpacing: root.sizeHint >= 20 ? -0.25 : 0.0
+    font.hintingPreference: Font.PreferFullHinting
 }
