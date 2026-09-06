@@ -6,6 +6,7 @@ GlassSurface {
     objectName: "overviewPage"
     tintAlpha: 0.42
     surfaceRadius: GlassTokens.pageRadius
+    edgeContrast: GlassTokens.structuralEdgeContrast
 
     readonly property var vm: (typeof overviewState !== "undefined") ? overviewState : null
     readonly property bool ready: vm !== null && (vm.lifecycle === "READY" || vm.lifecycle === "STALE")

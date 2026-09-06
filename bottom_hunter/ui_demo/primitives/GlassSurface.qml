@@ -29,7 +29,7 @@ Rectangle {
     property real surfaceRadius: GlassTokens.containerRadius
     // Scales only the optical boundary. Content cards can melt into their
     // parent glass while page-level panes retain a stronger silhouette.
-    property real edgeContrast: 1.0
+    property real edgeContrast: 0.52
     property bool reactive: false
     readonly property bool capsuleShape: height > 0
         && surfaceRadius >= height / 2 - 0.5
@@ -115,7 +115,7 @@ Rectangle {
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Vertical
-            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.30) }
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.22 * root.edgeContrast) }
             GradientStop { position: 0.22; color: Qt.rgba(1, 1, 1, 0.0) }
             GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
         }
@@ -214,11 +214,11 @@ Rectangle {
         x: root.surfaceRadius
         y: 1
         width: Math.max(0, root.width * 0.62 - root.surfaceRadius)
-        height: 2
+        height: 1
         radius: 1
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.92 * root.edgeContrast) }
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.58 * root.edgeContrast) }
             GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.02) }
         }
     }
@@ -231,7 +231,14 @@ Rectangle {
         anchors.topMargin: root.surfaceRadius * 0.58
         anchors.bottomMargin: root.surfaceRadius * 0.58
         width: 2
-        color: Qt.rgba(1, 1, 1, 0.44 * root.edgeContrast)
+        color: "transparent"
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.0) }
+            GradientStop { position: 0.22; color: Qt.rgba(1, 1, 1, 0.28 * root.edgeContrast) }
+            GradientStop { position: 0.78; color: Qt.rgba(1, 1, 1, 0.28 * root.edgeContrast) }
+            GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
+        }
     }
     Rectangle {
         visible: !root.capsuleShape
@@ -240,7 +247,14 @@ Rectangle {
         anchors.leftMargin: root.surfaceRadius * 0.58
         anchors.rightMargin: root.surfaceRadius * 0.58
         height: 3
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.17 * root.edgeContrast)
+        color: "transparent"
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: Qt.rgba(0.18, 0.34, 0.46, 0.0) }
+            GradientStop { position: 0.18; color: Qt.rgba(0.18, 0.34, 0.46, 0.13 * root.edgeContrast) }
+            GradientStop { position: 0.82; color: Qt.rgba(0.18, 0.34, 0.46, 0.13 * root.edgeContrast) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.18, 0.34, 0.46, 0.0) }
+        }
     }
     Rectangle {
         visible: !root.capsuleShape
@@ -249,7 +263,14 @@ Rectangle {
         anchors.topMargin: root.surfaceRadius * 0.58
         anchors.bottomMargin: root.surfaceRadius * 0.58
         width: 3
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.13 * root.edgeContrast)
+        color: "transparent"
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: Qt.rgba(0.18, 0.34, 0.46, 0.0) }
+            GradientStop { position: 0.22; color: Qt.rgba(0.18, 0.34, 0.46, 0.10 * root.edgeContrast) }
+            GradientStop { position: 0.78; color: Qt.rgba(0.18, 0.34, 0.46, 0.10 * root.edgeContrast) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.18, 0.34, 0.46, 0.0) }
+        }
     }
 
     HoverHandler {

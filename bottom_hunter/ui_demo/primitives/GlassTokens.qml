@@ -8,6 +8,9 @@ QtObject {
     readonly property real cardRadius: 44
     readonly property real containerRadius: 28
     readonly property real compactContainerRadius: 22
+    // Large structural panes should separate through material and radius, not
+    // through bright, ruler-straight borders.
+    readonly property real structuralEdgeContrast: 0.18
 
     readonly property color textPrimary: "#0E1B27"
     readonly property color textSecondary: "#263B4D"

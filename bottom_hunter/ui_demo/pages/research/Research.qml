@@ -6,6 +6,7 @@ GlassSurface {
     objectName: "researchPage"
     tintAlpha: 0.42
     surfaceRadius: GlassTokens.pageRadius
+    edgeContrast: GlassTokens.structuralEdgeContrast
 
     readonly property var vm: (typeof researchVm !== "undefined") ? researchVm : null
     readonly property bool hasData: vm !== null && (vm.assetCount > 0 || vm.macroCount > 0)

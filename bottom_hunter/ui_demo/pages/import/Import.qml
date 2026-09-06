@@ -7,6 +7,7 @@ GlassSurface {
     objectName: "importPage"
     tintAlpha: 0.42
     surfaceRadius: GlassTokens.pageRadius
+    edgeContrast: GlassTokens.structuralEdgeContrast
 
     readonly property var vm: (typeof importVm !== "undefined") ? importVm : null
     property string selectedSource: "tonghuashun"

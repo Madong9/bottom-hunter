@@ -6,6 +6,7 @@ GlassSurface {
     objectName: "statusPage"
     tintAlpha: 0.42
     surfaceRadius: GlassTokens.pageRadius
+    edgeContrast: GlassTokens.structuralEdgeContrast
 
     readonly property var vm: (typeof statusVm !== "undefined") ? statusVm : null
 

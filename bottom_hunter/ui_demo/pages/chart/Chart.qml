@@ -7,6 +7,7 @@ GlassSurface {
     objectName: "chartPage"
     tintAlpha: 0.42
     surfaceRadius: GlassTokens.pageRadius
+    edgeContrast: GlassTokens.structuralEdgeContrast
 
     readonly property var vm: (typeof chartVm !== "undefined") ? chartVm : null
     property string overlayIndicator: "MA"

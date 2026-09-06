@@ -202,7 +202,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "property real tintAlpha: 0.30" in surface
     assert "Pointer-driven reflection" in surface
     assert "Short lower caustic band" in surface
-    assert "property real edgeContrast: 1.0" in surface
+    assert "property real edgeContrast: 0.52" in surface
     assert "readonly property bool capsuleShape" in surface
     assert "visible: !root.capsuleShape" in surface
     assert "0.66 * root.edgeContrast" in surface
@@ -218,6 +218,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "readonly property real cardRadius: 44" in tokens
     assert "readonly property real containerRadius: 28" in tokens
     assert "readonly property real compactContainerRadius: 22" in tokens
+    assert "readonly property real structuralEdgeContrast: 0.18" in tokens
     assert "function capsuleRadius(height)" in tokens
     assert "function circleRadius(size)" in tokens
 
@@ -236,6 +237,9 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "popupType: Popup.Item" in nav_rail
     assert "background: GlassSurface" in nav_rail
     assert "surfaceRadius: GlassTokens.containerRadius" in nav_rail
+    assert "edgeContrast: GlassTokens.structuralEdgeContrast" in nav_rail
+    assert "Qt.rgba(1, 1, 1, 0.70)" not in nav_rail
+    assert "Qt.rgba(1, 1, 1, 0.82)" not in nav_rail
     assert "GlassTokens.capsuleRadius(height)" in nav_rail
     assert "GlassTokens.circleRadius(width)" in nav_rail
     assert 'text: "整体色彩浓度"' in nav_rail
@@ -262,6 +266,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         page = (PAGES_DIR / relative).read_text(encoding="utf-8")
         assert "tintAlpha: 0.42" in page
         assert "surfaceRadius: GlassTokens.pageRadius" in page
+        assert "edgeContrast: GlassTokens.structuralEdgeContrast" in page
 
 
 def test_product_shape_and_typography_roles_stay_semantic() -> None:

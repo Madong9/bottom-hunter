@@ -12,41 +12,10 @@ GlassSurface {
     appearanceKey: "shell.navigation"
     appearanceLabel: "左侧导航"
     surfaceRadius: GlassTokens.containerRadius
-    color: Qt.rgba(0.92, 0.97, 1.0, 0.46)
+    tint: "#EAF7FF"
+    tintAlpha: 0.46
+    edgeContrast: GlassTokens.structuralEdgeContrast
     clip: true
-    border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.70)
-
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: 1
-        radius: parent.radius - 1
-        color: "transparent"
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.28)
-    }
-
-    // 顶部内高光（Level A 明显）
-    Rectangle {
-        anchors { top: parent.top; left: parent.left; right: parent.right }
-        anchors.margins: 1
-        height: 2
-        color: Qt.rgba(1, 1, 1, 0.82)
-    }
-
-    // thick-glass slab edges: subtle darker bottom / right refraction edge
-    Rectangle {
-        anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-        anchors.margins: 1
-        height: 3
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.17)
-    }
-    Rectangle {
-        anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
-        anchors.margins: 1
-        width: 3
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.13)
-    }
 
     Column {
         anchors.fill: parent
