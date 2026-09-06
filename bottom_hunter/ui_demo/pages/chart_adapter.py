@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import math
+import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -70,6 +72,9 @@ class ChartReadAdapter:
         summary_path: str | Path = SUMMARY_PATH,
         service: object | None = None,
         assets: tuple[ChartAssetDTO, ...] | None = None,
+        retry_attempts: int = 2,
+        retry_delay: float = 0.35,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if service is None:
             from bottom_hunter.src.charting import MarketChartService
@@ -78,6 +83,10 @@ class ChartReadAdapter:
         self._service = service
         loaded = load_chart_assets(summary_path) if assets is None else tuple(assets)
         self._assets = {asset.canonical_id: asset for asset in loaded}
+        self._retry_attempts = max(1, int(retry_attempts))
+        self._retry_delay = max(0.0, float(retry_delay))
+        self._sleep = sleep
+        self._last_good: dict[tuple[str, str, int], ChartDTO] = {}
 
     @property
     def assets(self) -> tuple[ChartAssetDTO, ...]:
@@ -89,7 +98,38 @@ class ChartReadAdapter:
         asset = self._assets.get(str(canonical_id))
         if asset is None:
             raise ValueError("所选标的已不在当前自选快照中。")
-        result = self._service.fetch(asset.backend_mapping(), str(timeframe), int(limit))
+        request_key = (asset.canonical_id, str(timeframe), int(limit))
+        last_error: Exception | None = None
+        result = None
+        for attempt in range(self._retry_attempts):
+            try:
+                result = self._service.fetch(
+                    asset.backend_mapping(), str(timeframe), int(limit)
+                )
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt + 1 < self._retry_attempts and self._retry_delay:
+                    self._sleep(self._retry_delay)
+
+        if result is None:
+            cached = self._last_good.get(request_key)
+            if cached is not None:
+                detail = str(last_error or "未知错误")
+                return ChartDTO(
+                    canonical_id=cached.canonical_id,
+                    symbol=cached.symbol,
+                    name=cached.name,
+                    market=cached.market,
+                    timeframe=cached.timeframe,
+                    bars=cached.bars,
+                    provider=f"{cached.provider or '行情源'} · 会话缓存",
+                    updated_at=cached.updated_at,
+                    note=f"实时刷新失败，显示最近成功数据。原因：{detail}",
+                )
+            assert last_error is not None
+            raise last_error
+
         indicators = calculate_chart_indicators(result.bars)
         bars: list[ChartBarDTO] = []
         for timestamp, row in result.bars.iterrows():
@@ -118,7 +158,7 @@ class ChartReadAdapter:
                     kdj_j=_number(indicator.get("kdj_j")),
                 )
             )
-        return ChartDTO(
+        dto = ChartDTO(
             canonical_id=result.canonical_id,
             symbol=result.symbol,
             name=result.name,
@@ -129,3 +169,5 @@ class ChartReadAdapter:
             updated_at=result.updated_at.isoformat(),
             note=result.note,
         )
+        self._last_good[request_key] = dto
+        return dto

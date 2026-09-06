@@ -520,12 +520,88 @@ GlassSurface {
             GlassSurface {
                 visible: root.vm !== null && root.vm.lifecycle === "LOADING"
                 anchors.centerIn: parent
+                z: 10
                 width: 176; height: 48
                 surfaceRadius: 22
                 tintAlpha: 0.72
                 accentTint: "#D3E5FF"
                 accentStrength: 0.18
                 GlassText { anchors.centerIn: parent; text: "正在读取 K 线…"; tone: "primary"; sizeHint: 13 }
+            }
+
+            GlassSurface {
+                visible: root.vm !== null && root.vm.lifecycle === "ERROR" && root.vm.barCount === 0
+                anchors.centerIn: parent
+                z: 11
+                width: Math.min(500, chartCard.width - 80)
+                height: 174
+                surfaceRadius: 28
+                tint: "#F5FAFF"
+                tintAlpha: 0.82
+                accentTint: "#FFD9D2"
+                accentStrength: 0.22
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 22
+                    spacing: 9
+
+                    GlassText {
+                        width: parent.width
+                        text: "暂时无法读取 K 线"
+                        tone: "primary"
+                        sizeHint: 17
+                    }
+                    GlassText {
+                        width: parent.width
+                        height: 44
+                        text: root.vm !== null ? root.vm.error : "行情服务未连接"
+                        tone: "secondary"
+                        sizeHint: 12
+                        wrapMode: Text.Wrap
+                        elide: Text.ElideRight
+                        maximumLineCount: 2
+                    }
+                    GlassSurface {
+                        width: 112
+                        height: 38
+                        reactive: true
+                        surfaceRadius: 19
+                        tintAlpha: 0.34
+                        accentTint: "#CDEFE2"
+                        accentStrength: 0.28
+                        GlassText {
+                            anchors.centerIn: parent
+                            text: "重新加载"
+                            tone: "primary"
+                            sizeHint: 13
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: if (root.vm !== null) root.vm.refresh()
+                        }
+                    }
+                }
+            }
+
+            GlassSurface {
+                visible: root.vm !== null && root.vm.lifecycle === "EMPTY"
+                         && root.vm.available && root.vm.barCount === 0
+                anchors.centerIn: parent
+                z: 10
+                width: 360
+                height: 92
+                surfaceRadius: 26
+                tintAlpha: 0.64
+                accentTint: "#DCE9FF"
+                accentStrength: 0.16
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 6
+                    GlassText { anchors.horizontalCenter: parent.horizontalCenter; text: "暂无 K 线数据"; tone: "primary"; sizeHint: 16 }
+                    GlassText { anchors.horizontalCenter: parent.horizontalCenter; text: "请切换周期或稍后重试"; tone: "muted"; sizeHint: 12 }
+                }
             }
         }
     }

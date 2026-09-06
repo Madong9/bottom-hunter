@@ -93,6 +93,82 @@ def test_chart_adapter_maps_backend_result_without_exposing_dataframe() -> None:
     assert not hasattr(dto, "dataframe")
 
 
+def test_chart_adapter_retries_a_transient_feed_failure() -> None:
+    asset = ChartAssetDTO("crypto:CAKE", "CAKE-USDT", "PancakeSwap", "CRYPTO", "crypto")
+    index = pd.date_range("2026-09-01", periods=2, freq="min")
+    frame = pd.DataFrame(
+        {
+            "open": [2.50, 2.51],
+            "high": [2.53, 2.54],
+            "low": [2.48, 2.49],
+            "close": [2.51, 2.52],
+            "volume": [1000, 1200],
+        },
+        index=index,
+    )
+
+    class FlakyService:
+        calls = 0
+
+        def fetch(self, mapping, timeframe, limit):
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("临时连接超时")
+            return ChartResult(
+                canonical_id=asset.canonical_id,
+                symbol=asset.symbol,
+                name=asset.name,
+                timeframe=timeframe,
+                bars=frame,
+                provider="fake-binance",
+                updated_at=datetime(2026, 9, 6, tzinfo=UTC),
+            )
+
+    service = FlakyService()
+    adapter = ChartReadAdapter(
+        service=service, assets=(asset,), retry_attempts=2, sleep=lambda _seconds: None
+    )
+    dto = adapter.fetch(asset.canonical_id, "1m", 160)
+    assert service.calls == 2
+    assert len(dto.bars) == 2
+    assert dto.provider == "fake-binance"
+
+
+def test_chart_adapter_uses_exact_last_good_data_after_refresh_failure() -> None:
+    asset = ChartAssetDTO("crypto:CAKE", "CAKE-USDT", "PancakeSwap", "CRYPTO", "crypto")
+    frame = pd.DataFrame(
+        {"open": [2.5], "high": [2.6], "low": [2.4], "close": [2.55], "volume": [900]},
+        index=pd.date_range("2026-09-01", periods=1, freq="min"),
+    )
+
+    class Service:
+        fail = False
+
+        def fetch(self, mapping, timeframe, limit):
+            if self.fail:
+                raise RuntimeError("币安与欧易均暂时不可用")
+            return ChartResult(
+                canonical_id=asset.canonical_id,
+                symbol=asset.symbol,
+                name=asset.name,
+                timeframe=timeframe,
+                bars=frame,
+                provider="fake-binance",
+                updated_at=datetime(2026, 9, 6, tzinfo=UTC),
+            )
+
+    service = Service()
+    adapter = ChartReadAdapter(
+        service=service, assets=(asset,), retry_attempts=2, sleep=lambda _seconds: None
+    )
+    fresh = adapter.fetch(asset.canonical_id, "1m", 160)
+    service.fail = True
+    cached = adapter.fetch(asset.canonical_id, "1m", 160)
+    assert cached.bars == fresh.bars
+    assert "会话缓存" in cached.provider
+    assert "刷新失败" in cached.note
+
+
 def test_chart_viewmodel_lifecycle_and_selection() -> None:
     assets = (
         ChartAssetDTO("equity:US:AAPL", "AAPL", "Apple", "US", "global_equity"),
@@ -171,3 +247,5 @@ def test_chart_qml_supports_indicators_drawing_and_ctrl_wheel() -> None:
     assert "trend" in source and "horizontal" in source
     assert "Timer {" in source
     assert "candidateBars === null || candidateBars === undefined" in source
+    assert "暂时无法读取 K 线" in source
+    assert "重新加载" in source
