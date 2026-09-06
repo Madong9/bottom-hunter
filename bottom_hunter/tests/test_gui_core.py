@@ -186,6 +186,7 @@ def test_headless_health_check_entrypoint() -> None:
 
 def test_qt_window_builds_all_workspaces(monkeypatch) -> None:
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    monkeypatch.setattr("bottom_hunter.src.gui_qt.recent_scan_runs", lambda **_kwargs: [])
     from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance() or QApplication([])
