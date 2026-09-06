@@ -11,7 +11,9 @@ Rectangle {
 
     property real tintAlpha: 0.30
     property color tint: "#EEF7FD"
-    property real surfaceRadius: 20
+    property color accentTint: "transparent"
+    property real accentStrength: 0.0
+    property real surfaceRadius: 28
     property bool reactive: false
     readonly property bool materialHovered: liquidHover.hovered
     readonly property real materialOffsetX: liquidHover.hovered && width > 0
@@ -24,6 +26,22 @@ Rectangle {
     color: Qt.rgba(tint.r, tint.g, tint.b, tintAlpha)
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.66)
+
+    // A local colour wash gives selected functional surfaces their own visual
+    // identity while leaving most of the material optically neutral.  Content
+    // supplied by derived components is rendered above this layer.
+    Rectangle {
+        visible: root.accentStrength > 0.001
+        anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
+        width: Math.max(root.surfaceRadius * 2, parent.width * 0.62)
+        color: "transparent"
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, 0.0) }
+            GradientStop { position: 0.62; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, root.accentStrength * 0.42) }
+            GradientStop { position: 1.0; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, root.accentStrength) }
+        }
+    }
 
     // Secondary internal contour makes the rounded edge read as a thick lens
     // instead of a one-pixel outline painted on transparent plastic.

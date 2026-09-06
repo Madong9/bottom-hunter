@@ -5,7 +5,7 @@ GlassSurface {
     id: root
     objectName: "overviewPage"
     tintAlpha: 0.42
-    surfaceRadius: 24
+    surfaceRadius: 32
 
     readonly property var vm: (typeof overviewState !== "undefined") ? overviewState : null
     readonly property bool ready: vm !== null && (vm.lifecycle === "READY" || vm.lifecycle === "STALE")
@@ -56,18 +56,20 @@ GlassSurface {
 
             Repeater {
                 model: root.vm === null ? [] : [
-                    { label: "超跌机会", value: root.vm.opportunityCount, detail: root.vm.opportunityHint },
-                    { label: "市场状态", value: root.vm.marketStatus, detail: root.vm.marketStatusDetail },
-                    { label: "扫描状态", value: root.vm.scanStatus, detail: root.vm.scanStatusDetail },
-                    { label: "数据健康", value: root.vm.dataHealthText, detail: root.vm.dataHealthLevel },
-                    { label: "滚动验证", value: root.vm.validation, detail: root.vm.validationHint },
-                    { label: "模拟净值", value: root.vm.portfolioValue, detail: root.vm.portfolioHint }
+                    { label: "超跌机会", value: root.vm.opportunityCount, detail: root.vm.opportunityHint, tint: "#FFD9E8" },
+                    { label: "市场状态", value: root.vm.marketStatus, detail: root.vm.marketStatusDetail, tint: "#CFE8FF" },
+                    { label: "扫描状态", value: root.vm.scanStatus, detail: root.vm.scanStatusDetail, tint: "#CFF5E6" },
+                    { label: "数据健康", value: root.vm.dataHealthText, detail: root.vm.dataHealthLevel, tint: "#FFE6C7" },
+                    { label: "滚动验证", value: root.vm.validation, detail: root.vm.validationHint, tint: "#D9E0FF" },
+                    { label: "模拟净值", value: root.vm.portfolioValue, detail: root.vm.portfolioHint, tint: "#E7D7FF" }
                 ]
 
                 delegate: GlassCard {
                     width: (root.width - 64) / 3
                     height: 132
                     interactive: false
+                    accentTint: modelData.tint
+                    accentStrength: 0.22
                     Column {
                         anchors.fill: parent
                         anchors.margins: 16

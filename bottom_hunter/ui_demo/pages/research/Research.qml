@@ -5,7 +5,7 @@ GlassSurface {
     id: root
     objectName: "researchPage"
     tintAlpha: 0.42
-    surfaceRadius: 24
+    surfaceRadius: 32
 
     readonly property var vm: (typeof researchVm !== "undefined") ? researchVm : null
     readonly property bool hasData: vm !== null && (vm.assetCount > 0 || vm.macroCount > 0)
@@ -95,6 +95,8 @@ GlassSurface {
                 width: (parent.width - parent.spacing) * 0.42
                 height: parent.height
                 interactive: false
+                accentTint: "#D9E5FF"
+                accentStrength: 0.14
 
                 Column {
                     anchors.fill: parent
@@ -119,7 +121,9 @@ GlassSurface {
                             width: assetList.width
                             height: 86
                             tintAlpha: 0.025
-                            surfaceRadius: 12
+                            surfaceRadius: 18
+                            accentTint: "#DFE7FF"
+                            accentStrength: 0.10
 
                             Column {
                                 anchors.fill: parent
@@ -156,6 +160,8 @@ GlassSurface {
                 width: parent.width - x
                 height: parent.height
                 interactive: false
+                accentTint: "#D6F2EA"
+                accentStrength: 0.14
 
                 Column {
                     anchors.fill: parent
@@ -180,7 +186,10 @@ GlassSurface {
                             width: macroList.width
                             height: 66
                             tintAlpha: 0.025
-                            surfaceRadius: 12
+                            surfaceRadius: 18
+                            accentTint: modelData.signal > 0 ? "#CDEFE0"
+                                        : (modelData.signal < 0 ? "#FFE0D6" : "#DDEBFA")
+                            accentStrength: 0.10
 
                             Row {
                                 anchors.fill: parent

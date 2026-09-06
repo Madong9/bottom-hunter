@@ -5,7 +5,7 @@ GlassSurface {
     id: root
     objectName: "reportPage"
     tintAlpha: 0.42
-    surfaceRadius: 24
+    surfaceRadius: 32
 
     readonly property var vm: (typeof reportVm !== "undefined") ? reportVm : null
 
@@ -47,15 +47,17 @@ GlassSurface {
             spacing: 12
             Repeater {
                 model: [
-                    { label: "交易信号", value: root.vm !== null ? root.vm.signalCount : 0 },
-                    { label: "有效机会", value: root.vm !== null ? root.vm.opportunityCount : 0 },
-                    { label: "板块数量", value: root.vm !== null ? root.vm.sectorCount : 0 },
-                    { label: "数据异常", value: root.vm !== null ? root.vm.errorCount : 0 }
+                    { label: "交易信号", value: root.vm !== null ? root.vm.signalCount : 0, tint: "#D7E4FF" },
+                    { label: "有效机会", value: root.vm !== null ? root.vm.opportunityCount : 0, tint: "#D2F5E5" },
+                    { label: "板块数量", value: root.vm !== null ? root.vm.sectorCount : 0, tint: "#E8DBFF" },
+                    { label: "数据异常", value: root.vm !== null ? root.vm.errorCount : 0, tint: "#FFDCCF" }
                 ]
                 delegate: GlassCard {
                     width: (root.width - 76) / 4
                     height: 112
                     interactive: false
+                    accentTint: modelData.tint
+                    accentStrength: 0.22
                     Column {
                         anchors.fill: parent
                         anchors.margins: 16

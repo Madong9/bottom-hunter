@@ -6,7 +6,7 @@ GlassSurface {
     id: root
     objectName: "chartPage"
     tintAlpha: 0.42
-    surfaceRadius: 24
+    surfaceRadius: 32
 
     readonly property var vm: (typeof chartVm !== "undefined") ? chartVm : null
     property string overlayIndicator: "MA"
@@ -58,22 +58,23 @@ GlassSurface {
             font.pixelSize: 15
             font.weight: Font.DemiBold
         }
-        background: Rectangle {
-            radius: 11
-            color: Qt.rgba(0.94, 0.98, 1.0, combo.hovered ? 0.38 : 0.25)
-            border.width: 1
-            border.color: Qt.rgba(1, 1, 1, combo.activeFocus ? 0.86 : 0.58)
+        background: GlassSurface {
+            surfaceRadius: 18
+            tintAlpha: combo.hovered ? 0.40 : 0.28
+            accentTint: "#CEE4FF"
+            accentStrength: combo.activeFocus ? 0.22 : 0.10
         }
         popup: Popup {
             y: combo.height + 6
             width: combo.width
             implicitHeight: Math.min(contentItem.implicitHeight + 10, 330)
             padding: 5
-            background: Rectangle {
-                radius: 13
-                color: "#EAF2F7"
-                border.color: "#FFFFFF"
-                border.width: 1
+            background: GlassSurface {
+                surfaceRadius: 20
+                tint: "#ECF7FF"
+                tintAlpha: 0.72
+                accentTint: "#D8E4FF"
+                accentStrength: 0.18
             }
             contentItem: ListView {
                 clip: true
@@ -96,7 +97,7 @@ GlassSurface {
                 elide: Text.ElideRight
             }
             background: Rectangle {
-                radius: 9
+                radius: 14
                 color: parent.highlighted ? Qt.rgba(0.10, 0.58, 0.38, 0.14) : "transparent"
             }
         }
@@ -136,6 +137,8 @@ GlassSurface {
             width: parent.width
             height: 62
             interactive: false
+            accentTint: "#D2E7FF"
+            accentStrength: 0.14
 
             Row {
                 anchors.fill: parent
@@ -166,7 +169,9 @@ GlassSurface {
                         height: 38
                         reactive: true
                         tintAlpha: root.vm !== null && root.vm.timeframe === modelData.key ? 0.18 : 0.06
-                        surfaceRadius: 11
+                        surfaceRadius: 18
+                        accentTint: root.vm !== null && root.vm.timeframe === modelData.key ? "#CDEFE2" : "transparent"
+                        accentStrength: root.vm !== null && root.vm.timeframe === modelData.key ? 0.18 : 0.0
                         GlassText {
                             anchors.centerIn: parent
                             text: modelData.label
@@ -190,7 +195,9 @@ GlassSurface {
                     height: 38
                     reactive: true
                     tintAlpha: 0.10
-                    surfaceRadius: 11
+                    surfaceRadius: 18
+                    accentTint: "#D0E5FF"
+                    accentStrength: 0.16
                     GlassText { anchors.centerIn: parent; text: "刷新"; tone: "primary"; sizeHint: 12 }
                     MouseArea {
                         anchors.fill: parent
@@ -206,6 +213,8 @@ GlassSurface {
             width: parent.width
             height: 54
             interactive: false
+            accentTint: "#E6DBFF"
+            accentStrength: 0.13
 
             Row {
                 anchors.fill: parent
@@ -239,7 +248,9 @@ GlassSurface {
                         height: 36
                         reactive: true
                         tintAlpha: root.drawingMode === modelData.mode ? 0.17 : 0.055
-                        surfaceRadius: 10
+                        surfaceRadius: 18
+                        accentTint: root.drawingMode === modelData.mode ? "#E1D4FF" : "transparent"
+                        accentStrength: root.drawingMode === modelData.mode ? 0.20 : 0.0
                         GlassText { anchors.centerIn: parent; text: modelData.label; tone: "primary"; sizeHint: 12 }
                         MouseArea {
                             anchors.fill: parent
@@ -254,7 +265,7 @@ GlassSurface {
 
                 GlassSurface {
                     width: 62; height: 36; reactive: root.annotations.length > 0
-                    tintAlpha: 0.05; surfaceRadius: 10
+                    tintAlpha: 0.05; surfaceRadius: 18
                     GlassText { anchors.centerIn: parent; text: "撤销"; tone: "secondary"; sizeHint: 12 }
                     MouseArea {
                         anchors.fill: parent; enabled: root.annotations.length > 0
@@ -267,7 +278,7 @@ GlassSurface {
                 }
                 GlassSurface {
                     width: 72; height: 36; reactive: root.annotations.length > 0
-                    tintAlpha: 0.05; surfaceRadius: 10
+                    tintAlpha: 0.05; surfaceRadius: 18
                     GlassText { anchors.centerIn: parent; text: "清空"; tone: "secondary"; sizeHint: 12 }
                     MouseArea {
                         anchors.fill: parent; enabled: root.annotations.length > 0
@@ -289,6 +300,8 @@ GlassSurface {
             width: parent.width
             height: Math.max(430, root.height - 20 * 2 - 34 - 62 - 54 - 30 - 4 * parent.spacing)
             interactive: false
+            accentTint: "#D8F2E8"
+            accentStrength: 0.08
 
             Item {
                 id: chartHost
@@ -347,7 +360,8 @@ GlassSurface {
                         ctx.reset()
                         ctx.fillStyle = Qt.rgba(0.96, 0.985, 1.0, 0.16)
                         ctx.fillRect(0, 0, width, height)
-                        const all = root.vm !== null ? root.vm.bars : []
+                        const candidateBars = root.vm !== null ? root.vm.bars : null
+                        const all = candidateBars === null || candidateBars === undefined ? [] : candidateBars
                         shownBars = Math.min(all.length, Math.max(10, root.visibleCount))
                         firstBar = Math.max(0, all.length - shownBars)
                         const values = all.slice(firstBar)
@@ -503,12 +517,14 @@ GlassSurface {
                 }
             }
 
-            Rectangle {
+            GlassSurface {
                 visible: root.vm !== null && root.vm.lifecycle === "LOADING"
                 anchors.centerIn: parent
-                width: 176; height: 48; radius: 16
-                color: Qt.rgba(0.92, 0.97, 1.0, 0.82)
-                border.color: Qt.rgba(1, 1, 1, 0.92)
+                width: 176; height: 48
+                surfaceRadius: 22
+                tintAlpha: 0.72
+                accentTint: "#D3E5FF"
+                accentStrength: 0.18
                 GlassText { anchors.centerIn: parent; text: "正在读取 K 线…"; tone: "primary"; sizeHint: 13 }
             }
         }

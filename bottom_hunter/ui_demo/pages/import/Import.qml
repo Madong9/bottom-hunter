@@ -6,7 +6,7 @@ GlassSurface {
     id: root
     objectName: "importPage"
     tintAlpha: 0.42
-    surfaceRadius: 24
+    surfaceRadius: 32
 
     readonly property var vm: (typeof importVm !== "undefined") ? importVm : null
     property string selectedSource: "tonghuashun"
@@ -51,6 +51,8 @@ GlassSurface {
             width: parent.width
             height: 116
             interactive: false
+            accentTint: "#D6E8FF"
+            accentStrength: 0.15
 
             Column {
                 anchors.fill: parent
@@ -78,7 +80,9 @@ GlassSurface {
                             height: 36
                             reactive: true
                             tintAlpha: root.selectedSource === modelData.id ? 0.10 : 0.035
-                            surfaceRadius: 10
+                            surfaceRadius: 18
+                            accentTint: root.selectedSource === modelData.id ? "#CDEFE1" : "transparent"
+                            accentStrength: root.selectedSource === modelData.id ? 0.18 : 0.0
 
                             GlassText {
                                 anchors.centerIn: parent
@@ -99,7 +103,9 @@ GlassSurface {
                         height: 36
                         reactive: true
                         tintAlpha: 0.08
-                        surfaceRadius: 10
+                        surfaceRadius: 18
+                        accentTint: "#CFE4FF"
+                        accentStrength: 0.18
 
                         GlassText {
                             anchors.centerIn: parent
@@ -126,6 +132,10 @@ GlassSurface {
             width: parent.width
             height: 96
             interactive: false
+            accentTint: root.vm !== null && root.vm.lifecycle === "SUCCESS" ? "#CDEFE0"
+                        : root.vm !== null && root.vm.lifecycle === "ERROR" ? "#FFD8CF"
+                        : "#D9E4FF"
+            accentStrength: 0.18
 
             Column {
                 anchors.fill: parent
@@ -172,7 +182,9 @@ GlassSurface {
                 height: 38
                 reactive: root.vm !== null && root.vm.validCount > 0
                 tintAlpha: root.vm !== null && root.vm.validCount > 0 ? 0.10 : 0.025
-                surfaceRadius: 10
+                surfaceRadius: 18
+                accentTint: "#CDEFE0"
+                accentStrength: root.vm !== null && root.vm.validCount > 0 ? 0.20 : 0.0
                 GlassText {
                     anchors.centerIn: parent
                     text: "确认导入"
@@ -195,7 +207,9 @@ GlassSurface {
                 height: 38
                 reactive: true
                 tintAlpha: 0.10
-                surfaceRadius: 10
+                surfaceRadius: 18
+                accentTint: "#CDEFE0"
+                accentStrength: 0.20
                 GlassText { anchors.centerIn: parent; text: "接受并导入"; tone: "primary"; sizeHint: 13 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.vm.acceptPartial() }
             }
@@ -207,7 +221,7 @@ GlassSurface {
                 height: 38
                 reactive: true
                 tintAlpha: 0.035
-                surfaceRadius: 10
+                surfaceRadius: 18
                 GlassText { anchors.centerIn: parent; text: "取消"; tone: "secondary"; sizeHint: 13 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.vm.cancelImport() }
             }
@@ -219,30 +233,35 @@ GlassSurface {
                 height: 38
                 reactive: true
                 tintAlpha: 0.08
-                surfaceRadius: 10
+                surfaceRadius: 18
+                accentTint: "#FFE1D6"
+                accentStrength: 0.18
                 GlassText { anchors.centerIn: parent; text: "重试"; tone: "primary"; sizeHint: 13 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.vm.retryImport() }
             }
         }
 
         Row {
+            id: previewStats
             visible: root.vm !== null && root.vm.lifecycle === "READY"
             width: parent.width
             spacing: 12
 
             Repeater {
                 model: [
-                    { label: "文件", value: root.vm !== null ? root.vm.filename : "--" },
-                    { label: "格式", value: root.vm !== null ? root.vm.fileFormat : "--" },
-                    { label: "检测", value: root.vm !== null ? String(root.vm.detectedCount) : "0" },
+                    { label: "文件", value: root.vm !== null ? root.vm.filename : "--", tint: "#D6E8FF" },
+                    { label: "格式", value: root.vm !== null ? root.vm.fileFormat : "--", tint: "#E6DCFF" },
+                    { label: "检测", value: root.vm !== null ? String(root.vm.detectedCount) : "0", tint: "#D6F1E7" },
                     { label: "有效 / 无效", value: root.vm !== null
-                          ? root.vm.validCount + " / " + root.vm.invalidCount : "0 / 0" }
+                          ? root.vm.validCount + " / " + root.vm.invalidCount : "0 / 0", tint: "#FFE2D5" }
                 ]
 
                 delegate: GlassCard {
-                    width: (parent.width - 3 * parent.spacing) / 4
+                    width: (previewStats.width - 3 * previewStats.spacing) / 4
                     height: 76
                     interactive: false
+                    accentTint: modelData.tint
+                    accentStrength: 0.18
 
                     Column {
                         anchors.fill: parent
@@ -271,6 +290,8 @@ GlassSurface {
                 width: (parent.width - parent.spacing) * 0.68
                 height: parent.height
                 interactive: false
+                accentTint: "#D8E9FF"
+                accentStrength: 0.10
 
                 Column {
                     anchors.fill: parent
@@ -291,7 +312,7 @@ GlassSurface {
                             width: previewList.width
                             height: 54
                             tintAlpha: 0.025
-                            surfaceRadius: 10
+                            surfaceRadius: 16
 
                             Row {
                                 anchors.fill: parent
@@ -317,6 +338,8 @@ GlassSurface {
                 width: parent.width - x
                 height: parent.height
                 interactive: false
+                accentTint: "#FFE5D4"
+                accentStrength: 0.12
 
                 Column {
                     anchors.fill: parent

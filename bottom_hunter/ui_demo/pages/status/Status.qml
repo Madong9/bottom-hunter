@@ -5,7 +5,7 @@ GlassSurface {
     id: root
     objectName: "statusPage"
     tintAlpha: 0.42
-    surfaceRadius: 24
+    surfaceRadius: 32
 
     readonly property var vm: (typeof statusVm !== "undefined") ? statusVm : null
 
@@ -47,14 +47,16 @@ GlassSurface {
             spacing: 12
             Repeater {
                 model: [
-                    { label: "数据状态", value: root.vm !== null ? root.vm.dataStatus : "--" },
-                    { label: "最近扫描", value: root.vm !== null ? root.vm.lastScanTime : "--" },
-                    { label: "系统健康", value: root.vm !== null ? root.vm.systemHealth : "--" }
+                    { label: "数据状态", value: root.vm !== null ? root.vm.dataStatus : "--", tint: "#D7E9FF" },
+                    { label: "最近扫描", value: root.vm !== null ? root.vm.lastScanTime : "--", tint: "#E5DCFF" },
+                    { label: "系统健康", value: root.vm !== null ? root.vm.systemHealth : "--", tint: "#D3F4E4" }
                 ]
                 delegate: GlassCard {
                     width: (root.width - 64) / 3
                     height: 100
                     interactive: false
+                    accentTint: modelData.tint
+                    accentStrength: 0.20
                     Column {
                         anchors.fill: parent
                         anchors.margins: 14
@@ -82,6 +84,8 @@ GlassSurface {
                 width: (parent.width - parent.spacing) * 0.58
                 height: parent.height
                 interactive: false
+                accentTint: "#D8F4EA"
+                accentStrength: 0.12
                 Column {
                     anchors.fill: parent
                     anchors.margins: 16
@@ -97,7 +101,9 @@ GlassSurface {
                             width: parent.width
                             height: 52
                             tintAlpha: 0.025
-                            surfaceRadius: 9
+                            surfaceRadius: 16
+                            accentTint: modelData.ok ? "#CDEFE0" : "#FFD8CF"
+                            accentStrength: 0.12
                             Row {
                                 anchors.fill: parent
                                 anchors.margins: 11
@@ -115,6 +121,8 @@ GlassSurface {
                 width: parent.width - x
                 height: parent.height
                 interactive: false
+                accentTint: "#FFE2D7"
+                accentStrength: 0.12
                 Column {
                     anchors.fill: parent
                     anchors.margins: 16

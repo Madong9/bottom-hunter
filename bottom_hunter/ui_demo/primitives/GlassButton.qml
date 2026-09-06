@@ -15,7 +15,7 @@ Rectangle {
     property bool active: false
     property color activeTint: Qt.rgba(0.169, 0.835, 0.463, 0.09)
 
-    radius: 14
+    radius: 18
     color: active ? activeTint
                   : hover.hovered ? Qt.rgba(1, 1, 1, 0.22)
                                   : Qt.rgba(1, 1, 1, 0.07)

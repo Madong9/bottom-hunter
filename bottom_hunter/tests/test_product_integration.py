@@ -204,6 +204,9 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "Pointer-driven reflection" in surface
     assert "Short lower caustic band" in surface
     assert "border.color: Qt.rgba(1, 1, 1, 0.66)" in surface
+    assert 'property color accentTint: "transparent"' in surface
+    assert "property real accentStrength: 0.0" in surface
+    assert "property real surfaceRadius: 28" in surface
 
     nav_symbol = PAGES_DIR.parent / "components" / "NavSymbol.qml"
     nav_rail = (PAGES_DIR.parent / "components" / "GlassNavRail.qml").read_text(
@@ -212,6 +215,10 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert nav_symbol.is_file()
     assert "NavSymbol {" in nav_rail
     assert '⌂' not in nav_rail and '◆' not in nav_rail and '◎' not in nav_rail
+    assert "ToolTip {" in nav_rail
+    assert "background: GlassSurface" in nav_rail
+    assert "radius: 32" in nav_rail
+    assert "clip: true" in nav_rail
 
     for relative in (
         "overview/Overview.qml",
@@ -224,7 +231,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     ):
         page = (PAGES_DIR / relative).read_text(encoding="utf-8")
         assert "tintAlpha: 0.42" in page
-        assert "surfaceRadius: 24" in page
+        assert "surfaceRadius: 32" in page
 
 
 def test_status_qml_error_and_fallback_load(monkeypatch) -> None:

@@ -170,3 +170,4 @@ def test_chart_qml_supports_indicators_drawing_and_ctrl_wheel() -> None:
     assert "Qt.ControlModifier" in source
     assert "trend" in source and "horizontal" in source
     assert "Timer {" in source
+    assert "candidateBars === null || candidateBars === undefined" in source

@@ -7,7 +7,7 @@ GlassSurface {
     id: root
     objectName: "watchlistPage"
     tintAlpha: 0.42
-    surfaceRadius: 24
+    surfaceRadius: 32
 
     readonly property var vm: (typeof watchlistVm !== "undefined") ? watchlistVm : null
     readonly property bool hasData: vm !== null && vm.items.length > 0
@@ -95,7 +95,9 @@ GlassSurface {
             width: parent.width
             height: root.tableHeaderHeight
             tintAlpha: 0.025
-            surfaceRadius: 10
+            surfaceRadius: 16
+            accentTint: "#D8E8FA"
+            accentStrength: 0.10
 
             Row {
                 id: tableHeader
@@ -140,7 +142,9 @@ GlassSurface {
                 width: list.width
                 height: root.tableRowHeight
                 tintAlpha: 0.035
-                surfaceRadius: 10
+                surfaceRadius: 16
+                accentTint: modelData.change_percent.startsWith("+") ? "#FFE0E0" : "#D4F1E6"
+                accentStrength: 0.08
 
                 property string up: modelData.change_percent.startsWith("+") ? "#E05C5C" : "#2BD58F"
                 property string down: "#2BD58F"

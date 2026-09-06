@@ -1,6 +1,7 @@
 // GlassNavRail — raised daylight liquid-glass navigation lens.
 import QtQuick
 import QtQuick.Controls.Basic
+import "../primitives"
 
 Rectangle {
     id: root
@@ -9,7 +10,8 @@ Rectangle {
     signal navigate(int index)
 
     color: Qt.rgba(0.92, 0.97, 1.0, 0.46)
-    radius: 26
+    radius: 32
+    clip: true
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.70)
 
@@ -89,7 +91,7 @@ Rectangle {
                 // active 克制 emerald 药丸（very subtle tint + thin edge）
                 Rectangle {
                     anchors.fill: parent
-                    radius: 14
+                    radius: 18
                     color: index === root.currentIndex
                            ? Qt.rgba(0.169, 0.835, 0.463, 0.09)
                            : hover.hovered ? Qt.rgba(1, 1, 1, 0.24) : "transparent"
@@ -119,9 +121,29 @@ Rectangle {
                     NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
                 }
 
-                ToolTip.visible: hover.hovered
-                ToolTip.text: modelData.tip
-                ToolTip.delay: 500
+                ToolTip {
+                    id: navTip
+                    visible: hover.hovered
+                    delay: 500
+                    x: parent.width + 10
+                    y: (parent.height - implicitHeight) / 2
+                    padding: 10
+
+                    contentItem: GlassText {
+                        text: modelData.tip
+                        tone: "primary"
+                        sizeHint: 13
+                    }
+                    background: GlassSurface {
+                        implicitWidth: 58
+                        implicitHeight: 38
+                        tint: "#EAF6FF"
+                        tintAlpha: 0.70
+                        accentTint: "#A9D8FF"
+                        accentStrength: 0.18
+                        surfaceRadius: 15
+                    }
+                }
             }
         }
     }
