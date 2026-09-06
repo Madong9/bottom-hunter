@@ -5,7 +5,7 @@ import QtQuick
 // semantic role instead of inventing local radii or low-contrast ink colors.
 QtObject {
     readonly property real pageRadius: 32
-    readonly property real cardRadius: 30
+    readonly property real cardRadius: 44
     readonly property real containerRadius: 28
     readonly property real compactContainerRadius: 22
 

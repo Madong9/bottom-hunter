@@ -212,19 +212,25 @@ Rectangle {
     // Left lens edge and cool lower/right thickness.
     Rectangle {
         anchors { top: parent.top; left: parent.left; bottom: parent.bottom }
-        anchors.margins: 1
+        anchors.leftMargin: 1
+        anchors.topMargin: root.surfaceRadius * 0.58
+        anchors.bottomMargin: root.surfaceRadius * 0.58
         width: 2
         color: Qt.rgba(1, 1, 1, 0.44 * root.edgeContrast)
     }
     Rectangle {
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-        anchors.margins: 1
+        anchors.bottomMargin: 1
+        anchors.leftMargin: root.surfaceRadius * 0.58
+        anchors.rightMargin: root.surfaceRadius * 0.58
         height: 3
         color: Qt.rgba(0.18, 0.34, 0.46, 0.17 * root.edgeContrast)
     }
     Rectangle {
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
-        anchors.margins: 1
+        anchors.rightMargin: 1
+        anchors.topMargin: root.surfaceRadius * 0.58
+        anchors.bottomMargin: root.surfaceRadius * 0.58
         width: 3
         color: Qt.rgba(0.18, 0.34, 0.46, 0.13 * root.edgeContrast)
     }

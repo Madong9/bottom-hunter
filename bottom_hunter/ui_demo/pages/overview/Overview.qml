@@ -71,10 +71,11 @@ GlassSurface {
                     width: (root.width - 64) / 3
                     height: 132
                     interactive: false
-                    surfaceRadius: GlassTokens.cardRadius
+                    surfaceRadius: Math.min(GlassTokens.cardRadius,
+                                            GlassTokens.capsuleRadius(height))
                     tintAlpha: 0.26
                     edgeContrast: 0.48
-                    shadowOpacity: 0.16
+                    shadowOpacity: 0.08
                     accentTint: modelData.tint
                     accentStrength: 0.20
                     Column {
