@@ -123,6 +123,10 @@ Rectangle {
 
                 ToolTip {
                     id: navTip
+                    // Keep the tooltip inside the transparent QML scene. A
+                    // native popup creates a rectangular platform window
+                    // behind the rounded glass surface on Linux/X11.
+                    popupType: Popup.Item
                     visible: hover.hovered
                     delay: 500
                     x: parent.width + 10
@@ -141,7 +145,7 @@ Rectangle {
                         tintAlpha: 0.70
                         accentTint: "#A9D8FF"
                         accentStrength: 0.18
-                        surfaceRadius: 15
+                        surfaceRadius: 19
                     }
                 }
             }

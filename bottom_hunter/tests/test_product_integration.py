@@ -216,7 +216,9 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "NavSymbol {" in nav_rail
     assert '⌂' not in nav_rail and '◆' not in nav_rail and '◎' not in nav_rail
     assert "ToolTip {" in nav_rail
+    assert "popupType: Popup.Item" in nav_rail
     assert "background: GlassSurface" in nav_rail
+    assert "surfaceRadius: 19" in nav_rail
     assert "radius: 32" in nav_rail
     assert "clip: true" in nav_rail
 
