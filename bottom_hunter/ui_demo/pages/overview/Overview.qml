@@ -7,6 +7,7 @@ GlassSurface {
     tintAlpha: 0.42
     surfaceRadius: GlassTokens.pageRadius
     edgeContrast: GlassTokens.structuralEdgeContrast
+    depthStrength: GlassTokens.structuralDepthStrength
 
     readonly property var vm: (typeof overviewState !== "undefined") ? overviewState : null
     readonly property bool ready: vm !== null && (vm.lifecycle === "READY" || vm.lifecycle === "STALE")
@@ -74,9 +75,10 @@ GlassSurface {
                     interactive: false
                     surfaceRadius: Math.min(GlassTokens.cardRadius,
                                             GlassTokens.capsuleRadius(height))
-                    tintAlpha: 0.26
+                    tintAlpha: 0.30
                     edgeContrast: 0.48
-                    shadowOpacity: 0.08
+                    depthStrength: 1.18
+                    shadowOpacity: 0.14
                     accentTint: modelData.tint
                     accentStrength: 0.20
                     Column {

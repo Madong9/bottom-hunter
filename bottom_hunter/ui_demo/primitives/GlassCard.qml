@@ -6,11 +6,12 @@ GlassSurface {
     id: root
 
     property bool interactive: true
-    property real shadowOpacity: 0.08
+    property real shadowOpacity: 0.14
     surfaceRadius: Math.min(GlassTokens.cardRadius,
                             GlassTokens.capsuleRadius(height))
     edgeContrast: 0.48
-    tintAlpha: 0.26
+    depthStrength: 1.18
+    tintAlpha: 0.30
     reactive: interactive
 
     // Rectangle.clip is axis-aligned even when Rectangle.radius is set. A

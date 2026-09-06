@@ -15,6 +15,7 @@ GlassSurface {
     tint: "#EAF7FF"
     tintAlpha: 0.46
     edgeContrast: GlassTokens.structuralEdgeContrast
+    depthStrength: GlassTokens.structuralDepthStrength
     clip: true
 
     Column {

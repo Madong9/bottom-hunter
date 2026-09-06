@@ -203,6 +203,10 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "Pointer-driven reflection" in surface
     assert "Short lower caustic band" in surface
     assert "property real edgeContrast: 0.52" in surface
+    assert "property real depthStrength: 0.90" in surface
+    assert "0.28 * root.depthStrength" in surface
+    assert "0.20 * root.depthStrength" in surface
+    assert "0.075 * root.depthStrength" in surface
     assert "readonly property bool capsuleShape" in surface
     assert "visible: !root.capsuleShape" in surface
     assert "0.66 * root.edgeContrast" in surface
@@ -219,6 +223,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "readonly property real containerRadius: 28" in tokens
     assert "readonly property real compactContainerRadius: 22" in tokens
     assert "readonly property real structuralEdgeContrast: 0.18" in tokens
+    assert "readonly property real structuralDepthStrength: 0.32" in tokens
     assert "function capsuleRadius(height)" in tokens
     assert "function circleRadius(size)" in tokens
 
@@ -238,6 +243,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "background: GlassSurface" in nav_rail
     assert "surfaceRadius: GlassTokens.containerRadius" in nav_rail
     assert "edgeContrast: GlassTokens.structuralEdgeContrast" in nav_rail
+    assert "depthStrength: GlassTokens.structuralDepthStrength" in nav_rail
     assert "Qt.rgba(1, 1, 1, 0.70)" not in nav_rail
     assert "Qt.rgba(1, 1, 1, 0.82)" not in nav_rail
     assert "GlassTokens.capsuleRadius(height)" in nav_rail
@@ -267,6 +273,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         assert "tintAlpha: 0.42" in page
         assert "surfaceRadius: GlassTokens.pageRadius" in page
         assert "edgeContrast: GlassTokens.structuralEdgeContrast" in page
+        assert "depthStrength: GlassTokens.structuralDepthStrength" in page
 
 
 def test_product_shape_and_typography_roles_stay_semantic() -> None:
@@ -300,14 +307,17 @@ def test_product_shape_and_typography_roles_stay_semantic() -> None:
     assert "Math.min(GlassTokens.cardRadius" in glass_card
     assert "GlassTokens.capsuleRadius(height)" in glass_card
     assert "edgeContrast: 0.48" in glass_card
+    assert "depthStrength: 1.18" in glass_card
+    assert "property real shadowOpacity: 0.14" in glass_card
     assert "maskEnabled: true" in glass_card
     assert "maskSource: root.roundedMask" in glass_card
 
     overview = (PAGES_DIR / "overview" / "Overview.qml").read_text(encoding="utf-8")
     assert "Math.min(GlassTokens.cardRadius" in overview
-    assert "tintAlpha: 0.26" in overview
+    assert "tintAlpha: 0.30" in overview
     assert "edgeContrast: 0.48" in overview
-    assert "shadowOpacity: 0.08" in overview
+    assert "depthStrength: 1.18" in overview
+    assert "shadowOpacity: 0.14" in overview
     assert "accentStrength: 0.20" in overview
 
 

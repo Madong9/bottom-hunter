@@ -27,9 +27,12 @@ Rectangle {
         resolvedAppearanceKey, root.accentStrength)
     property string runtimeAppearanceKey: ""
     property real surfaceRadius: GlassTokens.containerRadius
-    // Scales only the optical boundary. Content cards can melt into their
-    // parent glass while page-level panes retain a stronger silhouette.
+    // Scales only the optical boundary. Large page panes can recede while
+    // compact lenses keep their own material depth.
     property real edgeContrast: 0.52
+    // Optical volume is deliberately independent from edge contrast. This
+    // keeps a thick, rounded lens without recreating ruler-straight borders.
+    property real depthStrength: 0.90
     property bool reactive: false
     readonly property bool capsuleShape: height > 0
         && surfaceRadius >= height / 2 - 0.5
@@ -65,15 +68,15 @@ Rectangle {
         }
     }
 
-    // Secondary internal contour makes the rounded edge read as a thick lens
-    // instead of a one-pixel outline painted on transparent plastic.
+    // Secondary internal contour belongs to the glass volume, rather than to
+    // the outer structural boundary.
     Rectangle {
         anchors.fill: parent
         anchors.margins: 2
         radius: Math.max(0, root.surfaceRadius - 2)
         color: "transparent"
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.24 * root.edgeContrast)
+        border.color: Qt.rgba(1, 1, 1, 0.13 * root.depthStrength)
     }
 
     // Pointer-driven reflection. This mirrors Liquid Glass's interactive
@@ -88,7 +91,9 @@ Rectangle {
         y: liquidHover.hovered
            ? liquidHover.point.position.y - height / 2
            : -height * 0.62
-        opacity: root.reactive ? (liquidHover.hovered ? 0.82 : 0.20) : 0.0
+        opacity: root.reactive
+                 ? (liquidHover.hovered ? 0.82 : 0.16 * root.depthStrength)
+                 : 0.12 * root.depthStrength
 
         Rectangle {
             anchors.fill: parent
@@ -115,8 +120,8 @@ Rectangle {
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Vertical
-            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.22 * root.edgeContrast) }
-            GradientStop { position: 0.22; color: Qt.rgba(1, 1, 1, 0.0) }
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.28 * root.depthStrength) }
+            GradientStop { position: 0.34; color: Qt.rgba(1, 1, 1, 0.0) }
             GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
         }
     }
@@ -204,22 +209,23 @@ Rectangle {
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0.0; color: Qt.rgba(0.72, 0.88, 1.0, 0.0) }
-            GradientStop { position: 0.82; color: Qt.rgba(0.72, 0.88, 1.0, 0.0) }
-            GradientStop { position: 1.0; color: Qt.rgba(0.72, 0.88, 1.0, 0.16) }
+            GradientStop { position: 0.72; color: Qt.rgba(0.72, 0.88, 1.0, 0.0) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.72, 0.88, 1.0, 0.20 * root.depthStrength) }
         }
     }
 
-    // Concentrated specular streak: short and directional, not a flat border.
+    // A broad lower density gradient supplies physical thickness without a
+    // horizontal edge. It remains inside the same rounded material silhouette.
     Rectangle {
-        x: root.surfaceRadius
-        y: 1
-        width: Math.max(0, root.width * 0.62 - root.surfaceRadius)
-        height: 1
-        radius: 1
+        anchors.fill: parent
+        radius: root.surfaceRadius
+        antialiasing: true
+        color: "transparent"
         gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.58 * root.edgeContrast) }
-            GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.02) }
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: Qt.rgba(0.12, 0.24, 0.32, 0.0) }
+            GradientStop { position: 0.70; color: Qt.rgba(0.12, 0.24, 0.32, 0.0) }
+            GradientStop { position: 1.0; color: Qt.rgba(0.12, 0.24, 0.32, 0.075 * root.depthStrength) }
         }
     }
 

@@ -9,6 +9,7 @@ GlassSurface {
     tintAlpha: 0.42
     surfaceRadius: GlassTokens.pageRadius
     edgeContrast: GlassTokens.structuralEdgeContrast
+    depthStrength: GlassTokens.structuralDepthStrength
 
     readonly property var vm: (typeof watchlistVm !== "undefined") ? watchlistVm : null
     readonly property bool hasData: vm !== null && vm.items.length > 0
