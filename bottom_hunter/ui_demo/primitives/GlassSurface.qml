@@ -27,6 +27,9 @@ Rectangle {
         resolvedAppearanceKey, root.accentStrength)
     property string runtimeAppearanceKey: ""
     property real surfaceRadius: GlassTokens.containerRadius
+    // Scales only the optical boundary. Content cards can melt into their
+    // parent glass while page-level panes retain a stronger silhouette.
+    property real edgeContrast: 1.0
     property bool reactive: false
     readonly property bool materialHovered: liquidHover.hovered
     readonly property real materialOffsetX: liquidHover.hovered && width > 0
@@ -38,7 +41,7 @@ Rectangle {
     clip: true
     color: Qt.rgba(tint.r, tint.g, tint.b, tintAlpha)
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.66)
+    border.color: Qt.rgba(1, 1, 1, 0.66 * root.edgeContrast)
 
     Component.onCompleted: runtimeAppearanceKey = GlassAppearance.keyFor(root)
 
@@ -66,7 +69,7 @@ Rectangle {
         radius: Math.max(0, root.surfaceRadius - 2)
         color: "transparent"
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.24)
+        border.color: Qt.rgba(1, 1, 1, 0.24 * root.edgeContrast)
     }
 
     // Pointer-driven reflection. This mirrors Liquid Glass's interactive
@@ -119,13 +122,17 @@ Rectangle {
         anchors { top: parent.top; left: parent.left; bottom: parent.bottom }
         anchors.margins: 2
         width: 1
-        color: Qt.rgba(0.30, 0.82, 1.0, root.reactive && root.materialHovered ? 0.34 : 0.17)
+        color: Qt.rgba(0.30, 0.82, 1.0,
+                       (root.reactive && root.materialHovered ? 0.34 : 0.17)
+                       * root.edgeContrast)
     }
     Rectangle {
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
         anchors.margins: 3
         width: 1
-        color: Qt.rgba(0.82, 0.46, 1.0, root.reactive && root.materialHovered ? 0.24 : 0.11)
+        color: Qt.rgba(0.82, 0.46, 1.0,
+                       (root.reactive && root.materialHovered ? 0.24 : 0.11)
+                       * root.edgeContrast)
     }
 
     // Edit-mode selection ring is presentation-only and sits above the glass
@@ -197,7 +204,7 @@ Rectangle {
         radius: 1
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.92) }
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.92 * root.edgeContrast) }
             GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.02) }
         }
     }
@@ -207,19 +214,19 @@ Rectangle {
         anchors { top: parent.top; left: parent.left; bottom: parent.bottom }
         anchors.margins: 1
         width: 2
-        color: Qt.rgba(1, 1, 1, 0.44)
+        color: Qt.rgba(1, 1, 1, 0.44 * root.edgeContrast)
     }
     Rectangle {
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         anchors.margins: 1
         height: 3
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.17)
+        color: Qt.rgba(0.18, 0.34, 0.46, 0.17 * root.edgeContrast)
     }
     Rectangle {
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
         anchors.margins: 1
         width: 3
-        color: Qt.rgba(0.18, 0.34, 0.46, 0.13)
+        color: Qt.rgba(0.18, 0.34, 0.46, 0.13 * root.edgeContrast)
     }
 
     HoverHandler {

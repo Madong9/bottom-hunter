@@ -204,7 +204,8 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "property real tintAlpha: 0.30" in surface
     assert "Pointer-driven reflection" in surface
     assert "Short lower caustic band" in surface
-    assert "border.color: Qt.rgba(1, 1, 1, 0.66)" in surface
+    assert "property real edgeContrast: 1.0" in surface
+    assert "0.66 * root.edgeContrast" in surface
     assert 'property color accentTint: "transparent"' in surface
     assert "property real accentStrength: 0.0" in surface
     assert "GlassAppearance.strengthFor" in surface
@@ -218,6 +219,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         encoding="utf-8"
     )
     assert "readonly property real pageRadius: 32" in tokens
+    assert "readonly property real cardRadius: 30" in tokens
     assert "readonly property real containerRadius: 28" in tokens
     assert "readonly property real compactContainerRadius: 22" in tokens
     assert "function capsuleRadius(height)" in tokens
@@ -297,6 +299,20 @@ def test_product_shape_and_typography_roles_stay_semantic() -> None:
         PAGES_DIR.parent / "components" / "StatusBadge.qml"
     ).read_text(encoding="utf-8")
     assert "GlassTokens.capsuleRadius(height)" in status_badge
+    assert "border.width: 0" in status_badge
+
+    glass_card = (PAGES_DIR.parent / "primitives" / "GlassCard.qml").read_text(
+        encoding="utf-8"
+    )
+    assert "surfaceRadius: GlassTokens.cardRadius" in glass_card
+    assert "edgeContrast: 0.48" in glass_card
+
+    overview = (PAGES_DIR / "overview" / "Overview.qml").read_text(encoding="utf-8")
+    assert "surfaceRadius: GlassTokens.cardRadius" in overview
+    assert "tintAlpha: 0.26" in overview
+    assert "edgeContrast: 0.48" in overview
+    assert "shadowOpacity: 0.16" in overview
+    assert "accentStrength: 0.20" in overview
 
 
 def test_glass_surface_supports_independent_color_and_depth(monkeypatch) -> None:

@@ -6,8 +6,10 @@ GlassSurface {
     id: root
 
     property bool interactive: true
-    property real shadowOpacity: 0.24
-    surfaceRadius: GlassTokens.containerRadius
+    property real shadowOpacity: 0.16
+    surfaceRadius: GlassTokens.cardRadius
+    edgeContrast: 0.48
+    tintAlpha: 0.26
     reactive: interactive
 
     layer.enabled: true

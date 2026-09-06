@@ -18,11 +18,11 @@ Rectangle {
     readonly property var _colors: toneColors(tone)
 
     radius: Primitives.GlassTokens.capsuleRadius(height)
-    implicitHeight: 24
-    implicitWidth: badgeText.implicitWidth + 20
+    implicitHeight: 22
+    implicitWidth: badgeText.implicitWidth + 16
     color: Qt.rgba(_colors.fill.r, _colors.fill.g, _colors.fill.b, _colors.bg)
-    border.width: 1
-    border.color: Qt.rgba(_colors.fill.r, _colors.fill.g, _colors.fill.b, 0.28)
+    // A status wash, not a second outlined container inside the parent glass.
+    border.width: 0
 
     Primitives.GlassText {
         id: badgeText

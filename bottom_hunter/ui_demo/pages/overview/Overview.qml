@@ -71,8 +71,12 @@ GlassSurface {
                     width: (root.width - 64) / 3
                     height: 132
                     interactive: false
+                    surfaceRadius: GlassTokens.cardRadius
+                    tintAlpha: 0.26
+                    edgeContrast: 0.48
+                    shadowOpacity: 0.16
                     accentTint: modelData.tint
-                    accentStrength: 0.22
+                    accentStrength: 0.20
                     Column {
                         anchors.fill: parent
                         anchors.margins: 16
