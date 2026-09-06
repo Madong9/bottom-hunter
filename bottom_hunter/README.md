@@ -159,6 +159,8 @@ python -m bottom_hunter.ui_demo.pages.application_shell_launcher
 
 该入口通过 `build_production_flow()` 统一注入总览、自选、研究、报告、导入、状态和 K 线七个路由的 ViewModel。导入页已接入异步事务链；K 线页通过只读 Adapter 复用现有行情服务，支持后台加载、定时刷新、周期切换、MA/BOLL/MACD/RSI/KDJ、Ctrl+滚轮缩放和会话内画线。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
 
+产品外壳的雨滴会按尺寸以不同速度沿玻璃缓慢下滑，大滴带有克制的透明水痕；窗口失焦或隐藏时动画自动暂停。左侧导航底部的调色按钮可在 `60%–180%` 范围实时调节淡玫瑰、天蓝、薄荷、暖金和蓝紫等局部色洗浓度，默认值为 `125%`，调节只在当前运行会话内生效。
+
 ### 真实桌面模糊
 
 QML 产品外壳会向桌面合成器请求整窗口背景模糊。模糊对象是窗口后方正在变化的桌面和其他应用，不是应用内置图片；桌面像素始终留在合成器中，Bottom Hunter 不截屏、不读取、不保存桌面内容。应用自身仍负责液态高光、边缘色散、材质 tint 和雨滴折射，因此文字与图标不会被背景模糊层一起模糊。

@@ -151,4 +151,150 @@ Rectangle {
             }
         }
     }
+
+    Item {
+        id: appearanceButton
+        objectName: "appearanceControlButton"
+        width: 52
+        height: 46
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 12
+        scale: appearanceTap.pressed ? 0.94 : appearanceHover.hovered ? 1.04 : 1.0
+
+        Rectangle {
+            anchors.fill: parent
+            radius: height / 2
+            color: appearancePopup.opened
+                   ? Qt.rgba(0.36, 0.48, 0.94, 0.13)
+                   : appearanceHover.hovered ? Qt.rgba(1, 1, 1, 0.24) : "transparent"
+            border.width: appearancePopup.opened ? 1 : 0
+            border.color: Qt.rgba(0.36, 0.48, 0.94, 0.30)
+        }
+
+        NavSymbol {
+            anchors.centerIn: parent
+            width: 21
+            height: 21
+            symbol: "palette"
+            strokeWidth: appearancePopup.opened ? 2.2 : 1.85
+            strokeColor: appearancePopup.opened ? "#5368C8" : "#465D70"
+        }
+
+        HoverHandler { id: appearanceHover }
+        TapHandler {
+            id: appearanceTap
+            onTapped: appearancePopup.opened ? appearancePopup.close() : appearancePopup.open()
+        }
+
+        Behavior on scale {
+            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+        }
+
+        ToolTip {
+            visible: appearanceHover.hovered && !appearancePopup.opened
+            popupType: Popup.Item
+            delay: 500
+            x: parent.width + 10
+            y: (parent.height - implicitHeight) / 2
+            padding: 10
+            contentItem: GlassText { text: "玻璃色彩"; tone: "primary"; sizeHint: 13 }
+            background: GlassSurface {
+                implicitWidth: 82
+                implicitHeight: 38
+                tint: "#F2F5FF"
+                tintAlpha: 0.74
+                accentTint: "#DCD9FF"
+                accentStrength: 0.22
+                surfaceRadius: 19
+            }
+        }
+
+        Popup {
+            id: appearancePopup
+            objectName: "appearanceControlPopup"
+            popupType: Popup.Item
+            x: parent.width + 12
+            y: parent.height - height
+            width: 264
+            height: 142
+            padding: 0
+            modal: false
+            focus: true
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            background: Item { }
+
+            contentItem: GlassSurface {
+                surfaceRadius: 28
+                tint: "#F4F8FF"
+                tintAlpha: 0.86
+                accentTint: "#E0D9FF"
+                accentStrength: 0.26
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 18
+                    spacing: 10
+
+                    Row {
+                        width: parent.width
+                        height: 24
+                        GlassText { text: "局部色洗浓度"; tone: "primary"; sizeHint: 14 }
+                        Item { width: parent.width - 126; height: 1 }
+                        GlassText {
+                            text: Math.round(toneSlider.value * 100) + "%"
+                            tone: "secondary"
+                            sizeHint: 13
+                        }
+                    }
+
+                    Slider {
+                        id: toneSlider
+                        width: parent.width
+                        height: 32
+                        from: 0.60
+                        to: 1.80
+                        stepSize: 0.05
+                        value: GlassAppearance.accentIntensity
+                        onMoved: GlassAppearance.accentIntensity = value
+
+                        background: Rectangle {
+                            x: toneSlider.leftPadding
+                            y: toneSlider.topPadding + toneSlider.availableHeight / 2 - height / 2
+                            width: toneSlider.availableWidth
+                            height: 7
+                            radius: height / 2
+                            color: Qt.rgba(0.35, 0.46, 0.58, 0.16)
+                            gradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.00; color: "#F2DCE6" }
+                                GradientStop { position: 0.25; color: "#BFDFFF" }
+                                GradientStop { position: 0.50; color: "#BDEBD9" }
+                                GradientStop { position: 0.75; color: "#F3D5A4" }
+                                GradientStop { position: 1.00; color: "#C9C5FF" }
+                            }
+                        }
+                        handle: Rectangle {
+                            x: toneSlider.leftPadding + toneSlider.visualPosition
+                               * (toneSlider.availableWidth - width)
+                            y: toneSlider.topPadding + toneSlider.availableHeight / 2 - height / 2
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: "#F8FCFF"
+                            border.width: 2
+                            border.color: "#7184D5"
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        GlassText { text: "柔和"; tone: "muted"; sizeHint: 11 }
+                        Item { width: parent.width - 48; height: 1 }
+                        GlassText { text: "浓郁"; tone: "muted"; sizeHint: 11 }
+                    }
+                }
+            }
+        }
+    }
 }

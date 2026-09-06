@@ -1,13 +1,12 @@
 #version 440
 
 // CrystalGlassMaterialLab — layer 3: static, realistic small rain droplets.
-// StaticRainUI — OVERVIEW SHELL VARIANT of the FROZEN material_lab
-// StaticRain.frag. Droplet optics below are byte-identical to the accepted
-// shader (do NOT tune count/size/clustering/lens/glint here); the ONLY
-// addition is the importance/exclusion mask (u_mask): a low-resolution
-// texture whose R channel multiplies droplet presence, protecting critical
-// UI content (titles, values, buttons) with low rain density while card
-// margins / panel edges / empty areas keep normal density.
+// StaticRainUI — product variant of the accepted material_lab StaticRain.frag.
+// Count, size, clustering and lens constants stay calibrated. Product-only
+// additions are deterministic gravity motion, faint water tracks and the
+// importance/exclusion mask (u_mask): a low-resolution texture whose R channel
+// multiplies droplet presence, protecting critical UI content while card
+// margins, panel edges and empty areas keep normal density.
 //
 // Droplets are screen-space water lenses stuck to the glass surface — NOT
 // spheres / orbs / bubbles, NOT translucent alpha circles. Visual hierarchy:
@@ -40,9 +39,10 @@
 //   micro ~431, small ~100, medium ~22, large ~3, total ~556 (target 500-600,
 //   hard cap 800). Do NOT raise them — they were chosen to stay inside quota.
 //
-// Fully static stage: hash field is time-stable, no slide / trail /
-// per-frame regeneration. (Gravity stretch / teardrop asymmetry are static
-// silhouette features, not animation.)
+// Product motion stage: the deterministic hash field moves downward without
+// per-frame regeneration, so droplets never flicker. Each size layer has a
+// restrained fall speed; small/medium/large droplets leave a faint water
+// track above them while the existing optics and density remain unchanged.
 //
 // u_debug = 1 draws every candidate droplet (full-density field) as a
 // colour-coded bounding ring + centre dot over the dimmed scene:
@@ -60,7 +60,7 @@
 //   u_quality   — 1.0 high / 0.75 balanced
 //   u_density   — 0..1 global density
 //   u_debug     — 0 normal / 1 bounding circles
-//   u_time      — reserved (fixed; static stage)
+//   u_time      — accumulated active render time in seconds
 
 layout(binding = 1) uniform sampler2D source;
 layout(binding = 2) uniform sampler2D u_mask;
@@ -106,6 +106,9 @@ const float DENS[4]  = float[4](0.0581, 0.0866, 0.1341, 0.1356);
 // large = strongest (total displacement clamped later; no fisheye).
 const float LENS_PX[4] = float[4](0.9, 2.2, 5.0, 8.0);
 const float GLINT_A[4] = float[4](0.85, 0.60, 0.50, 0.45);
+// Larger droplets overcome surface tension more readily and therefore slide
+// faster. Values are pixels/second and deliberately remain slow.
+const float FALL_SPEED[4] = float[4](0.65, 1.55, 3.60, 6.80);
 
 vec3 layerDebugColor(int layer) {
     if (layer == 0) return vec3(0.25, 0.95, 0.45);
@@ -170,7 +173,9 @@ void main() {
         float cell = GRID[layer];
         float layerDens = density * DENS[layer];
         vec2 cellPx = vec2(cell);
-        vec2 cellIdx = floor(fragPx / cellPx);
+        float fallPx = u_time * FALL_SPEED[layer];
+        vec2 fieldPx = fragPx - vec2(0.0, fallPx);
+        vec2 cellIdx = floor(fieldPx / cellPx);
 
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dx = -1; dx <= 1; ++dx) {
@@ -179,11 +184,14 @@ void main() {
                 if (h > layerDens) continue; // fast reject (mask <= 1)
 
                 vec2 rnd = hash21(h * 913.7 + float(layer) * 57.31);
-                vec2 centre = cellPx * (idx + vec2(0.5) + (rnd - 0.5) * 0.5);
+                vec2 fieldCentre = cellPx * (idx + vec2(0.5) + (rnd - 0.5) * 0.5);
 
                 // diameter in px (quota enforced; always < 30 absolute cap)
                 float diameter = mix(D_MIN[layer], D_MAX[layer], hash11(h * 53.1));
                 float radius = diameter * 0.5;
+                float sway = sin(u_time * (0.13 + float(layer) * 0.025)
+                               + h * 6.2831) * min(1.2, radius * 0.08);
+                vec2 centre = fieldCentre + vec2(sway, fallPx);
 
                 // presence: hash gate x low-frequency wet/dry clustering
                 // (dry regions / sparse regions / small clusters — synced
@@ -203,7 +211,7 @@ void main() {
                 maskF = min(maskF, texture(u_mask, mPx + vec2(-mOff.x, 0.0)).r);
                 maskF = min(maskF, texture(u_mask, mPx + vec2(0.0,  mOff.y)).r);
                 maskF = min(maskF, texture(u_mask, mPx + vec2(0.0, -mOff.y)).r);
-                if (h > layerDens * clusterMask(centre) * maskF) continue;
+                if (h > layerDens * clusterMask(fieldCentre) * maskF) continue;
 
                 // slight shape variation: per-droplet aspect (height/width)
                 // + very restrained boundary wobble (no metaball/blob look)
@@ -242,6 +250,31 @@ void main() {
 
                 // lens influence ~ physical footprint
                 float rad = dist / rEff;
+                // A narrow, fading film remains above moving droplets. It is
+                // sampled against the per-pixel protection mask so labels and
+                // financial values remain clean even when a drop passes by.
+                float trail = 0.0;
+                if (layer >= 1) {
+                    float trailSeed = hash11(h * 281.7 + float(layer) * 31.9);
+                    float trailLength = radius * mix(1.25, layer >= 2 ? 3.20 : 2.10,
+                                                     trailSeed);
+                    float above = centre.y - fragPx.y;
+                    float trailCore = 1.0 - smoothstep(radius * 0.14,
+                                                       radius * 0.42,
+                                                       abs(delta.x));
+                    float trailHead = smoothstep(radius * 0.62, radius * 0.92, above);
+                    float trailTail = 1.0 - smoothstep(trailLength * 0.72,
+                                                       trailLength, above);
+                    float trailWeight = layer == 1 ? 0.18 : (layer == 2 ? 0.40 : 0.58);
+                    trail = trailCore * trailHead * trailTail * trailWeight
+                          * texture(u_mask, baseUv).r;
+                }
+                if (trail > 0.001) {
+                    float meander = sin(fragPx.y * 0.075 + h * 9.0) * 0.22;
+                    refractOffset += vec2(meander, -0.08) * trail * LENS_PX[layer];
+                    highlight += trail * 0.10;
+                    innerLift += trail * 0.18;
+                }
                 if (rad >= 1.15) continue;
                 vec2 dir = (dist > 0.001) ? delta / dist : vec2(0.0, 1.0);
 

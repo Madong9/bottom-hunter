@@ -70,6 +70,12 @@ Canvas {
         } else if (symbol === "status") {
             ctx.beginPath(); ctx.arc(12, 12, 8.5, 0, Math.PI * 2); ctx.stroke()
             line(ctx, [[7, 12.5], [10, 12.5], [11.5, 8.5], [14, 16], [15.5, 12.5], [18, 12.5]])
+        } else if (symbol === "palette") {
+            ctx.beginPath(); ctx.arc(12, 12, 8.2, 0, Math.PI * 2); ctx.stroke()
+            ctx.beginPath(); ctx.arc(9, 9, 1.1, 0, Math.PI * 2); ctx.fill()
+            ctx.beginPath(); ctx.arc(14.5, 8.5, 1.1, 0, Math.PI * 2); ctx.fill()
+            ctx.beginPath(); ctx.arc(8.5, 14, 1.1, 0, Math.PI * 2); ctx.fill()
+            ctx.beginPath(); ctx.arc(15, 14.5, 2.0, 0, Math.PI * 2); ctx.stroke()
         } else {
             line(ctx, [[4, 19.5], [4, 5]])
             line(ctx, [[4, 19.5], [20, 19.5]])

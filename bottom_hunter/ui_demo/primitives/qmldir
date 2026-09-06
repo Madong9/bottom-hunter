@@ -1,4 +1,5 @@
 module bottom_hunter.ui_demo.primitives
+singleton GlassAppearance 1.0 GlassAppearance.qml
 GlassSurface 1.0 GlassSurface.qml
 GlassCard 1.0 GlassCard.qml
 GlassButton 1.0 GlassButton.qml

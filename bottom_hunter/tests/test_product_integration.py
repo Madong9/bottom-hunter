@@ -206,6 +206,11 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "border.color: Qt.rgba(1, 1, 1, 0.66)" in surface
     assert 'property color accentTint: "transparent"' in surface
     assert "property real accentStrength: 0.0" in surface
+    assert "GlassAppearance.accentIntensity" in surface
+    appearance = (PAGES_DIR.parent / "primitives" / "GlassAppearance.qml").read_text(
+        encoding="utf-8"
+    )
+    assert "property real accentIntensity: 1.25" in appearance
     assert "property real surfaceRadius: 28" in surface
 
     nav_symbol = PAGES_DIR.parent / "components" / "NavSymbol.qml"
@@ -219,6 +224,8 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "popupType: Popup.Item" in nav_rail
     assert "background: GlassSurface" in nav_rail
     assert "surfaceRadius: 19" in nav_rail
+    assert 'text: "局部色洗浓度"' in nav_rail
+    assert "GlassAppearance.accentIntensity = value" in nav_rail
     assert "radius: 32" in nav_rail
     assert "clip: true" in nav_rail
 

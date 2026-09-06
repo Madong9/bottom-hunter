@@ -1,11 +1,11 @@
 // RainGlassSurface — the LAST physical glass surface over the composited UI
 // (overview shell v2 architecture).
 //
-// Accepted pipeline (frozen MaterialLab rain material):
+// Product pipeline (accepted MaterialLab lens optics + gravity motion):
 //   sceneContent (transparent window + glass panels + chrome/content)
 //   ↓ captured ONCE by srcCapture (ShaderEffectSource, hideSource = true)
 //   ↓ [optional ClearGlass pane when includeGlassPane = true]
-//   ↓ rainEffect = StaticRainUI (frozen droplet optics + importance mask)
+//   ↓ rainEffect = StaticRainUI (droplet optics + motion + importance mask)
 //   ↓ viewer
 //
 // The rain layer is physically last: droplets refract card borders, nav
@@ -39,6 +39,9 @@ Item {
     property real u_quality: 1.0
     // 1 = full-field diameter/count proof rings (lab diagnostic)
     property real u_debug: 0.0
+    // Accumulated render time. FrameAnimation clamps long frames so restoring
+    // a minimized window never makes droplets visibly jump.
+    property real animationTime: 0.0
 
     // read-only introspection for the launcher (texture size proofs)
     readonly property vector2d captureTextureSize: Qt.vector2d(
@@ -50,6 +53,12 @@ Item {
 
     // true low-resolution importance mask: 1/4 linear dimensions (STEP 4)
     readonly property real maskScale: 0.25
+
+    FrameAnimation {
+        running: root.rainEnabled && root.visible
+                 && (root.Window.window === null || root.Window.window.active)
+        onTriggered: root.animationTime += Math.min(frameTime, 0.05)
+    }
 
     // internal fallback mask: all-normal density (used when maskSource null);
     // parked off-window (visible so the capture is never empty)
@@ -123,7 +132,7 @@ Item {
         property real u_quality: root.u_quality
         property real u_density: root.u_density
         property real u_debug: root.u_debug
-        property real u_time: 0.0
+        property real u_time: root.animationTime
 
         fragmentShader: "effects/StaticRainUI.qsb"
     }

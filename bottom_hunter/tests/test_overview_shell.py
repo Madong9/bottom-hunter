@@ -84,8 +84,18 @@ def test_overview_shell_qml_load_smoke(monkeypatch) -> None:
 
 @pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
 def test_rain_glass_surface_load_smoke(monkeypatch) -> None:
-    for _ in _load_root(monkeypatch, "RainGlassSurface.qml"):
-        pass  # surface item loads without errors
+    for root in _load_root(monkeypatch, "RainGlassSurface.qml"):
+        assert float(root.property("animationTime")) >= 0.0
+
+
+def test_product_rain_has_gravity_motion_and_trails() -> None:
+    surface = (SHELL_DIR / "RainGlassSurface.qml").read_text(encoding="utf-8")
+    shader = (SHELL_DIR / "effects" / "StaticRainUI.frag").read_text(encoding="utf-8")
+    assert "FrameAnimation {" in surface
+    assert "u_time: root.animationTime" in surface
+    assert "FALL_SPEED[4]" in shader
+    assert "float trail = 0.0" in shader
+    assert "texture(u_mask, baseUv).r" in shader
 
 
 # ---- 4/5/7/8/9. viewports + dynamic zones + texture sizes -------------------

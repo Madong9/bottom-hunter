@@ -13,6 +13,8 @@ Rectangle {
     property color tint: "#EEF7FD"
     property color accentTint: "transparent"
     property real accentStrength: 0.0
+    readonly property real effectiveAccentStrength: Math.min(
+        0.58, root.accentStrength * GlassAppearance.accentIntensity)
     property real surfaceRadius: 28
     property bool reactive: false
     readonly property bool materialHovered: liquidHover.hovered
@@ -31,15 +33,15 @@ Rectangle {
     // identity while leaving most of the material optically neutral.  Content
     // supplied by derived components is rendered above this layer.
     Rectangle {
-        visible: root.accentStrength > 0.001
+        visible: root.effectiveAccentStrength > 0.001
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
         width: Math.max(root.surfaceRadius * 2, parent.width * 0.62)
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0.0; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, 0.0) }
-            GradientStop { position: 0.62; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, root.accentStrength * 0.42) }
-            GradientStop { position: 1.0; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, root.accentStrength) }
+            GradientStop { position: 0.62; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, root.effectiveAccentStrength * 0.42) }
+            GradientStop { position: 1.0; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, root.effectiveAccentStrength) }
         }
     }
 
