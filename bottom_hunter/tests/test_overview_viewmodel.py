@@ -8,13 +8,14 @@ preserved), QML lifecycle binding, and the business-isolation rule.
 from __future__ import annotations
 
 import re
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
 
 QML_AVAILABLE = True
 try:
-    from PySide6.QtCore import QCoreApplication, QUrl
+    from PySide6.QtCore import QUrl
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtQml import QQmlApplicationEngine
 except ImportError:  # pragma: no cover - PySide6 always present in this venv
@@ -98,7 +99,7 @@ def test_overview_dto_is_frozen() -> None:
     from bottom_hunter.ui_demo.overview_shell.contracts import OverviewDTO
 
     dto = OverviewDTO()
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         dto.opportunity.count = "99"  # type: ignore[misc]
 
 

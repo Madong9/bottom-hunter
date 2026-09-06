@@ -75,7 +75,7 @@ def test_static_rain_diameter_quota() -> None:
     assert dmin == [1.5, 4.0, 8.0, 15.0], f"unexpected D_MIN {dmin}"
     assert dmax == [4.0, 8.0, 15.0, 25.0], f"unexpected D_MAX {dmax}"
     assert max(dmax) <= 30.0, "absolute diameter cap (30px) exceeded"
-    for lo, hi in zip(dmin, dmax):
+    for lo, hi in zip(dmin, dmax, strict=True):
         assert lo < hi, "diameter range invalid"
 
 
@@ -104,8 +104,8 @@ def test_qml_loads_smoke(monkeypatch) -> None:
 def test_launcher_cli() -> None:
     from bottom_hunter.ui_demo.material_lab.material_lab_launcher import (
         HEIGHT,
-        WIDTH,
         MODES,
+        WIDTH,
         _select_modes,
         parse_args,
     )
@@ -133,8 +133,6 @@ def test_launcher_cli() -> None:
         ("rain", "clear_glass_with_static_rain.png"),
         ("calibration", "refraction_calibration.png"),
     ]
-    import pytest
-
     with pytest.raises(SystemExit):
         _select_modes("bogus")
     args = parse_args(["--out", "/tmp/x", "--debug-droplets", "--software"])
