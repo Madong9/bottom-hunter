@@ -5,7 +5,7 @@ GlassSurface {
     id: root
     objectName: "researchPage"
     tintAlpha: 0.42
-    surfaceRadius: 32
+    surfaceRadius: GlassTokens.pageRadius
 
     readonly property var vm: (typeof researchVm !== "undefined") ? researchVm : null
     readonly property bool hasData: vm !== null && (vm.assetCount > 0 || vm.macroCount > 0)
@@ -121,7 +121,7 @@ GlassSurface {
                             width: assetList.width
                             height: 86
                             tintAlpha: 0.025
-                            surfaceRadius: 18
+                            surfaceRadius: GlassTokens.compactContainerRadius
                             accentTint: "#DFE7FF"
                             accentStrength: 0.10
 
@@ -186,7 +186,7 @@ GlassSurface {
                             width: macroList.width
                             height: 66
                             tintAlpha: 0.025
-                            surfaceRadius: 18
+                            surfaceRadius: GlassTokens.compactContainerRadius
                             accentTint: modelData.signal > 0 ? "#CDEFE0"
                                         : (modelData.signal < 0 ? "#FFE0D6" : "#DDEBFA")
                             accentStrength: 0.10

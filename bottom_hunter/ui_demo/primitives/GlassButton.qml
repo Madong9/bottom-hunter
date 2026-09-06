@@ -15,7 +15,7 @@ Rectangle {
     property bool active: false
     property color activeTint: Qt.rgba(0.169, 0.835, 0.463, 0.09)
 
-    radius: 18
+    radius: GlassTokens.capsuleRadius(height)
     color: active ? activeTint
                   : hover.hovered ? Qt.rgba(1, 1, 1, 0.22)
                                   : Qt.rgba(1, 1, 1, 0.07)
@@ -47,12 +47,11 @@ Rectangle {
         color: Qt.rgba(0.82, 0.46, 1.0, hover.hovered ? 0.25 : 0.09)
     }
 
-    Text {
+    GlassText {
         anchors.centerIn: parent
         text: root.glyph !== "" ? root.glyph : root.label
         color: root.active ? "#128653" : (hover.hovered ? "#152330" : "#465D70")
-        font.pixelSize: root.glyph !== "" ? 19 : 13
-        font.family: "Noto Sans CJK SC"
+        sizeHint: root.glyph !== "" ? 19 : 13
         font.weight: Font.DemiBold
     }
 

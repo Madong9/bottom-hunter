@@ -6,6 +6,7 @@
 import QtQuick
 import "../components"
 import "../overview_shell"
+import "../primitives"
 
 Item {
     id: root
@@ -126,19 +127,19 @@ Item {
                 visible: !root.currentPageLoaded
                 anchors.centerIn: parent
                 spacing: 8
-                Text {
+                GlassText {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: root.pageTitles[root.currentIndex]
-                    color: "#152330"
-                    font.pixelSize: 23
+                    tone: "primary"
+                    sizeHint: 23
                     font.weight: Font.Bold
                     font.family: "Noto Sans CJK SC"
                 }
-                Text {
+                GlassText {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "页面正在加载，如持续显示请检查 ViewModel 注入。"
-                    color: "#61778B"
-                    font.pixelSize: 13
+                    tone: "muted"
+                    sizeHint: 13
                     font.family: "Noto Sans CJK SC"
                 }
             }

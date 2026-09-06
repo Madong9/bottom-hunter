@@ -26,7 +26,7 @@ Rectangle {
     readonly property real effectiveAccentStrength: GlassAppearance.strengthFor(
         resolvedAppearanceKey, root.accentStrength)
     property string runtimeAppearanceKey: ""
-    property real surfaceRadius: 28
+    property real surfaceRadius: GlassTokens.containerRadius
     property bool reactive: false
     readonly property bool materialHovered: liquidHover.hovered
     readonly property real materialOffsetX: liquidHover.hovered && width > 0

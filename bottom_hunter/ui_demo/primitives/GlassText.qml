@@ -13,17 +13,21 @@ Text {
     property int sizeHint: 14
 
     readonly property var _tones: ({
-        "primary": "#152330",
-        "secondary": "#34495C",
-        "muted": "#61778B",
+        "primary": GlassTokens.textPrimary,
+        "secondary": GlassTokens.textSecondary,
+        "muted": GlassTokens.textMuted,
     })
 
     property color toneColor: _tones[tone] !== undefined ? _tones[tone] : _tones.secondary
 
     color: root.toneColor
+    opacity: 1.0
     font.pixelSize: root.sizeHint
     font.family: "Noto Sans CJK SC"
-    font.weight: root.sizeHint >= 20 ? Font.DemiBold : Font.Medium
+    font.weight: root.tone === "primary" || root.sizeHint >= 20
+                 ? Font.DemiBold : Font.Medium
     font.letterSpacing: root.sizeHint >= 20 ? -0.25 : 0.0
     font.hintingPreference: Font.PreferFullHinting
+    style: Text.Raised
+    styleColor: GlassTokens.textHighlight
 }

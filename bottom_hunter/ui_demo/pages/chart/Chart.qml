@@ -6,7 +6,7 @@ GlassSurface {
     id: root
     objectName: "chartPage"
     tintAlpha: 0.42
-    surfaceRadius: 32
+    surfaceRadius: GlassTokens.pageRadius
 
     readonly property var vm: (typeof chartVm !== "undefined") ? chartVm : null
     property string overlayIndicator: "MA"
@@ -43,23 +43,23 @@ GlassSurface {
         leftPadding: 13
         rightPadding: 30
 
-        contentItem: Text {
+        contentItem: GlassText {
             text: combo.displayText
-            color: "#152330"
-            font: combo.font
+            tone: "primary"
+            sizeHint: 13
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
-        indicator: Text {
+        indicator: GlassText {
             x: combo.width - width - 11
             anchors.verticalCenter: parent.verticalCenter
             text: "⌄"
-            color: "#465D70"
-            font.pixelSize: 15
+            color: GlassTokens.textSecondary
+            sizeHint: 15
             font.weight: Font.DemiBold
         }
         background: GlassSurface {
-            surfaceRadius: 18
+            surfaceRadius: GlassTokens.capsuleRadius(height)
             tintAlpha: combo.hovered ? 0.40 : 0.28
             accentTint: "#CEE4FF"
             accentStrength: combo.activeFocus ? 0.22 : 0.10
@@ -70,7 +70,7 @@ GlassSurface {
             implicitHeight: Math.min(contentItem.implicitHeight + 10, 330)
             padding: 5
             background: GlassSurface {
-                surfaceRadius: 20
+                surfaceRadius: GlassTokens.containerRadius
                 tint: "#ECF7FF"
                 tintAlpha: 0.72
                 accentTint: "#D8E4FF"
@@ -88,16 +88,15 @@ GlassSurface {
             width: combo.width - 10
             height: 38
             highlighted: combo.highlightedIndex === index
-            contentItem: Text {
+            contentItem: GlassText {
                 text: combo.textRole ? model[combo.textRole] : modelData
-                color: "#152330"
-                font.family: "Noto Sans CJK SC"
-                font.pixelSize: 13
+                tone: "primary"
+                sizeHint: 13
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight
             }
             background: Rectangle {
-                radius: 14
+                radius: GlassTokens.capsuleRadius(height)
                 color: parent.highlighted ? Qt.rgba(0.10, 0.58, 0.38, 0.14) : "transparent"
             }
         }
@@ -169,7 +168,7 @@ GlassSurface {
                         height: 38
                         reactive: true
                         tintAlpha: root.vm !== null && root.vm.timeframe === modelData.key ? 0.18 : 0.06
-                        surfaceRadius: 18
+                        surfaceRadius: GlassTokens.capsuleRadius(height)
                         accentTint: root.vm !== null && root.vm.timeframe === modelData.key ? "#CDEFE2" : "transparent"
                         accentStrength: root.vm !== null && root.vm.timeframe === modelData.key ? 0.18 : 0.0
                         GlassText {
@@ -195,7 +194,7 @@ GlassSurface {
                     height: 38
                     reactive: true
                     tintAlpha: 0.10
-                    surfaceRadius: 18
+                    surfaceRadius: GlassTokens.capsuleRadius(height)
                     accentTint: "#D0E5FF"
                     accentStrength: 0.16
                     GlassText { anchors.centerIn: parent; text: "刷新"; tone: "primary"; sizeHint: 12 }
@@ -248,7 +247,7 @@ GlassSurface {
                         height: 36
                         reactive: true
                         tintAlpha: root.drawingMode === modelData.mode ? 0.17 : 0.055
-                        surfaceRadius: 18
+                        surfaceRadius: GlassTokens.capsuleRadius(height)
                         accentTint: root.drawingMode === modelData.mode ? "#E1D4FF" : "transparent"
                         accentStrength: root.drawingMode === modelData.mode ? 0.20 : 0.0
                         GlassText { anchors.centerIn: parent; text: modelData.label; tone: "primary"; sizeHint: 12 }
@@ -265,7 +264,7 @@ GlassSurface {
 
                 GlassSurface {
                     width: 62; height: 36; reactive: root.annotations.length > 0
-                    tintAlpha: 0.05; surfaceRadius: 18
+                    tintAlpha: 0.05; surfaceRadius: GlassTokens.capsuleRadius(height)
                     GlassText { anchors.centerIn: parent; text: "撤销"; tone: "secondary"; sizeHint: 12 }
                     MouseArea {
                         anchors.fill: parent; enabled: root.annotations.length > 0
@@ -278,7 +277,7 @@ GlassSurface {
                 }
                 GlassSurface {
                     width: 72; height: 36; reactive: root.annotations.length > 0
-                    tintAlpha: 0.05; surfaceRadius: 18
+                    tintAlpha: 0.05; surfaceRadius: GlassTokens.capsuleRadius(height)
                     GlassText { anchors.centerIn: parent; text: "清空"; tone: "secondary"; sizeHint: 12 }
                     MouseArea {
                         anchors.fill: parent; enabled: root.annotations.length > 0
@@ -522,7 +521,7 @@ GlassSurface {
                 anchors.centerIn: parent
                 z: 10
                 width: 176; height: 48
-                surfaceRadius: 22
+                surfaceRadius: GlassTokens.capsuleRadius(height)
                 tintAlpha: 0.72
                 accentTint: "#D3E5FF"
                 accentStrength: 0.18
@@ -535,7 +534,7 @@ GlassSurface {
                 z: 11
                 width: Math.min(500, chartCard.width - 80)
                 height: 174
-                surfaceRadius: 28
+                surfaceRadius: GlassTokens.containerRadius
                 tint: "#F5FAFF"
                 tintAlpha: 0.82
                 accentTint: "#FFD9D2"
@@ -566,7 +565,7 @@ GlassSurface {
                         width: 112
                         height: 38
                         reactive: true
-                        surfaceRadius: 19
+                        surfaceRadius: GlassTokens.capsuleRadius(height)
                         tintAlpha: 0.34
                         accentTint: "#CDEFE2"
                         accentStrength: 0.28
@@ -592,7 +591,7 @@ GlassSurface {
                 z: 10
                 width: 360
                 height: 92
-                surfaceRadius: 26
+                surfaceRadius: GlassTokens.containerRadius
                 tintAlpha: 0.64
                 accentTint: "#DCE9FF"
                 accentStrength: 0.16

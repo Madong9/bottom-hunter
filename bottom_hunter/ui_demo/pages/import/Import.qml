@@ -6,7 +6,7 @@ GlassSurface {
     id: root
     objectName: "importPage"
     tintAlpha: 0.42
-    surfaceRadius: 32
+    surfaceRadius: GlassTokens.pageRadius
 
     readonly property var vm: (typeof importVm !== "undefined") ? importVm : null
     property string selectedSource: "tonghuashun"
@@ -80,7 +80,7 @@ GlassSurface {
                             height: 36
                             reactive: true
                             tintAlpha: root.selectedSource === modelData.id ? 0.10 : 0.035
-                            surfaceRadius: 18
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
                             accentTint: root.selectedSource === modelData.id ? "#CDEFE1" : "transparent"
                             accentStrength: root.selectedSource === modelData.id ? 0.18 : 0.0
 
@@ -103,7 +103,7 @@ GlassSurface {
                         height: 36
                         reactive: true
                         tintAlpha: 0.08
-                        surfaceRadius: 18
+                        surfaceRadius: GlassTokens.capsuleRadius(height)
                         accentTint: "#CFE4FF"
                         accentStrength: 0.18
 
@@ -182,7 +182,7 @@ GlassSurface {
                 height: 38
                 reactive: root.vm !== null && root.vm.validCount > 0
                 tintAlpha: root.vm !== null && root.vm.validCount > 0 ? 0.10 : 0.025
-                surfaceRadius: 18
+                surfaceRadius: GlassTokens.capsuleRadius(height)
                 accentTint: "#CDEFE0"
                 accentStrength: root.vm !== null && root.vm.validCount > 0 ? 0.20 : 0.0
                 GlassText {
@@ -207,7 +207,7 @@ GlassSurface {
                 height: 38
                 reactive: true
                 tintAlpha: 0.10
-                surfaceRadius: 18
+                surfaceRadius: GlassTokens.capsuleRadius(height)
                 accentTint: "#CDEFE0"
                 accentStrength: 0.20
                 GlassText { anchors.centerIn: parent; text: "接受并导入"; tone: "primary"; sizeHint: 13 }
@@ -221,7 +221,7 @@ GlassSurface {
                 height: 38
                 reactive: true
                 tintAlpha: 0.035
-                surfaceRadius: 18
+                surfaceRadius: GlassTokens.capsuleRadius(height)
                 GlassText { anchors.centerIn: parent; text: "取消"; tone: "secondary"; sizeHint: 13 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.vm.cancelImport() }
             }
@@ -233,7 +233,7 @@ GlassSurface {
                 height: 38
                 reactive: true
                 tintAlpha: 0.08
-                surfaceRadius: 18
+                surfaceRadius: GlassTokens.capsuleRadius(height)
                 accentTint: "#FFE1D6"
                 accentStrength: 0.18
                 GlassText { anchors.centerIn: parent; text: "重试"; tone: "primary"; sizeHint: 13 }
@@ -312,7 +312,7 @@ GlassSurface {
                             width: previewList.width
                             height: 54
                             tintAlpha: 0.025
-                            surfaceRadius: 16
+                            surfaceRadius: GlassTokens.compactContainerRadius
 
                             Row {
                                 anchors.fill: parent

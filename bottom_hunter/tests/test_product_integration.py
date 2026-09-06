@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 
@@ -211,7 +212,24 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         encoding="utf-8"
     )
     assert "property real accentIntensity: 1.25" in appearance
-    assert "property real surfaceRadius: 28" in surface
+    assert "property real surfaceRadius: GlassTokens.containerRadius" in surface
+
+    tokens = (PAGES_DIR.parent / "primitives" / "GlassTokens.qml").read_text(
+        encoding="utf-8"
+    )
+    assert "readonly property real pageRadius: 32" in tokens
+    assert "readonly property real containerRadius: 28" in tokens
+    assert "readonly property real compactContainerRadius: 22" in tokens
+    assert "function capsuleRadius(height)" in tokens
+    assert "function circleRadius(size)" in tokens
+
+    glass_text = (PAGES_DIR.parent / "primitives" / "GlassText.qml").read_text(
+        encoding="utf-8"
+    )
+    assert '"primary": GlassTokens.textPrimary' in glass_text
+    assert "opacity: 1.0" in glass_text
+    assert "style: Text.Raised" in glass_text
+    assert "styleColor: GlassTokens.textHighlight" in glass_text
 
     nav_symbol = PAGES_DIR.parent / "components" / "NavSymbol.qml"
     nav_rail = (PAGES_DIR.parent / "components" / "GlassNavRail.qml").read_text(
@@ -223,7 +241,9 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "ToolTip {" in nav_rail
     assert "popupType: Popup.Item" in nav_rail
     assert "background: GlassSurface" in nav_rail
-    assert "surfaceRadius: 19" in nav_rail
+    assert "surfaceRadius: GlassTokens.containerRadius" in nav_rail
+    assert "GlassTokens.capsuleRadius(height)" in nav_rail
+    assert "GlassTokens.circleRadius(width)" in nav_rail
     assert 'text: "整体色彩浓度"' in nav_rail
     assert "GlassAppearance.accentIntensity = value" in nav_rail
     assert "GlassAppearance.editMode" in nav_rail
@@ -234,7 +254,6 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert 'name: "薄荷"' in nav_rail
     assert 'name: "暖金"' in nav_rail
     assert 'name: "蓝紫"' in nav_rail
-    assert "radius: 32" in nav_rail
     assert "clip: true" in nav_rail
 
     for relative in (
@@ -248,7 +267,36 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     ):
         page = (PAGES_DIR / relative).read_text(encoding="utf-8")
         assert "tintAlpha: 0.42" in page
-        assert "surfaceRadius: 32" in page
+        assert "surfaceRadius: GlassTokens.pageRadius" in page
+
+
+def test_product_shape_and_typography_roles_stay_semantic() -> None:
+    product_files = [
+        PAGES_DIR / "ApplicationShell.qml",
+        PAGES_DIR / "overview" / "Overview.qml",
+        PAGES_DIR / "watchlist" / "Watchlist.qml",
+        PAGES_DIR / "research" / "Research.qml",
+        PAGES_DIR / "report" / "Report.qml",
+        PAGES_DIR / "import" / "Import.qml",
+        PAGES_DIR / "status" / "Status.qml",
+        PAGES_DIR / "chart" / "Chart.qml",
+        PAGES_DIR.parent / "components" / "GlassNavRail.qml",
+    ]
+    for path in product_files:
+        source = path.read_text(encoding="utf-8")
+        assert re.search(r"surfaceRadius:\s*\d", source) is None, path
+
+    text_consumers = product_files + [
+        PAGES_DIR.parent / "components" / "StatusBadge.qml",
+        PAGES_DIR.parent / "primitives" / "GlassButton.qml",
+    ]
+    for path in text_consumers:
+        assert re.search(r"\bText\s*\{", path.read_text(encoding="utf-8")) is None, path
+
+    status_badge = (
+        PAGES_DIR.parent / "components" / "StatusBadge.qml"
+    ).read_text(encoding="utf-8")
+    assert "GlassTokens.capsuleRadius(height)" in status_badge
 
 
 def test_glass_surface_supports_independent_color_and_depth(monkeypatch) -> None:

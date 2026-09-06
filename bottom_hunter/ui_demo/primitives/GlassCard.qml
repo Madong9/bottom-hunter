@@ -7,7 +7,7 @@ GlassSurface {
 
     property bool interactive: true
     property real shadowOpacity: 0.24
-    surfaceRadius: 26
+    surfaceRadius: GlassTokens.containerRadius
     reactive: interactive
 
     layer.enabled: true

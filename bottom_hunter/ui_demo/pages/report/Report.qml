@@ -5,7 +5,7 @@ GlassSurface {
     id: root
     objectName: "reportPage"
     tintAlpha: 0.42
-    surfaceRadius: 32
+    surfaceRadius: GlassTokens.pageRadius
 
     readonly property var vm: (typeof reportVm !== "undefined") ? reportVm : null
 

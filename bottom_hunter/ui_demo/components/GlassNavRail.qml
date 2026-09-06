@@ -11,9 +11,8 @@ GlassSurface {
 
     appearanceKey: "shell.navigation"
     appearanceLabel: "左侧导航"
-    surfaceRadius: 32
+    surfaceRadius: GlassTokens.containerRadius
     color: Qt.rgba(0.92, 0.97, 1.0, 0.46)
-    radius: 32
     clip: true
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.70)
@@ -57,17 +56,17 @@ GlassSurface {
         // 品牌
         Rectangle {
             width: 40; height: 40
-            radius: 20
+            radius: GlassTokens.circleRadius(width)
             anchors.horizontalCenter: parent.horizontalCenter
             color: Qt.rgba(0.169, 0.835, 0.463, 0.16)
             border.width: 1
             border.color: Qt.rgba(0.169, 0.835, 0.463, 0.4)
 
-            Text {
+            GlassText {
                 anchors.centerIn: parent
                 text: "B"
                 color: "#2BD576"
-                font.pixelSize: 19
+                sizeHint: 19
                 font.weight: Font.Bold
             }
         }
@@ -94,7 +93,7 @@ GlassSurface {
                 // active 克制 emerald 药丸（very subtle tint + thin edge）
                 Rectangle {
                     anchors.fill: parent
-                    radius: 18
+                    radius: GlassTokens.capsuleRadius(height)
                     color: index === root.currentIndex
                            ? Qt.rgba(0.169, 0.835, 0.463, 0.09)
                            : hover.hovered ? Qt.rgba(1, 1, 1, 0.24) : "transparent"
@@ -149,7 +148,7 @@ GlassSurface {
                         tintAlpha: 0.70
                         accentTint: "#A9D8FF"
                         accentStrength: 0.18
-                        surfaceRadius: 19
+                        surfaceRadius: GlassTokens.capsuleRadius(height)
                     }
                 }
             }
@@ -168,7 +167,7 @@ GlassSurface {
 
         Rectangle {
             anchors.fill: parent
-            radius: height / 2
+            radius: GlassTokens.capsuleRadius(height)
             color: appearancePopup.opened
                    ? Qt.rgba(0.36, 0.48, 0.94, 0.13)
                    : appearanceHover.hovered ? Qt.rgba(1, 1, 1, 0.24) : "transparent"
@@ -211,7 +210,7 @@ GlassSurface {
                 tintAlpha: 0.74
                 accentTint: "#DCD9FF"
                 accentStrength: 0.22
-                surfaceRadius: 19
+                surfaceRadius: GlassTokens.capsuleRadius(height)
             }
         }
 
@@ -232,7 +231,7 @@ GlassSurface {
 
             contentItem: GlassSurface {
                 appearanceSelectable: false
-                surfaceRadius: 28
+                surfaceRadius: GlassTokens.containerRadius
                 tint: "#F4F8FF"
                 tintAlpha: 0.86
                 accentTint: "#E0D9FF"
@@ -270,7 +269,7 @@ GlassSurface {
                             y: toneSlider.topPadding + toneSlider.availableHeight / 2 - height / 2
                             width: toneSlider.availableWidth
                             height: 7
-                            radius: height / 2
+                            radius: GlassTokens.capsuleRadius(height)
                             color: Qt.rgba(0.35, 0.46, 0.58, 0.16)
                             gradient: Gradient {
                                 orientation: Gradient.Horizontal
@@ -287,7 +286,7 @@ GlassSurface {
                             y: toneSlider.topPadding + toneSlider.availableHeight / 2 - height / 2
                             width: 22
                             height: 22
-                            radius: 11
+                            radius: GlassTokens.circleRadius(width)
                             color: "#F8FCFF"
                             border.width: 2
                             border.color: "#7184D5"
@@ -314,7 +313,7 @@ GlassSurface {
                         height: 38
                         appearanceSelectable: false
                         reactive: true
-                        surfaceRadius: 19
+                        surfaceRadius: GlassTokens.capsuleRadius(height)
                         tintAlpha: GlassAppearance.editMode ? 0.34 : 0.16
                         accentTint: "#D8D4FF"
                         accentStrength: GlassAppearance.editMode ? 0.34 : 0.12
@@ -368,7 +367,7 @@ GlassSurface {
                             delegate: Rectangle {
                                 width: 34
                                 height: 34
-                                radius: 17
+                                radius: GlassTokens.circleRadius(width)
                                 color: modelData.color
                                 opacity: GlassAppearance.selectedKey === "" ? 0.42 : 0.92
                                 border.width: GlassAppearance.editorColor.toString().toUpperCase()
@@ -397,7 +396,7 @@ GlassSurface {
                                         appearanceSelectable: false
                                         implicitWidth: 58
                                         implicitHeight: 30
-                                        surfaceRadius: 15
+                                        surfaceRadius: GlassTokens.capsuleRadius(height)
                                         tintAlpha: 0.78
                                         accentTint: modelData.color
                                         accentStrength: 0.28
@@ -445,12 +444,12 @@ GlassSurface {
                                + blockStrengthSlider.availableHeight / 2 - height / 2
                             width: blockStrengthSlider.availableWidth
                             height: 7
-                            radius: height / 2
+                            radius: GlassTokens.capsuleRadius(height)
                             color: Qt.rgba(0.35, 0.46, 0.58, 0.15)
                             Rectangle {
                                 width: blockStrengthSlider.visualPosition * parent.width
                                 height: parent.height
-                                radius: parent.radius
+                                radius: GlassTokens.capsuleRadius(height)
                                 color: GlassAppearance.editorColor
                                 opacity: 0.88
                             }
@@ -462,7 +461,7 @@ GlassSurface {
                                + blockStrengthSlider.availableHeight / 2 - height / 2
                             width: 22
                             height: 22
-                            radius: 11
+                            radius: GlassTokens.circleRadius(width)
                             color: "#F8FCFF"
                             border.width: 2
                             border.color: GlassAppearance.editorColor
@@ -477,7 +476,7 @@ GlassSurface {
                             width: (parent.width - 10) / 2
                             height: 36
                             appearanceSelectable: false
-                            surfaceRadius: 18
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
                             reactive: GlassAppearance.selectedKey !== ""
                             tintAlpha: 0.20
                             GlassText { anchors.centerIn: parent; text: "恢复该块"; tone: "secondary"; sizeHint: 12 }
@@ -492,7 +491,7 @@ GlassSurface {
                             width: (parent.width - 10) / 2
                             height: 36
                             appearanceSelectable: false
-                            surfaceRadius: 18
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
                             reactive: true
                             tintAlpha: 0.26
                             accentTint: "#D4E5FF"

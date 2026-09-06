@@ -5,7 +5,7 @@ GlassSurface {
     id: root
     objectName: "statusPage"
     tintAlpha: 0.42
-    surfaceRadius: 32
+    surfaceRadius: GlassTokens.pageRadius
 
     readonly property var vm: (typeof statusVm !== "undefined") ? statusVm : null
 
@@ -101,7 +101,7 @@ GlassSurface {
                             width: parent.width
                             height: 52
                             tintAlpha: 0.025
-                            surfaceRadius: 16
+                            surfaceRadius: GlassTokens.compactContainerRadius
                             accentTint: modelData.ok ? "#CDEFE0" : "#FFD8CF"
                             accentStrength: 0.12
                             Row {

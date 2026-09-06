@@ -1,5 +1,6 @@
 // StatusBadge — 状态徽章：半透明底 + 提亮文字（dark-glass skill 硬规则 5）。
 import QtQuick
+import "../primitives" as Primitives
 
 Rectangle {
     id: root
@@ -16,19 +17,19 @@ Rectangle {
 
     readonly property var _colors: toneColors(tone)
 
-    radius: 12
+    radius: Primitives.GlassTokens.capsuleRadius(height)
     implicitHeight: 24
     implicitWidth: badgeText.implicitWidth + 20
     color: Qt.rgba(_colors.fill.r, _colors.fill.g, _colors.fill.b, _colors.bg)
     border.width: 1
     border.color: Qt.rgba(_colors.fill.r, _colors.fill.g, _colors.fill.b, 0.28)
 
-    Text {
+    Primitives.GlassText {
         id: badgeText
         anchors.centerIn: parent
         text: root.text
         color: root._colors.text
-        font.pixelSize: 11
+        sizeHint: 11
         font.weight: Font.DemiBold
     }
 }
