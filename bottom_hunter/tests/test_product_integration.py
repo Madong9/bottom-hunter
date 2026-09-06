@@ -203,6 +203,8 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "Pointer-driven reflection" in surface
     assert "Short lower caustic band" in surface
     assert "property real edgeContrast: 1.0" in surface
+    assert "readonly property bool capsuleShape" in surface
+    assert "visible: !root.capsuleShape" in surface
     assert "0.66 * root.edgeContrast" in surface
     assert 'property color accentTint: "transparent"' in surface
     assert "property real accentStrength: 0.0" in surface

@@ -31,6 +31,8 @@ Rectangle {
     // parent glass while page-level panes retain a stronger silhouette.
     property real edgeContrast: 1.0
     property bool reactive: false
+    readonly property bool capsuleShape: height > 0
+        && surfaceRadius >= height / 2 - 0.5
     readonly property bool materialHovered: liquidHover.hovered
     readonly property real materialOffsetX: liquidHover.hovered && width > 0
         ? Math.max(-1, Math.min(1, liquidHover.point.position.x / width * 2 - 1)) : -0.28
@@ -50,13 +52,15 @@ Rectangle {
     // supplied by derived components is rendered above this layer.
     Rectangle {
         visible: root.effectiveAccentStrength > 0.001
-        anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
-        width: Math.max(root.surfaceRadius * 2, parent.width * 0.62)
+        anchors.fill: parent
+        radius: root.surfaceRadius
+        antialiasing: true
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0.0; color: Qt.rgba(root.effectiveAccentTint.r, root.effectiveAccentTint.g, root.effectiveAccentTint.b, 0.0) }
-            GradientStop { position: 0.62; color: Qt.rgba(root.effectiveAccentTint.r, root.effectiveAccentTint.g, root.effectiveAccentTint.b, root.effectiveAccentStrength * 0.42) }
+            GradientStop { position: 0.38; color: Qt.rgba(root.effectiveAccentTint.r, root.effectiveAccentTint.g, root.effectiveAccentTint.b, 0.0) }
+            GradientStop { position: 0.76; color: Qt.rgba(root.effectiveAccentTint.r, root.effectiveAccentTint.g, root.effectiveAccentTint.b, root.effectiveAccentStrength * 0.42) }
             GradientStop { position: 1.0; color: Qt.rgba(root.effectiveAccentTint.r, root.effectiveAccentTint.g, root.effectiveAccentTint.b, root.effectiveAccentStrength) }
         }
     }
@@ -105,12 +109,14 @@ Rectangle {
 
     // Soft liquid sheen immediately below the upper lens edge.
     Rectangle {
-        anchors { top: parent.top; left: parent.left; right: parent.right }
-        height: Math.min(92, Math.max(24, parent.height * 0.22))
+        anchors.fill: parent
+        radius: root.surfaceRadius
+        antialiasing: true
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.30) }
+            GradientStop { position: 0.22; color: Qt.rgba(1, 1, 1, 0.0) }
             GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
         }
     }
@@ -119,16 +125,22 @@ Rectangle {
     // at the refracting boundary. These two sub-pixel colour rims follow that
     // rule: the centre remains neutral while the lens edge gains optical depth.
     Rectangle {
+        visible: !root.capsuleShape
         anchors { top: parent.top; left: parent.left; bottom: parent.bottom }
-        anchors.margins: 2
+        anchors.leftMargin: 2
+        anchors.topMargin: root.surfaceRadius * 0.58
+        anchors.bottomMargin: root.surfaceRadius * 0.58
         width: 1
         color: Qt.rgba(0.30, 0.82, 1.0,
                        (root.reactive && root.materialHovered ? 0.34 : 0.17)
                        * root.edgeContrast)
     }
     Rectangle {
+        visible: !root.capsuleShape
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
-        anchors.margins: 3
+        anchors.rightMargin: 3
+        anchors.topMargin: root.surfaceRadius * 0.58
+        anchors.bottomMargin: root.surfaceRadius * 0.58
         width: 1
         color: Qt.rgba(0.82, 0.46, 1.0,
                        (root.reactive && root.materialHovered ? 0.24 : 0.11)
@@ -185,12 +197,14 @@ Rectangle {
     // Short lower caustic band. Keeping gradients local avoids visible alpha
     // quantisation bands across a large transparent native window.
     Rectangle {
-        anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-        height: Math.min(72, Math.max(20, parent.height * 0.18))
+        anchors.fill: parent
+        radius: root.surfaceRadius
+        antialiasing: true
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Vertical
             GradientStop { position: 0.0; color: Qt.rgba(0.72, 0.88, 1.0, 0.0) }
+            GradientStop { position: 0.82; color: Qt.rgba(0.72, 0.88, 1.0, 0.0) }
             GradientStop { position: 1.0; color: Qt.rgba(0.72, 0.88, 1.0, 0.16) }
         }
     }
@@ -211,6 +225,7 @@ Rectangle {
 
     // Left lens edge and cool lower/right thickness.
     Rectangle {
+        visible: !root.capsuleShape
         anchors { top: parent.top; left: parent.left; bottom: parent.bottom }
         anchors.leftMargin: 1
         anchors.topMargin: root.surfaceRadius * 0.58
@@ -219,6 +234,7 @@ Rectangle {
         color: Qt.rgba(1, 1, 1, 0.44 * root.edgeContrast)
     }
     Rectangle {
+        visible: !root.capsuleShape
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         anchors.bottomMargin: 1
         anchors.leftMargin: root.surfaceRadius * 0.58
@@ -227,6 +243,7 @@ Rectangle {
         color: Qt.rgba(0.18, 0.34, 0.46, 0.17 * root.edgeContrast)
     }
     Rectangle {
+        visible: !root.capsuleShape
         anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
         anchors.rightMargin: 1
         anchors.topMargin: root.surfaceRadius * 0.58
