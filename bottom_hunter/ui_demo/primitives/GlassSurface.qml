@@ -13,8 +13,19 @@ Rectangle {
     property color tint: "#EEF7FD"
     property color accentTint: "transparent"
     property real accentStrength: 0.0
-    readonly property real effectiveAccentStrength: Math.min(
-        0.58, root.accentStrength * GlassAppearance.accentIntensity)
+    // Every surface participates in the optional visual editor. Explicit
+    // keys/objectNames remain stable; anonymous repeater items get a runtime
+    // key and can still be edited for the lifetime of that page instance.
+    property string appearanceKey: ""
+    property string appearanceLabel: ""
+    property bool appearanceSelectable: true
+    readonly property string resolvedAppearanceKey: appearanceKey !== ""
+        ? appearanceKey : (objectName !== "" ? objectName : runtimeAppearanceKey)
+    readonly property color effectiveAccentTint: GlassAppearance.tintFor(
+        resolvedAppearanceKey, root.accentTint)
+    readonly property real effectiveAccentStrength: GlassAppearance.strengthFor(
+        resolvedAppearanceKey, root.accentStrength)
+    property string runtimeAppearanceKey: ""
     property real surfaceRadius: 28
     property bool reactive: false
     readonly property bool materialHovered: liquidHover.hovered
@@ -29,6 +40,8 @@ Rectangle {
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.66)
 
+    Component.onCompleted: runtimeAppearanceKey = GlassAppearance.keyFor(root)
+
     // A local colour wash gives selected functional surfaces their own visual
     // identity while leaving most of the material optically neutral.  Content
     // supplied by derived components is rendered above this layer.
@@ -39,9 +52,9 @@ Rectangle {
         color: "transparent"
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, 0.0) }
-            GradientStop { position: 0.62; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, root.effectiveAccentStrength * 0.42) }
-            GradientStop { position: 1.0; color: Qt.rgba(root.accentTint.r, root.accentTint.g, root.accentTint.b, root.effectiveAccentStrength) }
+            GradientStop { position: 0.0; color: Qt.rgba(root.effectiveAccentTint.r, root.effectiveAccentTint.g, root.effectiveAccentTint.b, 0.0) }
+            GradientStop { position: 0.62; color: Qt.rgba(root.effectiveAccentTint.r, root.effectiveAccentTint.g, root.effectiveAccentTint.b, root.effectiveAccentStrength * 0.42) }
+            GradientStop { position: 1.0; color: Qt.rgba(root.effectiveAccentTint.r, root.effectiveAccentTint.g, root.effectiveAccentTint.b, root.effectiveAccentStrength) }
         }
     }
 
@@ -113,6 +126,32 @@ Rectangle {
         anchors.margins: 3
         width: 1
         color: Qt.rgba(0.82, 0.46, 1.0, root.reactive && root.materialHovered ? 0.24 : 0.11)
+    }
+
+    // Edit-mode selection ring is presentation-only and sits above the glass
+    // optics. It is invisible during normal operation.
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 2
+        radius: Math.max(0, root.surfaceRadius - 2)
+        color: "transparent"
+        visible: GlassAppearance.editMode && root.appearanceSelectable
+        border.width: GlassAppearance.selectedKey === root.resolvedAppearanceKey ? 3 : 1
+        border.color: GlassAppearance.selectedKey === root.resolvedAppearanceKey
+                      ? Qt.rgba(0.32, 0.42, 0.92, 0.88)
+                      : Qt.rgba(0.32, 0.42, 0.92, root.materialHovered ? 0.46 : 0.18)
+        z: 90
+    }
+
+    TapHandler {
+        enabled: GlassAppearance.editMode && root.appearanceSelectable
+        acceptedButtons: Qt.LeftButton
+        gesturePolicy: TapHandler.ReleaseWithinBounds
+        onTapped: GlassAppearance.selectSurface(
+            root.resolvedAppearanceKey,
+            root.appearanceLabel !== "" ? root.appearanceLabel : root.objectName,
+            root.accentTint,
+            root.accentStrength)
     }
 
     // A narrow moving specular ribbon provides the pointer-linked reflection

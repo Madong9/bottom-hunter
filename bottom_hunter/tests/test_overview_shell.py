@@ -93,9 +93,35 @@ def test_product_rain_has_gravity_motion_and_trails() -> None:
     shader = (SHELL_DIR / "effects" / "StaticRainUI.frag").read_text(encoding="utf-8")
     assert "FrameAnimation {" in surface
     assert "u_time: root.animationTime" in surface
-    assert "FALL_SPEED[4]" in shader
+    assert "GRAVITY_PX[4]" in shader
+    assert "SURFACE_FRICTION[4]" in shader
+    assert "VISCOUS_DRAG[4]" in shader
+    assert "fallDistance(layer, u_time)" in shader
+    assert "1.0 - exp(-drag * t)" in shader
     assert "float trail = 0.0" in shader
     assert "texture(u_mask, baseUv).r" in shader
+
+
+def test_rain_terminal_velocity_respects_size_and_surface_friction() -> None:
+    shader = (SHELL_DIR / "effects" / "StaticRainUI.frag").read_text(encoding="utf-8")
+
+    def constants(name: str) -> list[float]:
+        match = re.search(
+            rf"const float {name}\[4\]\s*=\s*float\[4\]\(([^)]*)\);", shader
+        )
+        assert match, f"missing shader physics constant {name}"
+        return [float(value) for value in match.group(1).replace(",", " ").split()]
+
+    gravity = constants("GRAVITY_PX")
+    friction = constants("SURFACE_FRICTION")
+    drag = constants("VISCOUS_DRAG")
+    terminal = [
+        g * (1.0 - f) / d
+        for g, f, d in zip(gravity, friction, drag, strict=True)
+    ]
+    assert terminal == sorted(terminal)
+    assert terminal[0] < 0.2  # micro droplets remain almost pinned
+    assert terminal[-1] > 8.0  # large droplets visibly overcome adhesion
 
 
 # ---- 4/5/7/8/9. viewports + dynamic zones + texture sizes -------------------

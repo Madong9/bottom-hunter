@@ -16,9 +16,9 @@ from bottom_hunter.ui_demo.pages.status_adapter import build_status_dto
 from bottom_hunter.ui_demo.pages.status_contracts import StatusDTO, StatusItemDTO
 from bottom_hunter.ui_demo.pages.status_viewmodel import StatusViewModel
 from bottom_hunter.ui_demo.pages.watchlist_contracts import WatchlistDTO
-from PySide6.QtCore import QCoreApplication, QObject, QUrl
+from PySide6.QtCore import QCoreApplication, QMetaObject, QObject, Qt, QUrl
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent, QQmlEngine
 
 PAGES_DIR = Path(__file__).resolve().parent.parent / "ui_demo" / "pages"
 
@@ -206,7 +206,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "border.color: Qt.rgba(1, 1, 1, 0.66)" in surface
     assert 'property color accentTint: "transparent"' in surface
     assert "property real accentStrength: 0.0" in surface
-    assert "GlassAppearance.accentIntensity" in surface
+    assert "GlassAppearance.strengthFor" in surface
     appearance = (PAGES_DIR.parent / "primitives" / "GlassAppearance.qml").read_text(
         encoding="utf-8"
     )
@@ -224,8 +224,16 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "popupType: Popup.Item" in nav_rail
     assert "background: GlassSurface" in nav_rail
     assert "surfaceRadius: 19" in nav_rail
-    assert 'text: "局部色洗浓度"' in nav_rail
+    assert 'text: "整体色彩浓度"' in nav_rail
     assert "GlassAppearance.accentIntensity = value" in nav_rail
+    assert "GlassAppearance.editMode" in nav_rail
+    assert 'text: "当前玻璃深浅"' in nav_rail
+    assert "to: 0.90" in nav_rail
+    assert 'name: "淡玫瑰"' in nav_rail
+    assert 'name: "天蓝"' in nav_rail
+    assert 'name: "薄荷"' in nav_rail
+    assert 'name: "暖金"' in nav_rail
+    assert 'name: "蓝紫"' in nav_rail
     assert "radius: 32" in nav_rail
     assert "clip: true" in nav_rail
 
@@ -241,6 +249,46 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         page = (PAGES_DIR / relative).read_text(encoding="utf-8")
         assert "tintAlpha: 0.42" in page
         assert "surfaceRadius: 32" in page
+
+
+def test_glass_surface_supports_independent_color_and_depth(monkeypatch) -> None:
+    _software_env(monkeypatch)
+    app = QGuiApplication.instance() or QGuiApplication([])
+    engine = QQmlEngine()
+    primitives_uri = QUrl.fromLocalFile(str(PAGES_DIR.parent / "primitives")).toString()
+    source = f'''import QtQuick
+import "{primitives_uri}"
+GlassSurface {{
+    appearanceKey: "test.card"
+    accentTint: "#83C5F3"
+    accentStrength: 0.20
+    width: 200
+    height: 100
+    function customize() {{
+        GlassAppearance.selectSurface(appearanceKey, "测试卡片", accentTint, accentStrength)
+        GlassAppearance.applySelected("#F3A9C2", 0.88)
+    }}
+    function restore() {{ GlassAppearance.resetSelected() }}
+}}
+'''
+    component = QQmlComponent(engine)
+    component.setData(source.encode(), QUrl.fromLocalFile("/tmp/glass_override_test.qml"))
+    surface = component.create()
+    try:
+        assert surface is not None, [error.toString() for error in component.errors()]
+        assert surface.property("effectiveAccentTint").name() == "#83c5f3"
+        assert float(surface.property("effectiveAccentStrength")) == pytest.approx(0.25)
+        QMetaObject.invokeMethod(surface, "customize", Qt.DirectConnection)
+        assert surface.property("effectiveAccentTint").name() == "#f3a9c2"
+        assert float(surface.property("effectiveAccentStrength")) == pytest.approx(0.88)
+        QMetaObject.invokeMethod(surface, "restore", Qt.DirectConnection)
+        assert surface.property("effectiveAccentTint").name() == "#83c5f3"
+        assert float(surface.property("effectiveAccentStrength")) == pytest.approx(0.25)
+    finally:
+        if surface is not None:
+            surface.deleteLater()
+        engine.deleteLater()
+        app.processEvents()
 
 
 def test_status_qml_error_and_fallback_load(monkeypatch) -> None:

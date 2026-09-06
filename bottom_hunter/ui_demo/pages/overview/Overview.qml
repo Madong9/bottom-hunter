@@ -65,6 +65,9 @@ GlassSurface {
                 ]
 
                 delegate: GlassCard {
+                    objectName: "overviewMetricCard" + index
+                    appearanceKey: "overview.metric." + index
+                    appearanceLabel: modelData.label
                     width: (root.width - 64) / 3
                     height: 132
                     interactive: false

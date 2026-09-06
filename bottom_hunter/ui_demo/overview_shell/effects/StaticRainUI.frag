@@ -106,9 +106,37 @@ const float DENS[4]  = float[4](0.0581, 0.0866, 0.1341, 0.1356);
 // large = strongest (total displacement clamped later; no fisheye).
 const float LENS_PX[4] = float[4](0.9, 2.2, 5.0, 8.0);
 const float GLINT_A[4] = float[4](0.85, 0.60, 0.50, 0.45);
-// Larger droplets overcome surface tension more readily and therefore slide
-// faster. Values are pixels/second and deliberately remain slow.
-const float FALL_SPEED[4] = float[4](0.65, 1.55, 3.60, 6.80);
+// Vertical motion uses a compact surface-physics model. Gravity supplies the
+// driving acceleration; Coulomb-like surface adhesion removes a size-specific
+// fraction of it; viscous glass/water friction creates terminal velocity.
+// Micro droplets remain almost pinned while large droplets accelerate into a
+// visible slide. Units are screen pixels and seconds.
+const float GRAVITY_PX[4] = float[4](1.10, 2.80, 5.60, 8.40);
+const float SURFACE_FRICTION[4] = float[4](0.92, 0.60, 0.40, 0.28);
+const float VISCOUS_DRAG[4] = float[4](0.80, 0.90, 0.75, 0.65);
+
+float netFallAcceleration(int layer) {
+    return max(0.0, GRAVITY_PX[layer] * (1.0 - SURFACE_FRICTION[layer]));
+}
+
+float terminalFallVelocity(int layer) {
+    return netFallAcceleration(layer) / max(0.001, VISCOUS_DRAG[layer]);
+}
+
+// Closed-form solution for dv/dt = a - drag*v, v(0)=0. This avoids frame
+// integration drift and yields genuine acceleration followed by a smooth
+// approach to terminal velocity.
+float fallVelocity(int layer, float seconds) {
+    float drag = VISCOUS_DRAG[layer];
+    return terminalFallVelocity(layer) * (1.0 - exp(-drag * max(0.0, seconds)));
+}
+
+float fallDistance(int layer, float seconds) {
+    float drag = VISCOUS_DRAG[layer];
+    float t = max(0.0, seconds);
+    return terminalFallVelocity(layer)
+         * (t - (1.0 - exp(-drag * t)) / drag);
+}
 
 vec3 layerDebugColor(int layer) {
     if (layer == 0) return vec3(0.25, 0.95, 0.45);
@@ -173,7 +201,9 @@ void main() {
         float cell = GRID[layer];
         float layerDens = density * DENS[layer];
         vec2 cellPx = vec2(cell);
-        float fallPx = u_time * FALL_SPEED[layer];
+        float fallPx = fallDistance(layer, u_time);
+        float velocityRatio = fallVelocity(layer, u_time)
+                            / max(0.001, terminalFallVelocity(layer));
         vec2 fieldPx = fragPx - vec2(0.0, fallPx);
         vec2 cellIdx = floor(fieldPx / cellPx);
 
@@ -257,7 +287,8 @@ void main() {
                 if (layer >= 1) {
                     float trailSeed = hash11(h * 281.7 + float(layer) * 31.9);
                     float trailLength = radius * mix(1.25, layer >= 2 ? 3.20 : 2.10,
-                                                     trailSeed);
+                                                     trailSeed)
+                                      * mix(0.35, 1.0, velocityRatio);
                     float above = centre.y - fragPx.y;
                     float trailCore = 1.0 - smoothstep(radius * 0.14,
                                                        radius * 0.42,
@@ -267,6 +298,7 @@ void main() {
                                                        trailLength, above);
                     float trailWeight = layer == 1 ? 0.18 : (layer == 2 ? 0.40 : 0.58);
                     trail = trailCore * trailHead * trailTail * trailWeight
+                          * smoothstep(0.08, 0.55, velocityRatio)
                           * texture(u_mask, baseUv).r;
                 }
                 if (trail > 0.001) {

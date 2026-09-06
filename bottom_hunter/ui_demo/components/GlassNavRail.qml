@@ -3,12 +3,15 @@ import QtQuick
 import QtQuick.Controls.Basic
 import "../primitives"
 
-Rectangle {
+GlassSurface {
     id: root
 
     property int currentIndex: 0
     signal navigate(int index)
 
+    appearanceKey: "shell.navigation"
+    appearanceLabel: "左侧导航"
+    surfaceRadius: 32
     color: Qt.rgba(0.92, 0.97, 1.0, 0.46)
     radius: 32
     clip: true
@@ -139,6 +142,7 @@ Rectangle {
                         sizeHint: 13
                     }
                     background: GlassSurface {
+                        appearanceSelectable: false
                         implicitWidth: 58
                         implicitHeight: 38
                         tint: "#EAF6FF"
@@ -200,6 +204,7 @@ Rectangle {
             padding: 10
             contentItem: GlassText { text: "玻璃色彩"; tone: "primary"; sizeHint: 13 }
             background: GlassSurface {
+                appearanceSelectable: false
                 implicitWidth: 82
                 implicitHeight: 38
                 tint: "#F2F5FF"
@@ -216,15 +221,17 @@ Rectangle {
             popupType: Popup.Item
             x: parent.width + 12
             y: parent.height - height
-            width: 264
-            height: 142
+            width: 306
+            height: 390
             padding: 0
             modal: false
             focus: true
-            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            closePolicy: Popup.CloseOnEscape
+            onClosed: GlassAppearance.editMode = false
             background: Item { }
 
             contentItem: GlassSurface {
+                appearanceSelectable: false
                 surfaceRadius: 28
                 tint: "#F4F8FF"
                 tintAlpha: 0.86
@@ -234,13 +241,13 @@ Rectangle {
                 Column {
                     anchors.fill: parent
                     anchors.margins: 18
-                    spacing: 10
+                    spacing: 9
 
                     Row {
                         width: parent.width
                         height: 24
-                        GlassText { text: "局部色洗浓度"; tone: "primary"; sizeHint: 14 }
-                        Item { width: parent.width - 126; height: 1 }
+                        GlassText { text: "整体色彩浓度"; tone: "primary"; sizeHint: 14 }
+                        Item { width: parent.width - 140; height: 1 }
                         GlassText {
                             text: Math.round(toneSlider.value * 100) + "%"
                             tone: "secondary"
@@ -252,8 +259,8 @@ Rectangle {
                         id: toneSlider
                         width: parent.width
                         height: 32
-                        from: 0.60
-                        to: 1.80
+                        from: 0.25
+                        to: 3.00
                         stepSize: 0.05
                         value: GlassAppearance.accentIntensity
                         onMoved: GlassAppearance.accentIntensity = value
@@ -289,9 +296,214 @@ Rectangle {
 
                     Row {
                         width: parent.width
-                        GlassText { text: "柔和"; tone: "muted"; sizeHint: 11 }
-                        Item { width: parent.width - 48; height: 1 }
-                        GlassText { text: "浓郁"; tone: "muted"; sizeHint: 11 }
+                        height: 16
+                        GlassText { text: "25%"; tone: "muted"; sizeHint: 11 }
+                        Item { width: parent.width - 66; height: 1 }
+                        GlassText { text: "300%"; tone: "muted"; sizeHint: 11 }
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 1
+                        color: Qt.rgba(0.30, 0.42, 0.54, 0.16)
+                    }
+
+                    GlassSurface {
+                        objectName: "perGlassEditButton"
+                        width: parent.width
+                        height: 38
+                        appearanceSelectable: false
+                        reactive: true
+                        surfaceRadius: 19
+                        tintAlpha: GlassAppearance.editMode ? 0.34 : 0.16
+                        accentTint: "#D8D4FF"
+                        accentStrength: GlassAppearance.editMode ? 0.34 : 0.12
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            GlassText {
+                                text: GlassAppearance.editMode ? "✓" : "+"
+                                tone: "primary"
+                                sizeHint: 15
+                            }
+                            GlassText {
+                                text: GlassAppearance.editMode ? "正在逐块调色" : "选择玻璃块"
+                                tone: "primary"
+                                sizeHint: 13
+                            }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: GlassAppearance.editMode = !GlassAppearance.editMode
+                        }
+                    }
+
+                    GlassText {
+                        width: parent.width
+                        height: 22
+                        text: GlassAppearance.editMode
+                              ? (GlassAppearance.selectedKey === ""
+                                 ? "请点击界面中的任意玻璃块"
+                                 : "已选择 · " + GlassAppearance.selectedLabel)
+                              : "开启后点击卡片、工具条或页面玻璃"
+                        elide: Text.ElideRight
+                        tone: GlassAppearance.selectedKey === "" ? "muted" : "secondary"
+                        sizeHint: 12
+                    }
+
+                    Row {
+                        width: parent.width
+                        height: 34
+                        spacing: 10
+                        Repeater {
+                            model: [
+                                { name: "淡玫瑰", color: "#F3A9C2" },
+                                { name: "天蓝", color: "#83C5F3" },
+                                { name: "薄荷", color: "#83D9B8" },
+                                { name: "暖金", color: "#E9B86B" },
+                                { name: "蓝紫", color: "#9994EE" },
+                                { name: "冰白", color: "#EAF4FA" }
+                            ]
+                            delegate: Rectangle {
+                                width: 34
+                                height: 34
+                                radius: 17
+                                color: modelData.color
+                                opacity: GlassAppearance.selectedKey === "" ? 0.42 : 0.92
+                                border.width: GlassAppearance.editorColor.toString().toUpperCase()
+                                              === modelData.color.toUpperCase() ? 3 : 1
+                                border.color: border.width === 3 ? "#5266C7" : Qt.rgba(1, 1, 1, 0.90)
+                                MouseArea {
+                                    anchors.fill: parent
+                                    enabled: GlassAppearance.selectedKey !== ""
+                                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                    onClicked: GlassAppearance.setSelectedColor(modelData.color)
+                                }
+                                HoverHandler { id: colorHover }
+                                ToolTip {
+                                    visible: colorHover.hovered
+                                    popupType: Popup.Item
+                                    delay: 350
+                                    x: (parent.width - width) / 2
+                                    y: -height - 6
+                                    padding: 7
+                                    contentItem: GlassText {
+                                        text: modelData.name
+                                        tone: "primary"
+                                        sizeHint: 11
+                                    }
+                                    background: GlassSurface {
+                                        appearanceSelectable: false
+                                        implicitWidth: 58
+                                        implicitHeight: 30
+                                        surfaceRadius: 15
+                                        tintAlpha: 0.78
+                                        accentTint: modelData.color
+                                        accentStrength: 0.28
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        height: 22
+                        GlassText { text: "当前玻璃深浅"; tone: "primary"; sizeHint: 13 }
+                        Item { width: parent.width - 140; height: 1 }
+                        GlassText {
+                            text: Math.round(blockStrengthSlider.value * 100) + "%"
+                            tone: "secondary"
+                            sizeHint: 13
+                        }
+                    }
+
+                    Slider {
+                        id: blockStrengthSlider
+                        objectName: "perGlassDepthSlider"
+                        width: parent.width
+                        height: 32
+                        from: 0.0
+                        to: 0.90
+                        stepSize: 0.01
+                        enabled: GlassAppearance.selectedKey !== ""
+                        opacity: enabled ? 1.0 : 0.42
+                        value: GlassAppearance.editorStrength
+                        onMoved: GlassAppearance.setSelectedStrength(value)
+
+                        Connections {
+                            target: GlassAppearance
+                            function onSelectionChanged() {
+                                blockStrengthSlider.value = GlassAppearance.editorStrength
+                            }
+                        }
+
+                        background: Rectangle {
+                            x: blockStrengthSlider.leftPadding
+                            y: blockStrengthSlider.topPadding
+                               + blockStrengthSlider.availableHeight / 2 - height / 2
+                            width: blockStrengthSlider.availableWidth
+                            height: 7
+                            radius: height / 2
+                            color: Qt.rgba(0.35, 0.46, 0.58, 0.15)
+                            Rectangle {
+                                width: blockStrengthSlider.visualPosition * parent.width
+                                height: parent.height
+                                radius: parent.radius
+                                color: GlassAppearance.editorColor
+                                opacity: 0.88
+                            }
+                        }
+                        handle: Rectangle {
+                            x: blockStrengthSlider.leftPadding + blockStrengthSlider.visualPosition
+                               * (blockStrengthSlider.availableWidth - width)
+                            y: blockStrengthSlider.topPadding
+                               + blockStrengthSlider.availableHeight / 2 - height / 2
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: "#F8FCFF"
+                            border.width: 2
+                            border.color: GlassAppearance.editorColor
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        height: 36
+                        spacing: 10
+                        GlassSurface {
+                            width: (parent.width - 10) / 2
+                            height: 36
+                            appearanceSelectable: false
+                            surfaceRadius: 18
+                            reactive: GlassAppearance.selectedKey !== ""
+                            tintAlpha: 0.20
+                            GlassText { anchors.centerIn: parent; text: "恢复该块"; tone: "secondary"; sizeHint: 12 }
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: GlassAppearance.selectedKey !== ""
+                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: GlassAppearance.resetSelected()
+                            }
+                        }
+                        GlassSurface {
+                            width: (parent.width - 10) / 2
+                            height: 36
+                            appearanceSelectable: false
+                            surfaceRadius: 18
+                            reactive: true
+                            tintAlpha: 0.26
+                            accentTint: "#D4E5FF"
+                            accentStrength: 0.22
+                            GlassText { anchors.centerIn: parent; text: "完成"; tone: "primary"; sizeHint: 12 }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: appearancePopup.close()
+                            }
+                        }
                     }
                 }
             }
