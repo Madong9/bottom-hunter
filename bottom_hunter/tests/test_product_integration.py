@@ -122,6 +122,7 @@ def test_build_production_flow_exposes_all_context_positions(tmp_path: Path) -> 
         "reportVm",
         "importVm",
         "statusVm",
+        "taskVm",
         "chartVm",
     }
     assert flow.navigation.currentPage == "overview"

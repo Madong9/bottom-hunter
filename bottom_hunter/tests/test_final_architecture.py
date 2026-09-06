@@ -30,6 +30,7 @@ DTO_MODULES = (
     "bottom_hunter.ui_demo.pages.import_contracts",
     "bottom_hunter.ui_demo.pages.status_contracts",
     "bottom_hunter.ui_demo.pages.chart_contracts",
+    "bottom_hunter.ui_demo.pages.task_contracts",
 )
 
 SANCTIONED_BACKEND_ADAPTERS = {
@@ -40,6 +41,8 @@ SANCTIONED_BACKEND_ADAPTERS = {
     PAGES / "overview_adapter.py",
     PAGES / "status_adapter.py",
     PAGES / "chart_adapter.py",
+    PAGES / "research_adapter.py",
+    PAGES / "task_adapter.py",
 }
 
 

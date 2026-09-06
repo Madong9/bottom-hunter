@@ -8,7 +8,14 @@ from datetime import UTC, datetime
 from typing import Protocol
 from uuid import uuid4
 
-from .import_contracts import FileFingerprintDTO, ImportCommandDTO, ImportResultDTO
+from .import_contracts import (
+    FileFingerprintDTO,
+    ImportCommandDTO,
+    ImportMaintenanceCommandDTO,
+    ImportMaintenanceResultDTO,
+    ImportResultDTO,
+    ImportSourceStatusDTO,
+)
 from .import_controller import StagedImportDTO, TransactionWorkspace
 
 BACKEND_INTEGRATION_ISSUES = (
@@ -36,6 +43,7 @@ class ProductionImportFlow:
 
     view_model: object
     controller: object
+    maintenance_controller: object
 
 
 class BackendPreparationPort(Protocol):
@@ -220,6 +228,80 @@ class RealMutationPort:
             self._staging_by_command.pop(command_id, None)
 
 
+class AccountWatchlistMaintenanceAdapter:
+    """The only production boundary for manual add, clear and linked refresh."""
+
+    def __init__(
+        self,
+        project_dir: str | None = None,
+        *,
+        state_dir: str | None = None,
+        config_dir: str | None = None,
+        gateway: object | None = None,
+    ) -> None:
+        if gateway is None:
+            from bottom_hunter.src.watchlist_maintenance_gateway import (
+                build_watchlist_maintenance_gateway,
+            )
+
+            gateway = build_watchlist_maintenance_gateway(
+                project_dir, state_dir=state_dir, config_dir=config_dir
+            )
+        self._gateway = gateway
+
+    def _statuses(self) -> tuple[ImportSourceStatusDTO, ...]:
+        values = self._gateway.source_statuses()
+        return tuple(
+            ImportSourceStatusDTO(
+                source=str(source),
+                label=str(raw.get("label") or source),
+                count=int(raw.get("count") or 0),
+                manual_count=int(raw.get("manual_count") or 0),
+                connected=bool(raw.get("connected")),
+                imported_at=str(raw.get("imported_at") or ""),
+                import_file=str(raw.get("import_file") or ""),
+            )
+            for source, raw in values.items()
+        )
+
+    def source_statuses(self) -> ImportMaintenanceResultDTO:
+        statuses = self._statuses()
+        return ImportMaintenanceResultDTO(
+            action="status",
+            success=True,
+            message="来源状态已更新。",
+            total_count=sum(item.count for item in statuses),
+            source_statuses=statuses,
+        )
+
+    def execute(self, command: ImportMaintenanceCommandDTO) -> ImportMaintenanceResultDTO:
+        raw = self._gateway.execute(
+            command.action,
+            {
+                "source": command.source,
+                "symbol": command.symbol,
+                "name": command.name,
+                "market": command.market,
+                "industry": command.industry,
+            },
+        )
+        summary = raw.get("summary") or {}
+        message = str(raw.get("message") or "自选维护已完成。")
+        affected = tuple(str(item) for item in raw.get("affected_sources") or ())
+        errors = tuple(
+            (str(key), str(value)) for key, value in (raw.get("errors") or {}).items()
+        )
+        return ImportMaintenanceResultDTO(
+            action=command.action,
+            success=not errors,
+            message=message,
+            total_count=int(summary.get("asset_count") or len(summary.get("assets") or ())),
+            affected_sources=affected,
+            errors=errors,
+            source_statuses=self._statuses(),
+        )
+
+
 def build_production_import_stack(
     project_dir: str | None = None,
     *,
@@ -252,6 +334,7 @@ def build_production_import_flow(
     """Wire the QML-facing flow while retaining the backend adapter boundary."""
 
     from .import_controller import ImportCommandGate, ImportController
+    from .import_maintenance_controller import ImportMaintenanceController
     from .import_preview_adapter import normalize_import_selection
     from .import_viewmodel import ImportViewModel
 
@@ -288,6 +371,13 @@ def build_production_import_flow(
         command_factory=command_factory,
     )
     view_model = ImportViewModel()
+    maintenance_controller = ImportMaintenanceController(
+        AccountWatchlistMaintenanceAdapter(
+            project_dir, state_dir=state_dir, config_dir=config_dir
+        ),
+        activity=runtime_activity,
+        busy_check=lambda: controller.asyncRunning,
+    )
     view_model.importRequested.connect(controller.requestImport)
     view_model.cancelRequested.connect(controller.cancelActive)
     view_model.partialAccepted.connect(controller.acceptPartialAsync)
@@ -295,4 +385,15 @@ def build_production_import_flow(
     controller.stateChanged.connect(view_model.applyControllerState)
     controller.progressEvent.connect(view_model.applyProgress)
     controller.resultReady.connect(view_model.applyResult)
-    return ProductionImportFlow(view_model=view_model, controller=controller)
+    view_model.manualAddRequested.connect(maintenance_controller.addManual)
+    view_model.clearSourceRequested.connect(maintenance_controller.clearSource)
+    view_model.refreshLinkedRequested.connect(maintenance_controller.refreshLinked)
+    maintenance_controller.stateChanged.connect(view_model.applyMaintenanceState)
+    maintenance_controller.resultReady.connect(view_model.applyMaintenanceResult)
+    maintenance_controller.failed.connect(view_model.applyMaintenanceError)
+    view_model.applyMaintenanceResult(maintenance_controller.initial_status())
+    return ProductionImportFlow(
+        view_model=view_model,
+        controller=controller,
+        maintenance_controller=maintenance_controller,
+    )

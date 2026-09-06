@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .status_contracts import StatusDTO, StatusItemDTO
+from .status_contracts import StatusDTO, StatusItemDTO, StatusMarketDTO, StatusRunDTO
 
 REPORT_DIR = Path(__file__).resolve().parents[2] / "reports"
 
@@ -55,7 +56,27 @@ def build_status_dto(
         health_reader = gui_core.health_check
 
     rows = tuple(StatusItemDTO(str(name), bool(ok), str(detail)) for name, ok, detail in health_reader())
-    data_status, last_scan, recent_errors = _read_report_status(_latest_report(Path(report_dir)))
+    latest_report = _latest_report(Path(report_dir))
+    data_status, last_scan, recent_errors = _read_report_status(latest_report)
+    market_health: tuple[StatusMarketDTO, ...] = ()
+    recent_runs: tuple[StatusRunDTO, ...] = ()
+    try:
+        from bottom_hunter.src import gui_core
+
+        if latest_report is not None:
+            market_health = tuple(StatusMarketDTO(**item) for item in gui_core.load_data_health(latest_report))
+        recent_runs = tuple(
+            StatusRunDTO(
+                run_id=int(item.get("id") or 0),
+                report_date=str(item.get("report_date") or "--"),
+                started_at=str(item.get("started_at") or ""),
+                completed_at=str(item.get("completed_at") or ""),
+                status=str(item.get("status") or "--"),
+            )
+            for item in gui_core.recent_scan_runs(limit=8)
+        )
+    except (OSError, ValueError, sqlite3.Error):
+        pass
     ok_count = sum(item.ok for item in rows)
     all_healthy = bool(rows) and ok_count == len(rows)
     return StatusDTO(
@@ -64,6 +85,8 @@ def build_status_dto(
         system_health="正常" if all_healthy else "需检查",
         items=rows,
         recent_errors=recent_errors,
+        market_health=market_health,
+        recent_runs=recent_runs,
         ok_count=ok_count,
         total_count=len(rows),
         generated_at=datetime.now(UTC).isoformat(),

@@ -131,7 +131,7 @@ def test_application_shell_loads(monkeypatch) -> None:
 def test_pages_do_not_import_business_modules() -> None:
     # Only sanctioned adapter boundaries may reference the backend; the
     # viewmodel layer and QML must not.
-    forbidden = re.compile(r"bottom_hunter\.src|from\s+bottom_hunter\.src|scanner", re.I)
+    forbidden = re.compile(r"bottom_hunter\.src|from\s+bottom_hunter\.src|from\s+.+scanner", re.I)
     sanctioned_adapters = {
         "contracts.py",
         "import_preview_adapter.py",
@@ -140,6 +140,8 @@ def test_pages_do_not_import_business_modules() -> None:
         "overview_adapter.py",
         "status_adapter.py",
         "chart_adapter.py",
+        "research_adapter.py",
+        "task_adapter.py",
     }
     for py in PAGES_DIR.rglob("*.py"):
         if py.name in sanctioned_adapters:

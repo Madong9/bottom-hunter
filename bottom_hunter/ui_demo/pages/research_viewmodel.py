@@ -7,7 +7,7 @@ from typing import Any
 from PySide6.QtCore import Property, Signal, Slot
 
 from . import PAGE_RESEARCH, PageViewModel
-from .research_contracts import ResearchDTO, build_research_dto
+from .research_contracts import ResearchDTO
 
 LIFECYCLE_INIT = "INIT"
 LIFECYCLE_LOADING = "LOADING"
@@ -21,6 +21,7 @@ class ResearchViewModel(PageViewModel):
 
     changed = Signal()
     lifecycleChanged = Signal()
+    refreshRequested = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(PAGE_RESEARCH, "研究", parent)
@@ -98,9 +99,4 @@ class ResearchViewModel(PageViewModel):
     @Slot()
     def refresh(self) -> None:  # noqa: N802
         self.markLoading()
-        try:
-            dto = build_research_dto()
-        except (OSError, ValueError) as exc:
-            self.applyError(str(exc))
-            return
-        self.apply(dto or ResearchDTO())
+        self.refreshRequested.emit()

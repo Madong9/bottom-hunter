@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import QtQuick.Dialogs
 import "../../primitives"
 
@@ -12,6 +13,25 @@ GlassSurface {
 
     readonly property var vm: (typeof importVm !== "undefined") ? importVm : null
     property string selectedSource: "tonghuashun"
+    property string mode: "file"
+    property string pendingClear: ""
+
+    component EntryField: TextField {
+        implicitHeight: 38
+        leftPadding: 13
+        rightPadding: 13
+        color: GlassTokens.textPrimary
+        placeholderTextColor: GlassTokens.textMuted
+        font.family: "Noto Sans CJK SC"
+        font.pixelSize: 13
+        selectByMouse: true
+        background: GlassSurface {
+            surfaceRadius: GlassTokens.capsuleRadius(height)
+            tintAlpha: parent.activeFocus ? 0.34 : 0.20
+            accentTint: "#D5E8FF"
+            accentStrength: parent.activeFocus ? 0.18 : 0.06
+        }
+    }
 
     function resultValue(key, fallbackValue) {
         if (root.vm === null || !root.vm.result || root.vm.result[key] === undefined)
@@ -44,12 +64,37 @@ GlassSurface {
         }
 
         GlassText {
-            text: "先预览并校验文件，确认后才会安全导入。"
+            text: "支持事务文件导入、手动添加和来源维护。"
             tone: "muted"
             sizeHint: 13
         }
 
+        Row {
+            height: 38
+            spacing: 9
+            Repeater {
+                model: [
+                    { id: "file", label: "文件导入" },
+                    { id: "manual", label: "手动添加" },
+                    { id: "manage", label: "来源管理" }
+                ]
+                delegate: GlassSurface {
+                    width: 112; height: 36; reactive: true
+                    surfaceRadius: GlassTokens.capsuleRadius(height)
+                    tintAlpha: root.mode === modelData.id ? 0.15 : 0.05
+                    accentTint: root.mode === modelData.id ? "#CDEFE1" : "transparent"
+                    accentStrength: root.mode === modelData.id ? 0.20 : 0.0
+                    GlassText { anchors.centerIn: parent; text: modelData.label; tone: "primary"; sizeHint: 13 }
+                    MouseArea {
+                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                        onClicked: { root.mode = modelData.id; root.pendingClear = "" }
+                    }
+                }
+            }
+        }
+
         GlassCard {
+            visible: root.mode === "file"
             width: parent.width
             height: 116
             interactive: false
@@ -130,7 +175,143 @@ GlassSurface {
         }
 
         GlassCard {
-            visible: root.vm !== null && ["IMPORTING", "SUCCESS", "PARTIAL_REVIEW", "ERROR"].indexOf(root.vm.lifecycle) >= 0
+            visible: root.mode === "manual"
+            width: parent.width
+            height: 150
+            interactive: false
+            accentTint: "#D8F2E8"
+            accentStrength: 0.14
+
+            Column {
+                anchors.fill: parent; anchors.margins: 16; spacing: 10
+                GlassText { text: "手动添加自选"; tone: "primary"; sizeHint: 16 }
+                Row {
+                    spacing: 9
+                    EntryField { id: manualSymbol; width: 190; placeholderText: "代码，如 600519.SS / BTC-USDT" }
+                    EntryField { id: manualName; width: 155; placeholderText: "名称（可只填名称）" }
+                    EntryField {
+                        id: manualMarket; width: 120
+                        placeholderText: root.selectedSource === "tonghuashun" ? "CN / HK / US" : "CRYPTO"
+                    }
+                    EntryField { id: manualIndustry; width: 160; placeholderText: "行业（可选）" }
+                    GlassSurface {
+                        width: 112; height: 38; reactive: root.vm !== null && root.vm.maintenanceState !== "RUNNING"
+                        surfaceRadius: GlassTokens.capsuleRadius(height)
+                        tintAlpha: 0.13; accentTint: "#CDEFE1"; accentStrength: 0.22
+                        GlassText { anchors.centerIn: parent; text: "添加"; tone: "primary"; sizeHint: 13 }
+                        MouseArea {
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            enabled: root.vm !== null && root.vm.maintenanceState !== "RUNNING"
+                            onClicked: root.vm.addManual(
+                                root.selectedSource, manualSymbol.text, manualName.text,
+                                manualMarket.text || (root.selectedSource === "tonghuashun" ? "CN" : "CRYPTO"),
+                                manualIndustry.text
+                            )
+                        }
+                    }
+                }
+                Row {
+                    spacing: 8
+                    GlassText { text: "归属："; tone: "muted"; sizeHint: 12; anchors.verticalCenter: parent.verticalCenter }
+                    Repeater {
+                        model: [
+                            { id: "tonghuashun", label: "同花顺" },
+                            { id: "binance", label: "币安" },
+                            { id: "okx", label: "欧易" }
+                        ]
+                        delegate: GlassSurface {
+                            width: 82; height: 30; reactive: true
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
+                            tintAlpha: root.selectedSource === modelData.id ? 0.14 : 0.04
+                            accentTint: root.selectedSource === modelData.id ? "#D6E8FF" : "transparent"
+                            accentStrength: root.selectedSource === modelData.id ? 0.18 : 0
+                            GlassText { anchors.centerIn: parent; text: modelData.label; tone: "primary"; sizeHint: 12 }
+                            MouseArea { anchors.fill: parent; onClicked: root.selectedSource = modelData.id }
+                        }
+                    }
+                }
+            }
+        }
+
+        GlassCard {
+            visible: root.mode === "manage"
+            width: parent.width
+            height: 192
+            interactive: false
+            accentTint: "#E7DEFF"
+            accentStrength: 0.13
+
+            Column {
+                anchors.fill: parent; anchors.margins: 16; spacing: 10
+                Row {
+                    width: parent.width; height: 34; spacing: 12
+                    GlassText { text: "来源状态"; tone: "primary"; sizeHint: 16 }
+                    GlassSurface {
+                        width: 142; height: 32; reactive: root.vm !== null && root.vm.maintenanceState !== "RUNNING"
+                        surfaceRadius: GlassTokens.capsuleRadius(height)
+                        tintAlpha: 0.09; accentTint: "#D5E8FF"; accentStrength: 0.15
+                        GlassText { anchors.centerIn: parent; text: "刷新关联文件"; tone: "primary"; sizeHint: 12 }
+                        MouseArea {
+                            anchors.fill: parent; enabled: root.vm !== null && root.vm.maintenanceState !== "RUNNING"
+                            cursorShape: Qt.PointingHandCursor; onClicked: root.vm.refreshLinked()
+                        }
+                    }
+                }
+                Repeater {
+                    model: root.vm !== null ? root.vm.sourceStatuses : []
+                    delegate: Row {
+                        width: parent.width; height: 34; spacing: 12
+                        GlassText { width: 100; text: modelData.label; tone: "primary"; sizeHint: 13 }
+                        GlassText {
+                            width: 190; text: modelData.count + " 个·手动 " + modelData.manualCount + " 个"
+                            tone: "secondary"; sizeHint: 12
+                        }
+                        GlassText {
+                            width: 270; text: modelData.importFile || "未关联文件"
+                            elide: Text.ElideMiddle; tone: "muted"; sizeHint: 11
+                        }
+                        GlassSurface {
+                            width: root.pendingClear === modelData.source ? 132 : 96; height: 30; reactive: true
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
+                            tintAlpha: root.pendingClear === modelData.source ? 0.16 : 0.05
+                            accentTint: "#FFD9D1"; accentStrength: root.pendingClear === modelData.source ? 0.24 : 0.10
+                            GlassText {
+                                anchors.centerIn: parent
+                                text: root.pendingClear === modelData.source ? "再次确认清空" : "清空来源"
+                                tone: "primary"; sizeHint: 12
+                            }
+                            MouseArea {
+                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                enabled: root.vm !== null && root.vm.maintenanceState !== "RUNNING"
+                                onClicked: {
+                                    if (root.pendingClear === modelData.source) {
+                                        root.vm.clearSource(modelData.source); root.pendingClear = ""
+                                    } else root.pendingClear = modelData.source
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        GlassSurface {
+            visible: root.mode !== "file" && root.vm !== null && root.vm.maintenanceMessage !== ""
+            width: parent.width; height: 42
+            surfaceRadius: GlassTokens.capsuleRadius(height)
+            tintAlpha: 0.09
+            accentTint: root.vm !== null && root.vm.maintenanceState === "ERROR" ? "#FFD9D1" : "#D5EFE4"
+            accentStrength: 0.15
+            GlassText {
+                anchors.fill: parent; anchors.margins: 12
+                verticalAlignment: Text.AlignVCenter
+                text: root.vm !== null && root.vm.maintenanceState === "RUNNING" ? "正在后台处理…" : root.vm.maintenanceMessage
+                tone: "secondary"; sizeHint: 12; elide: Text.ElideRight
+            }
+        }
+
+        GlassCard {
+            visible: root.mode === "file" && root.vm !== null && ["IMPORTING", "SUCCESS", "PARTIAL_REVIEW", "ERROR"].indexOf(root.vm.lifecycle) >= 0
             width: parent.width
             height: 96
             interactive: false
@@ -173,7 +354,7 @@ GlassSurface {
         }
 
         Row {
-            visible: root.vm !== null && ["READY", "IMPORTING", "PARTIAL_REVIEW", "ERROR"].indexOf(root.vm.lifecycle) >= 0
+            visible: root.mode === "file" && root.vm !== null && ["READY", "IMPORTING", "PARTIAL_REVIEW", "ERROR"].indexOf(root.vm.lifecycle) >= 0
             height: 40
             spacing: 10
 
@@ -245,7 +426,7 @@ GlassSurface {
 
         Row {
             id: previewStats
-            visible: root.vm !== null && root.vm.lifecycle === "READY"
+            visible: root.mode === "file" && root.vm !== null && root.vm.lifecycle === "READY"
             width: parent.width
             spacing: 12
 
@@ -283,7 +464,7 @@ GlassSurface {
         }
 
         Row {
-            visible: root.vm !== null && root.vm.lifecycle === "READY"
+            visible: root.mode === "file" && root.vm !== null && root.vm.lifecycle === "READY"
             width: parent.width
             height: parent.height - y
             spacing: 14

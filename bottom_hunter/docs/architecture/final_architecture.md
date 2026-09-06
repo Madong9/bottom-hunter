@@ -34,13 +34,13 @@ independent and frozen. The QML product shell is available through
 
 | Route | Context property | Data source | Product state |
 |---|---|---|---|
-| `overview` | `overviewState` | Latest report snapshot | Read-only metrics |
-| `watchlist` | `watchlistVm` | `watchlist_summary.json` | Read-only assets |
-| `research` | `researchVm` | Latest report research snapshot | Read-only research |
-| `report` | `reportVm` | Latest JSON daily report | Read-only summary |
-| `import` | `importVm` | Preview adapter + transaction controller | Explicit command flow |
-| `status` | `statusVm` | Existing health checks and report snapshot | Read-only health |
-| `chart` | `chartVm` | `ChartReadAdapter` + existing chart service | Read-only interactive K-line |
+| `overview` | `overviewState`, `taskVm` | Latest report + process command adapter | Metrics and explicit scan/backtest commands |
+| `watchlist` | `watchlistVm` | Watchlist + latest report snapshots | Searchable assets and chart navigation |
+| `research` | `researchVm` | Report + read-only SQLite cache | Financial, news/opinion and macro research |
+| `report` | `reportVm` | Latest JSON/Markdown daily report | Summary, signals, sectors and full report |
+| `import` | `importVm` | Preview, transaction and maintenance controllers | Explicit file/manual/maintenance commands |
+| `status` | `statusVm` | Health, report and run snapshots | Read-only market and system health |
+| `chart` | `chartVm` | Chart service + annotation adapter | Interactive K-line and saved drawings |
 
 Every route has a stable page ID, loader, injected ViewModel position and a
 Chinese loading, empty, error or fallback message. Chart reuses the existing
@@ -65,7 +65,7 @@ Lifecycle states are explicit. Data pages use `INIT`, `LOADING`, `READY`,
 transaction states. Adapter failures become safe Chinese UI messages instead
 of exceptions escaping into QML.
 
-Chart follows a dedicated read-only asynchronous path:
+Market data follows a dedicated read-only asynchronous path:
 
 ```text
 watchlist_summary.json -> ChartAssetDTO
@@ -75,8 +75,17 @@ user selection -> ChartViewModel intent -> ChartController / QThread
 ```
 
 Indicators are calculated by the existing chart calculation function and
-transported as immutable values. QML owns only view controls, the visible-bar
-window and non-persistent session annotations.
+transported as immutable values. Drawing intents return through the ViewModel
+to `ChartDrawingAdapter`; annotations are sanitized and stored per asset and
+timeframe without exposing the chart backend to QML.
+
+Scan and backtest commands also remain outside the presentation layer:
+
+```text
+QML intent -> TaskViewModel -> TaskController / QProcess
+-> TaskCommandAdapter -> existing CLI entry point
+-> streamed output and terminal state -> TaskViewModel -> QML
+```
 
 The transparent native product window has a separate presentation-only
 compositor boundary:
@@ -134,6 +143,16 @@ mutation. `PARTIAL_REVIEW` releases that lock; acceptance reacquires it and
 re-verifies the prepared transaction before commit. Cancellation is
 cooperative and checked at safe transaction boundaries.
 
+Manual add, source clear and linked-file refresh use a smaller explicit path:
+
+```text
+QML intent -> ImportViewModel -> ImportMaintenanceController / QThread
+-> AccountWatchlistMaintenanceAdapter -> backend maintenance gateway
+```
+
+The gateway applies the same cross-process import lock to manual add and clear.
+No repository or backend result object crosses back into the UI layer.
+
 ## 6. Test system
 
 The suite combines:
@@ -143,6 +162,9 @@ The suite combines:
 - ViewModel lifecycle and error-state tests;
 - QML offscreen loading and routing smoke tests;
 - asynchronous Import Controller and cancellation tests;
+- non-blocking scan/backtest process-controller tests;
+- chart annotation persistence and watchlist-to-chart navigation tests;
+- read-only SQLite research aggregation tests;
 - transaction conflict, backup, rollback and lock tests;
 - architecture isolation and frozen-file regression tests;
 - full legacy regression tests.

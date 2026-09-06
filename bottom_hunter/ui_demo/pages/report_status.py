@@ -5,7 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import Property, Signal, Slot
 
 from . import PAGE_REPORT, PageViewModel
-from .contracts import ReportDTO, build_report_dto
+from .contracts import ReportDTO
 from .status_viewmodel import StatusViewModel
 
 LIFECYCLE_INIT = "INIT"
@@ -20,6 +20,7 @@ class ReportViewModel(PageViewModel):
 
     changed = Signal()
     lifecycleChanged = Signal()
+    refreshRequested = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(PAGE_REPORT, "报告", parent)
@@ -28,6 +29,14 @@ class ReportViewModel(PageViewModel):
         self._opportunity_count = 0
         self._sector_count = 0
         self._error_count = 0
+        self._file_name = ""
+        self._generated_at = ""
+        self._market_text = "--"
+        self._signals: list[dict] = []
+        self._sectors: list[dict] = []
+        self._alerts: list[str] = []
+        self._data_errors: list[str] = []
+        self._markdown = ""
         self._loaded = False
         self._lifecycle = LIFECYCLE_INIT
         self._error = ""
@@ -52,6 +61,38 @@ class ReportViewModel(PageViewModel):
     def errorCount(self) -> int:  # noqa: N802
         return self._error_count
 
+    @Property(str, notify=changed)
+    def fileName(self) -> str:  # noqa: N802
+        return self._file_name
+
+    @Property(str, notify=changed)
+    def generatedAt(self) -> str:  # noqa: N802
+        return self._generated_at
+
+    @Property(str, notify=changed)
+    def marketText(self) -> str:  # noqa: N802
+        return self._market_text
+
+    @Property("QVariantList", notify=changed)
+    def signals(self) -> list[dict]:
+        return self._signals
+
+    @Property("QVariantList", notify=changed)
+    def sectors(self) -> list[dict]:
+        return self._sectors
+
+    @Property("QVariantList", notify=changed)
+    def alerts(self) -> list[str]:
+        return self._alerts
+
+    @Property("QVariantList", notify=changed)
+    def dataErrors(self) -> list[str]:  # noqa: N802
+        return self._data_errors
+
+    @Property(str, notify=changed)
+    def markdown(self) -> str:
+        return self._markdown
+
     @Property(bool, notify=changed)
     def loaded(self) -> bool:
         return self._loaded
@@ -70,6 +111,14 @@ class ReportViewModel(PageViewModel):
         self._opportunity_count = int(dto.opportunity_count)
         self._sector_count = int(dto.sector_count)
         self._error_count = int(dto.error_count)
+        self._file_name = str(dto.file_name)
+        self._generated_at = str(dto.generated_at)
+        self._market_text = " · ".join(f"{key} {value}" for key, value in dto.market_sessions) or "--"
+        self._signals = [item.as_dict() for item in dto.signals]
+        self._sectors = [item.as_dict() for item in dto.sectors]
+        self._alerts = [str(item) for item in dto.alerts]
+        self._data_errors = [str(item) for item in dto.data_errors]
+        self._markdown = str(dto.markdown)
         self._loaded = True
         self._error = ""
         self._set_lifecycle(LIFECYCLE_READY if self._report_date != "--" else LIFECYCLE_EMPTY)
@@ -92,12 +141,7 @@ class ReportViewModel(PageViewModel):
     @Slot()
     def refresh(self) -> None:
         self.markLoading()
-        try:
-            dto = build_report_dto()
-        except (OSError, ValueError) as exc:
-            self.applyError(str(exc))
-            return
-        self.apply(dto or ReportDTO())
+        self.refreshRequested.emit()
 
 
 __all__ = ["ReportViewModel", "StatusViewModel"]

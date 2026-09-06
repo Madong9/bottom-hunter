@@ -9,10 +9,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .chart_contracts import ChartAssetDTO, ChartBarDTO, ChartDTO
+from .chart_contracts import ChartAssetDTO, ChartBarDTO, ChartDrawingDTO, ChartDTO
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 SUMMARY_PATH = BACKEND_DIR / "state" / "watchlist_summary.json"
+DRAWINGS_PATH = BACKEND_DIR / "state" / "chart_drawings.json"
 
 
 def _number(value: Any) -> float | None:
@@ -76,12 +77,13 @@ class ChartReadAdapter:
         retry_delay: float = 0.35,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
+        self._summary_path = Path(summary_path)
         if service is None:
             from bottom_hunter.src.charting import MarketChartService
 
             service = MarketChartService()
         self._service = service
-        loaded = load_chart_assets(summary_path) if assets is None else tuple(assets)
+        loaded = load_chart_assets(self._summary_path) if assets is None else tuple(assets)
         self._assets = {asset.canonical_id: asset for asset in loaded}
         self._retry_attempts = max(1, int(retry_attempts))
         self._retry_delay = max(0.0, float(retry_delay))
@@ -91,6 +93,11 @@ class ChartReadAdapter:
     @property
     def assets(self) -> tuple[ChartAssetDTO, ...]:
         return tuple(self._assets.values())
+
+    def refresh_assets(self) -> tuple[ChartAssetDTO, ...]:
+        loaded = load_chart_assets(self._summary_path)
+        self._assets = {asset.canonical_id: asset for asset in loaded}
+        return tuple(loaded)
 
     def fetch(self, canonical_id: str, timeframe: str, limit: int) -> ChartDTO:
         from bottom_hunter.src.charting import calculate_chart_indicators
@@ -171,3 +178,54 @@ class ChartReadAdapter:
         )
         self._last_good[request_key] = dto
         return dto
+
+
+class ChartDrawingAdapter:
+    """The isolated persistence boundary for user-created chart annotations."""
+
+    _ALLOWED_KEYS = frozenset({"type", "price", "x1", "y1", "x2", "y2"})
+
+    def __init__(self, path: str | Path = DRAWINGS_PATH, store: object | None = None) -> None:
+        if store is None:
+            from bottom_hunter.src.charting import ChartAnnotationStore
+
+            store = ChartAnnotationStore(path)
+        self._store = store
+
+    @classmethod
+    def _normalize(cls, annotations: object) -> list[dict[str, str | float]]:
+        if not isinstance(annotations, (list, tuple)):
+            return []
+        normalized: list[dict[str, str | float]] = []
+        for value in annotations:
+            if not isinstance(value, dict):
+                continue
+            drawing_type = str(value.get("type") or "")
+            if drawing_type not in {"horizontal", "trend"}:
+                continue
+            item: dict[str, str | float] = {"type": drawing_type}
+            required = ("price",) if drawing_type == "horizontal" else ("x1", "y1", "x2", "y2")
+            try:
+                for key in required:
+                    item[key] = float(value[key])
+            except (KeyError, TypeError, ValueError):
+                continue
+            normalized.append(item)
+        return normalized
+
+    def load(self, canonical_id: str, timeframe: str) -> ChartDrawingDTO:
+        annotations = self._normalize(self._store.get(str(canonical_id), str(timeframe)))
+        return ChartDrawingDTO(
+            canonical_id=str(canonical_id),
+            timeframe=str(timeframe),
+            annotations=tuple(tuple(sorted(item.items())) for item in annotations),
+        )
+
+    def save(self, canonical_id: str, timeframe: str, annotations: object) -> ChartDrawingDTO:
+        normalized = self._normalize(annotations)
+        self._store.save(str(canonical_id), str(timeframe), normalized)
+        return ChartDrawingDTO(
+            canonical_id=str(canonical_id),
+            timeframe=str(timeframe),
+            annotations=tuple(tuple(sorted(item.items())) for item in normalized),
+        )

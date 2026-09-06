@@ -7,8 +7,7 @@ from typing import Any
 from PySide6.QtCore import Property, Signal, Slot
 
 from . import PAGE_STATUS, PageViewModel
-from .status_adapter import build_status_dto
-from .status_contracts import StatusDTO, StatusItemDTO
+from .status_contracts import StatusDTO, StatusItemDTO, StatusMarketDTO, StatusRunDTO
 
 LIFECYCLE_INIT = "INIT"
 LIFECYCLE_LOADING = "LOADING"
@@ -20,6 +19,7 @@ LIFECYCLE_ERROR = "ERROR"
 class StatusViewModel(PageViewModel):
     changed = Signal()
     lifecycleChanged = Signal()
+    refreshRequested = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(PAGE_STATUS, "状态", parent)
@@ -28,6 +28,8 @@ class StatusViewModel(PageViewModel):
         self._system_health = "未知"
         self._items: list[dict[str, Any]] = []
         self._recent_errors: list[str] = []
+        self._market_health: list[dict[str, Any]] = []
+        self._recent_runs: list[dict[str, Any]] = []
         self._ok_count = 0
         self._total_count = 0
         self._generated_at = ""
@@ -53,6 +55,14 @@ class StatusViewModel(PageViewModel):
     @Property("QVariantList", notify=changed)
     def recentErrors(self) -> list:  # noqa: N802
         return self._recent_errors
+
+    @Property("QVariantList", notify=changed)
+    def marketHealth(self) -> list:  # noqa: N802
+        return self._market_health
+
+    @Property("QVariantList", notify=changed)
+    def recentRuns(self) -> list:  # noqa: N802
+        return self._recent_runs
 
     @Property(int, notify=changed)
     def okCount(self) -> int:  # noqa: N802
@@ -90,6 +100,14 @@ class StatusViewModel(PageViewModel):
         self._last_scan_time = str(getattr(dto, "last_scan_time", "--"))
         self._system_health = str(getattr(dto, "system_health", "正常" if self._items else "未知"))
         self._recent_errors = [str(item) for item in getattr(dto, "recent_errors", ())]
+        self._market_health = [
+            item.as_dict() if isinstance(item, StatusMarketDTO) else dict(item)
+            for item in getattr(dto, "market_health", ())
+        ]
+        self._recent_runs = [
+            item.as_dict() if isinstance(item, StatusRunDTO) else dict(item)
+            for item in getattr(dto, "recent_runs", ())
+        ]
         self._ok_count = int(getattr(dto, "ok_count", 0))
         self._total_count = int(getattr(dto, "total_count", len(self._items)))
         self._generated_at = str(getattr(dto, "generated_at", ""))
@@ -113,9 +131,4 @@ class StatusViewModel(PageViewModel):
     @Slot()
     def refresh(self) -> None:
         self.markLoading()
-        try:
-            dto = build_status_dto()
-        except (OSError, ValueError) as exc:
-            self.applyError(str(exc))
-            return
-        self.apply(dto)
+        self.refreshRequested.emit()

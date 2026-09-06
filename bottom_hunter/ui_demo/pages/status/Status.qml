@@ -20,7 +20,17 @@ GlassSurface {
         anchors.margins: 20
         spacing: 14
 
-        GlassText { text: "系统状态"; tone: "primary"; sizeHint: 23 }
+        Row {
+            width: parent.width
+            spacing: 10
+            GlassText { width: parent.width - 90; text: "系统状态"; tone: "primary"; sizeHint: 23 }
+            GlassButton {
+                width: 76
+                height: 34
+                label: "重新检查"
+                onClicked: if (root.vm !== null) root.vm.refresh()
+            }
+        }
         GlassText {
             text: root.vm !== null && root.vm.generatedAt !== "" ? "检查时间 · " + root.vm.generatedAt : "只读健康检查"
             tone: "muted"
@@ -129,7 +139,51 @@ GlassSurface {
                     anchors.fill: parent
                     anchors.margins: 16
                     spacing: 9
-                    GlassText { text: "最近错误"; tone: "primary"; sizeHint: 16 }
+                    GlassText { text: "数据源健康"; tone: "primary"; sizeHint: 16 }
+                    ListView {
+                        id: marketHealthList
+                        width: parent.width
+                        height: Math.min(230, contentHeight)
+                        spacing: 6
+                        clip: true
+                        model: root.vm !== null ? root.vm.marketHealth : []
+                        delegate: GlassSurface {
+                            width: marketHealthList.width
+                            height: 54
+                            tintAlpha: 0.05
+                            surfaceRadius: GlassTokens.compactContainerRadius
+                            accentTint: modelData.errors > 0 ? "#FFD8CF" : "#D4F1E6"
+                            accentStrength: 0.10
+                            Row {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 8
+                                GlassText { width: 58; text: modelData.market; tone: "primary"; sizeHint: 12 }
+                                Column {
+                                    width: parent.width - 66
+                                    spacing: 3
+                                    GlassText { text: modelData.session + "  ·  完整 " + modelData.complete + "/" + modelData.signals + "  ·  异常 " + modelData.errors; tone: "secondary"; sizeHint: 11 }
+                                    GlassText { width: parent.width; text: modelData.providers; elide: Text.ElideRight; tone: "muted"; sizeHint: 10 }
+                                }
+                            }
+                        }
+                    }
+                    GlassText {
+                        text: "最近扫描批次 · " + (root.vm !== null ? root.vm.recentRuns.length : 0)
+                        tone: "primary"
+                        sizeHint: 14
+                    }
+                    GlassText {
+                        visible: root.vm !== null && root.vm.recentRuns.length > 0
+                        width: parent.width
+                        text: root.vm !== null && root.vm.recentRuns.length > 0
+                              ? "#" + root.vm.recentRuns[0].run_id + "  ·  "
+                                + root.vm.recentRuns[0].report_date + "  ·  "
+                                + root.vm.recentRuns[0].status : ""
+                        tone: "muted"
+                        sizeHint: 11
+                    }
+                    GlassText { text: "最近错误"; tone: "primary"; sizeHint: 14 }
                     GlassText {
                         visible: root.vm !== null && root.vm.recentErrors.length === 0
                         text: "未发现最近数据错误"

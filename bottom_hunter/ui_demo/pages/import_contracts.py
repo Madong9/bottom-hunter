@@ -116,3 +116,48 @@ class ImportResultDTO:
     error: ImportErrorDTO | None = None
     started_at: str = ""
     finished_at: str = ""
+
+
+@dataclass(frozen=True)
+class ImportMaintenanceCommandDTO:
+    """A user-confirmed watchlist maintenance intent."""
+
+    action: str
+    source: str = ""
+    symbol: str = ""
+    name: str = ""
+    market: str = ""
+    industry: str = ""
+
+
+@dataclass(frozen=True)
+class ImportSourceStatusDTO:
+    source: str
+    label: str
+    count: int = 0
+    manual_count: int = 0
+    connected: bool = False
+    imported_at: str = ""
+    import_file: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "source": self.source,
+            "label": self.label,
+            "count": self.count,
+            "manualCount": self.manual_count,
+            "connected": self.connected,
+            "importedAt": self.imported_at,
+            "importFile": self.import_file,
+        }
+
+
+@dataclass(frozen=True)
+class ImportMaintenanceResultDTO:
+    action: str
+    success: bool
+    message: str
+    total_count: int = 0
+    affected_sources: tuple[str, ...] = field(default_factory=tuple)
+    errors: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    source_statuses: tuple[ImportSourceStatusDTO, ...] = field(default_factory=tuple)

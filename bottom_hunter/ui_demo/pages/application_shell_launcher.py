@@ -37,6 +37,7 @@ def main(argv: list[str] | None = None) -> int:
     QGuiApplication.setDesktopFileName("bottom-hunter")
     app = QGuiApplication(argv if argv is not None else sys.argv)
     flow = build_production_flow()
+    app.aboutToQuit.connect(flow.task_controller.shutdown)
     view = QQuickView()
     surface_format = view.format()
     surface_format.setAlphaBufferSize(8)

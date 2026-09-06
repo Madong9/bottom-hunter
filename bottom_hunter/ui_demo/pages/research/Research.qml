@@ -40,6 +40,13 @@ GlassSurface {
                 sizeHint: 12
             }
 
+            GlassButton {
+                width: 76
+                height: 34
+                label: "刷新"
+                onClicked: if (root.vm !== null) root.vm.refresh()
+            }
+
             GlassText {
                 anchors.verticalCenter: parent.verticalCenter
                 text: {
@@ -121,7 +128,7 @@ GlassSurface {
 
                         delegate: GlassSurface {
                             width: assetList.width
-                            height: 86
+                            height: 104
                             tintAlpha: 0.025
                             surfaceRadius: GlassTokens.compactContainerRadius
                             accentTint: "#DFE7FF"
@@ -133,10 +140,17 @@ GlassSurface {
                                 spacing: 5
 
                                 GlassText {
-                                    text: modelData.symbol + "  ·  财务期 "
-                                          + modelData.latest_financial_period
+                                    text: modelData.name + "  ·  " + modelData.symbol
+                                          + "  ·  " + modelData.market
                                     tone: "primary"
                                     sizeHint: 14
+                                }
+                                GlassText {
+                                    text: "财务 " + modelData.financial_fact_count + " 项  ·  资讯 "
+                                          + modelData.research_item_count + " 条  ·  最新财务期 "
+                                          + modelData.latest_financial_period
+                                    tone: "muted"
+                                    sizeHint: 11
                                 }
                                 GlassText {
                                     width: parent.width
@@ -151,6 +165,16 @@ GlassSurface {
                                           ? modelData.items[0].source : ""
                                     tone: "muted"
                                     sizeHint: 11
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: modelData.items.length > 0 && modelData.items[0].url
+                                             ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onDoubleClicked: {
+                                    if (modelData.items.length > 0 && modelData.items[0].url)
+                                        Qt.openUrlExternally(modelData.items[0].url)
                                 }
                             }
                         }
@@ -235,6 +259,12 @@ GlassSurface {
                                     tone: "muted"
                                     sizeHint: 12
                                 }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: modelData.source_url ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onDoubleClicked: if (modelData.source_url) Qt.openUrlExternally(modelData.source_url)
                             }
                         }
                     }

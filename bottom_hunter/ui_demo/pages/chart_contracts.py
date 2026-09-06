@@ -110,3 +110,17 @@ class ChartDTO:
             "updatedAt": self.updated_at,
             "note": self.note,
         }
+
+
+@dataclass(frozen=True)
+class ChartDrawingDTO:
+    """Saved presentation annotations scoped to one asset and timeframe."""
+
+    canonical_id: str = ""
+    timeframe: str = "1d"
+    annotations: tuple[tuple[tuple[str, str | float], ...], ...] = field(
+        default_factory=tuple
+    )
+
+    def as_list(self) -> list[dict[str, str | float]]:
+        return [dict(item) for item in self.annotations]

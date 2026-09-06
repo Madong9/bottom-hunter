@@ -137,15 +137,16 @@ def test_research_viewmodel_empty_state() -> None:
     assert vm.property("loaded") is True
 
 
-def test_research_viewmodel_error_state(monkeypatch) -> None:
-    from bottom_hunter.ui_demo.pages import research_viewmodel
+def test_research_viewmodel_error_state() -> None:
+    from bottom_hunter.ui_demo.pages.research_viewmodel import ResearchViewModel
 
-    def fail():
-        raise ValueError("broken snapshot")
-
-    vm = research_viewmodel.ResearchViewModel()
-    monkeypatch.setattr(research_viewmodel, "build_research_dto", fail)
+    vm = ResearchViewModel()
+    requested = []
+    vm.refreshRequested.connect(lambda: requested.append(True))
     vm.refresh()
+    assert requested == [True]
+    assert vm.property("lifecycle") == "LOADING"
+    vm.applyError("broken snapshot")
     assert vm.property("lifecycle") == "ERROR"
     assert vm.property("error") == "broken snapshot"
     assert vm.property("loaded") is False

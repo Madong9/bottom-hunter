@@ -7,7 +7,12 @@ from typing import Any
 from PySide6.QtCore import Property, Signal, Slot
 
 from . import PAGE_IMPORT, PageViewModel
-from .import_contracts import FileFingerprintDTO, ImportPreviewDTO, ImportResultDTO
+from .import_contracts import (
+    FileFingerprintDTO,
+    ImportMaintenanceResultDTO,
+    ImportPreviewDTO,
+    ImportResultDTO,
+)
 from .import_preview_adapter import ImportPreviewError, build_import_preview_dto
 
 LIFECYCLE_INIT = "INIT"
@@ -32,6 +37,10 @@ class ImportViewModel(PageViewModel):
     cancelRequested = Signal()
     partialAccepted = Signal()
     retryRequested = Signal()
+    manualAddRequested = Signal(str, str, str, str, str)
+    clearSourceRequested = Signal(str)
+    refreshLinkedRequested = Signal()
+    maintenanceCompleted = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(PAGE_IMPORT, "导入", parent)
@@ -52,6 +61,9 @@ class ImportViewModel(PageViewModel):
         self._result_warnings: list[str] = []
         self._progress = 0
         self._progress_message = ""
+        self._maintenance_state = "IDLE"
+        self._maintenance_message = ""
+        self._source_statuses: list[dict[str, Any]] = []
 
     @Property(str, notify=changed)
     def filename(self) -> str:
@@ -108,6 +120,18 @@ class ImportViewModel(PageViewModel):
     @Property(str, notify=changed)
     def progressMessage(self) -> str:  # noqa: N802
         return self._progress_message
+
+    @Property(str, notify=changed)
+    def maintenanceState(self) -> str:  # noqa: N802
+        return self._maintenance_state
+
+    @Property(str, notify=changed)
+    def maintenanceMessage(self) -> str:  # noqa: N802
+        return self._maintenance_message
+
+    @Property("QVariantList", notify=changed)
+    def sourceStatuses(self) -> list[dict[str, Any]]:  # noqa: N802
+        return list(self._source_statuses)
 
     def apply(self, dto: ImportPreviewDTO) -> None:  # noqa: N802
         self._filename = str(dto.filename)
@@ -241,3 +265,46 @@ class ImportViewModel(PageViewModel):
         self._error = ""
         self._set_lifecycle(LIFECYCLE_IMPORTING)
         self.retryRequested.emit()
+
+    @Slot(str, str, str, str, str)
+    def addManual(
+        self, source: str, symbol: str, name: str, market: str, industry: str
+    ) -> None:  # noqa: N802
+        if self._maintenance_state == "RUNNING":
+            return
+        self._maintenance_message = ""
+        self.manualAddRequested.emit(source, symbol, name, market, industry)
+
+    @Slot(str)
+    def clearSource(self, source: str) -> None:  # noqa: N802
+        if self._maintenance_state != "RUNNING":
+            self.clearSourceRequested.emit(source)
+
+    @Slot()
+    def refreshLinked(self) -> None:  # noqa: N802
+        if self._maintenance_state != "RUNNING":
+            self.refreshLinkedRequested.emit()
+
+    @Slot(str)
+    def applyMaintenanceState(self, state: str) -> None:  # noqa: N802
+        self._maintenance_state = str(state)
+        self.changed.emit()
+
+    @Slot(str)
+    def applyMaintenanceError(self, message: str) -> None:  # noqa: N802
+        self._maintenance_state = "ERROR"
+        self._maintenance_message = str(message)
+        self.changed.emit()
+
+    @Slot(object)
+    def applyMaintenanceResult(self, dto: ImportMaintenanceResultDTO) -> None:  # noqa: N802
+        self._maintenance_state = "SUCCESS" if dto.action != "status" else "IDLE"
+        self._maintenance_message = dto.message
+        if dto.errors:
+            self._maintenance_message += " " + "；".join(
+                f"{source}：{message}" for source, message in dto.errors
+            )
+        self._source_statuses = [item.as_dict() for item in dto.source_statuses]
+        self.changed.emit()
+        if dto.action != "status":
+            self.maintenanceCompleted.emit()

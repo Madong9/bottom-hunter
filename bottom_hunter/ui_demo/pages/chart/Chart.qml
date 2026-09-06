@@ -28,6 +28,11 @@ GlassSurface {
             root.visibleCount = Math.min(Math.max(30, root.visibleCount), Math.max(30, root.vm.barCount))
             chartCanvas.requestPaint()
         }
+        function onDrawingsChanged() {
+            root.annotations = root.vm.annotations
+            root.draftPoint = null
+            chartCanvas.requestPaint()
+        }
     }
 
     Timer {
@@ -152,7 +157,6 @@ GlassSurface {
                     textRole: "label"
                     currentIndex: root.vm !== null ? root.vm.selectedIndex : -1
                     onActivated: function(index) {
-                        root.annotations = []
                         root.draftPoint = null
                         if (root.vm !== null) root.vm.selectAsset(index)
                     }
@@ -183,7 +187,6 @@ GlassSurface {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                root.annotations = []
                                 root.draftPoint = null
                                 if (root.vm !== null) root.vm.selectTimeframe(modelData.key)
                             }
@@ -273,6 +276,7 @@ GlassSurface {
                         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: {
                             let values = root.annotations.slice(); values.pop(); root.annotations = values
+                            if (root.vm !== null) root.vm.saveAnnotations(values)
                             chartCanvas.requestPaint()
                         }
                     }
@@ -284,7 +288,11 @@ GlassSurface {
                     MouseArea {
                         anchors.fill: parent; enabled: root.annotations.length > 0
                         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: { root.annotations = []; root.draftPoint = null; chartCanvas.requestPaint() }
+                        onClicked: {
+                            root.annotations = []; root.draftPoint = null
+                            if (root.vm !== null) root.vm.saveAnnotations([])
+                            chartCanvas.requestPaint()
+                        }
                     }
                 }
                 GlassText {
@@ -487,6 +495,7 @@ GlassSurface {
                             values.push({ type: "trend", x1: root.draftPoint.x, y1: root.draftPoint.price, x2: point.x, y2: point.price })
                             root.annotations = values; root.draftPoint = null
                         }
+                        if (root.vm !== null && root.draftPoint === null) root.vm.saveAnnotations(root.annotations)
                         chartCanvas.requestPaint()
                     }
                 }

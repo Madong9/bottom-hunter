@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Layouts
 import "../../primitives"
 import "../../components" as Components
 
@@ -36,7 +37,7 @@ GlassSurface {
             }
 
             GlassText {
-                text: (root.vm !== null && root.vm.count > 0) ? root.vm.count + " 个标的" : ""
+                text: root.vm !== null ? root.vm.count + " / " + root.vm.totalCount + " 个标的" : ""
                 tone: "muted"
                 sizeHint: 13
                 anchors.verticalCenter: parent.verticalCenter
@@ -74,11 +75,72 @@ GlassSurface {
             sizeHint: 12
         }
 
+        RowLayout {
+            width: parent.width
+            spacing: 8
+
+            TextField {
+                id: watchlistSearch
+                objectName: "watchlistSearch"
+                Layout.preferredWidth: 250
+                height: 38
+                placeholderText: "搜索代码、名称或行业"
+                color: GlassTokens.textPrimary
+                placeholderTextColor: GlassTokens.textMuted
+                selectByMouse: true
+                leftPadding: 14
+                rightPadding: 14
+                onTextChanged: if (root.vm !== null) root.vm.setQuery(text)
+                background: GlassSurface {
+                    tintAlpha: 0.18
+                    surfaceRadius: GlassTokens.capsuleRadius(height)
+                }
+            }
+
+            Repeater {
+                model: [
+                    { id: "all", label: "全部", count: root.vm !== null ? root.vm.totalCount : 0 },
+                    { id: "crypto", label: "加密", count: root.vm !== null ? root.vm.cryptoCount : 0 },
+                    { id: "global_equity", label: "美港股", count: root.vm !== null ? root.vm.globalEquityCount : 0 },
+                    { id: "cn_equity", label: "A股", count: root.vm !== null ? root.vm.cnEquityCount : 0 }
+                ]
+                GlassButton {
+                    Layout.preferredWidth: modelData.id === "global_equity" ? 94 : 76
+                    height: 38
+                    label: modelData.label + " " + modelData.count
+                    active: root.vm !== null && root.vm.category === modelData.id
+                    onClicked: if (root.vm !== null) root.vm.setCategory(modelData.id)
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            GlassButton {
+                Layout.preferredWidth: 76
+                height: 38
+                label: "刷新"
+                onClicked: if (root.vm !== null) root.vm.refresh()
+            }
+            GlassButton {
+                Layout.preferredWidth: 92
+                height: 38
+                label: "导入自选"
+                onClicked: if (root.vm !== null) root.vm.openImport()
+            }
+        }
+
         GlassText {
             visible: root.vm !== null && root.vm.lifecycle === "ERROR"
             text: root.vm !== null ? root.vm.error : ""
             tone: "secondary"
             sizeHint: 14
+        }
+
+        GlassText {
+            visible: root.vm !== null && root.vm.lifecycle === "READY" && root.vm.count === 0
+            text: "没有符合当前筛选条件的标的"
+            tone: "muted"
+            sizeHint: 13
         }
 
         GlassText {
@@ -171,6 +233,13 @@ GlassSurface {
                     GlassText { width: row.col2W; text: modelData.price; tone: "secondary"; sizeHint: 14 }
                     GlassText { width: row.col3W; text: modelData.change_percent; tone: "secondary"; sizeHint: 14 }
                     GlassText { width: row.col4W; text: modelData.signal; tone: "muted"; sizeHint: 13 }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.LeftButton
+                    onDoubleClicked: if (root.vm !== null) root.vm.openChart(index)
                 }
             }
         }

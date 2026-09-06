@@ -26,6 +26,8 @@ class ResearchItemDTO:
     source: str = "--"
     published_at: str = ""
     url: str = ""
+    summary: str = ""
+    sentiment: str = "neutral"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -35,6 +37,8 @@ class ResearchItemDTO:
             "source": self.source,
             "published_at": self.published_at,
             "url": self.url,
+            "summary": self.summary,
+            "sentiment": self.sentiment,
         }
 
 
@@ -43,13 +47,21 @@ class ResearchAssetDTO:
     """Research summary already attached to one asset in the report."""
 
     symbol: str = "--"
+    name: str = "--"
+    market: str = "--"
     latest_financial_period: str = "--"
+    financial_fact_count: int = 0
+    research_item_count: int = 0
     items: tuple[ResearchItemDTO, ...] = field(default_factory=tuple)
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "symbol": self.symbol,
+            "name": self.name,
+            "market": self.market,
             "latest_financial_period": self.latest_financial_period,
+            "financial_fact_count": self.financial_fact_count,
+            "research_item_count": self.research_item_count,
             "items": [item.as_dict() for item in self.items],
         }
 
@@ -145,12 +157,18 @@ def build_research_dto(report_dir: Path = REPORT_DIR) -> ResearchDTO | None:
                         source=str(raw_item.get("source") or "--"),
                         published_at=str(raw_item.get("published_at") or ""),
                         url=str(raw_item.get("url") or ""),
+                        summary=str(raw_item.get("summary") or ""),
+                        sentiment=str(raw_item.get("sentiment") or "neutral"),
                     )
                 )
             assets.append(
                 ResearchAssetDTO(
                     symbol=str(symbol or "--"),
+                    name=str(raw_asset.get("name") or symbol or "--"),
+                    market=str(raw_asset.get("market") or "--"),
                     latest_financial_period=str(raw_asset.get("latest_financial_period") or "--"),
+                    financial_fact_count=int(raw_asset.get("financial_fact_count") or 0),
+                    research_item_count=int(raw_asset.get("research_item_count") or len(items)),
                     items=tuple(items),
                 )
             )

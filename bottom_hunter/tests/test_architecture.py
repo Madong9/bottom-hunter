@@ -49,6 +49,8 @@ SANCTIONED_ADAPTERS = {
     "overview_adapter.py",
     "status_adapter.py",
     "chart_adapter.py",
+    "research_adapter.py",
+    "task_adapter.py",
 }
 
 
@@ -104,6 +106,7 @@ def test_dto_contracts_are_pure() -> None:
         UI_DEMO / "overview_shell" / "contracts" / "__init__.py",
         UI_DEMO / "pages" / "contracts.py",
         UI_DEMO / "pages" / "import_contracts.py",
+        UI_DEMO / "pages" / "task_contracts.py",
     ]
     forbidden = re.compile(r"PySide6|QtQuick|QObject", re.I)
     for path in contract_files:
