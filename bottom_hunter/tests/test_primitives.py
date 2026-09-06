@@ -28,8 +28,7 @@ def _software_env(monkeypatch) -> None:
 
 
 def test_primitives_files_exist() -> None:
-    for name in ("GlassSurface.qml", "GlassCard.qml", "GlassButton.qml",
-                 "GlassText.qml", "qmldir"):
+    for name in ("GlassSurface.qml", "GlassCard.qml", "GlassButton.qml", "GlassText.qml", "qmldir"):
         assert (PRIMITIVES_DIR / name).exists(), f"missing {name}"
 
 

@@ -31,6 +31,7 @@ def _software_env(monkeypatch) -> None:
 
 # ---- 1. DTO creation ---------------------------------------------------------
 
+
 def test_watchlist_item_dto_defaults() -> None:
     from bottom_hunter.ui_demo.pages.watchlist_contracts import WatchlistItemDTO
 
@@ -58,8 +59,7 @@ def test_watchlist_item_dto_frozen() -> None:
 def test_watchlist_dto_as_dict() -> None:
     from bottom_hunter.ui_demo.pages.watchlist_contracts import WatchlistDTO, WatchlistItemDTO
 
-    dto = WatchlistDTO(items=(WatchlistItemDTO(symbol="600000", name="浦发银行"),),
-                       generated_at="2026-09-02T00:00:00")
+    dto = WatchlistDTO(items=(WatchlistItemDTO(symbol="600000", name="浦发银行"),), generated_at="2026-09-02T00:00:00")
     payload = dto.as_dict()
     assert payload["generated_at"] == "2026-09-02T00:00:00"
     assert payload["items"][0]["symbol"] == "600000"
@@ -67,6 +67,7 @@ def test_watchlist_dto_as_dict() -> None:
 
 
 # ---- 2. ViewModel init -------------------------------------------------------
+
 
 def test_viewmodel_defaults() -> None:
     from bottom_hunter.ui_demo.pages.watchlist_viewmodel import (
@@ -85,6 +86,7 @@ def test_viewmodel_defaults() -> None:
 
 
 # ---- 3. mock data display ----------------------------------------------------
+
 
 def _make_vm_with_rows():
     from bottom_hunter.ui_demo.pages.watchlist_contracts import WatchlistDTO, WatchlistItemDTO
@@ -117,6 +119,7 @@ def test_viewmodel_apply_mock_data() -> None:
 
 # ---- 4. empty state ----------------------------------------------------------
 
+
 def test_viewmodel_empty_state() -> None:
     from bottom_hunter.ui_demo.pages.watchlist_contracts import WatchlistDTO
     from bottom_hunter.ui_demo.pages.watchlist_viewmodel import (
@@ -132,6 +135,7 @@ def test_viewmodel_empty_state() -> None:
 
 
 # ---- 5. error state ----------------------------------------------------------
+
 
 def test_viewmodel_error_state() -> None:
     from bottom_hunter.ui_demo.pages.watchlist_viewmodel import (
@@ -149,6 +153,7 @@ def test_viewmodel_error_state() -> None:
 
 
 # ---- 6. QML load smoke -------------------------------------------------------
+
 
 @pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
 def test_qml_load_smoke(monkeypatch) -> None:
@@ -207,6 +212,7 @@ def test_watchlist_uses_unambiguous_glass_card_import() -> None:
 
 # ---- 7. business isolation ---------------------------------------------------
 
+
 def test_viewmodel_layer_does_not_import_business() -> None:
     """watchlist_viewmodel.py (viewmodel) + Watchlist.qml must not reference
     backend modules; only watchlist_contracts.py (adapter boundary) may."""
@@ -238,6 +244,7 @@ def test_viewmodel_has_no_write_api_calls() -> None:
 
 
 # ---- 9. page registry route --------------------------------------------------
+
 
 def test_page_registry_route_present() -> None:
     from bottom_hunter.ui_demo.pages import PAGE_WATCHLIST, PAGES

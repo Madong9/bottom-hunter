@@ -41,9 +41,7 @@ def test_no_reversed_smoothstep() -> None:
         text = frag.read_text(encoding="utf-8")
         for m in pat.finditer(text):
             e0, e1 = float(m.group(1)), float(m.group(2))
-            assert e0 < e1, (
-                f"{frag.name}: reversed smoothstep edges {e0} > {e1} at {m.group(0)!r}"
-            )
+            assert e0 < e1, f"{frag.name}: reversed smoothstep edges {e0} > {e1} at {m.group(0)!r}"
 
 
 def test_shader_ubo_contract() -> None:

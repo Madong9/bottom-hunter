@@ -26,8 +26,7 @@ def test_report_viewmodel_apply() -> None:
     from bottom_hunter.ui_demo.pages.report_status import ReportViewModel
 
     vm = ReportViewModel()
-    vm.apply(ReportDTO(report_date="2026-08-13", signal_count=5,
-                       opportunity_count=27, sector_count=3, error_count=0))
+    vm.apply(ReportDTO(report_date="2026-08-13", signal_count=5, opportunity_count=27, sector_count=3, error_count=0))
     assert vm.property("reportDate") == "2026-08-13"
     assert vm.property("opportunityCount") == 27
     assert vm.property("loaded") is True
@@ -48,8 +47,7 @@ def test_status_viewmodel_apply() -> None:
     from bottom_hunter.ui_demo.pages.report_status import StatusViewModel
 
     vm = StatusViewModel()
-    dto = StatusDTO(items=(("Qt 桌面", True, "ok"), ("SQLite", False, "err")),
-                    ok_count=1, total_count=2)
+    dto = StatusDTO(items=(("Qt 桌面", True, "ok"), ("SQLite", False, "err")), ok_count=1, total_count=2)
     vm.apply(dto)
     items = vm.property("items")
     assert len(items) == 2

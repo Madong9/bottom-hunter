@@ -191,13 +191,16 @@ def test_qt_window_builds_all_workspaces(monkeypatch) -> None:
     app = QApplication.instance() or QApplication([])
     window = BottomHunterWindow()
     window.refresh_all()
+    # The overview always owns the two command entries. Assert it before the
+    # route loop ends on the chart page, whose list is legitimately empty for
+    # a clean CI checkout without a user watchlist snapshot.
+    assert window.context_list.count() >= 2
     monkeypatch.setattr(window.chart_workspace, "ensure_loaded", lambda: None)
     monkeypatch.setattr(window.research_workspace, "refresh", lambda: None)
     for page in range(7):
         window.switch_page(page)
         app.processEvents()
     assert window.pages.count() == 7
-    assert window.context_list.count() >= 2
     assert window.signal_table.columnCount() == 5
     assert window.chart_workspace.timeframe_combo.count() >= 8
     for source in ("tonghuashun", "binance", "okx"):

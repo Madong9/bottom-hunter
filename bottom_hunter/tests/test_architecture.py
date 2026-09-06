@@ -58,6 +58,7 @@ def _ui_py_files():
 
 # ---- 1. UI layer -> business import boundary --------------------------------
 
+
 def test_ui_layer_business_import_boundary() -> None:
     for path in _ui_py_files():
         text = path.read_text(encoding="utf-8", errors="ignore")
@@ -65,26 +66,24 @@ def test_ui_layer_business_import_boundary() -> None:
         # inside a sanctioned adapter, never at module level
         for m in re.finditer(r"from\s+bottom_hunter\.src\b", text):
             line_start = text.rfind("\n", 0, m.start()) + 1
-            line = text[line_start:m.end()]
+            line = text[line_start : m.end()]
             indent = line[: len(line) - len(line.lstrip())]
-            assert path.name in SANCTIONED_ADAPTERS, (
-                f"{path.name}: business import outside sanctioned adapter")
-            assert indent != "", (
-                f"{path.name}: business import at module level (must be "
-                f"deferred inside a function)")
+            assert path.name in SANCTIONED_ADAPTERS, f"{path.name}: business import outside sanctioned adapter"
+            assert indent != "", f"{path.name}: business import at module level (must be deferred inside a function)"
 
 
 # ---- 2. no reverse dependency (backend -> QML/QtQuick) ----------------------
+
 
 def test_no_reverse_dependency() -> None:
     forbidden = re.compile(r"QtQml|QtQuick", re.I)
     for path in SRC.rglob("*.py"):
         text = path.read_text(encoding="utf-8", errors="ignore")
-        assert not forbidden.search(text), (
-            f"reverse dependency: {path.name} imports QML/QtQuick")
+        assert not forbidden.search(text), f"reverse dependency: {path.name} imports QML/QtQuick"
 
 
 # ---- 3. no DB access from UI layer ------------------------------------------
+
 
 def test_no_database_access_from_ui() -> None:
     # sqlite3 / StateStore / raw connect() must not appear in UI-layer modules;
@@ -98,6 +97,7 @@ def test_no_database_access_from_ui() -> None:
 
 
 # ---- 4. DTO contracts are pure (no Qt, no business) -------------------------
+
 
 def test_dto_contracts_are_pure() -> None:
     contract_files = [
@@ -115,6 +115,7 @@ def test_dto_contracts_are_pure() -> None:
 
 # ---- 5. page registry integrity --------------------------------------------
 
+
 def test_page_registry_integrity() -> None:
     from bottom_hunter.ui_demo.pages import PAGES
 
@@ -126,26 +127,27 @@ def test_page_registry_integrity() -> None:
 
 # ---- 6. shader/qsb freeze (git-based, skip when git unavailable) ------------
 
+
 def test_shader_freeze_since_phase16() -> None:
     """No .frag/.qsb changed after the PHASE 1.6 freeze commit."""
     if not (REPO / ".git").exists():
         pytest.skip("not a git checkout")
     r = subprocess.run(
-        ["git", "diff", "--name-only", FROZEN_COMMIT, "HEAD",
-         "--", "bottom_hunter/ui_demo"],
-        capture_output=True, text=True, cwd=REPO, timeout=30,
+        ["git", "diff", "--name-only", FROZEN_COMMIT, "HEAD", "--", "bottom_hunter/ui_demo"],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=30,
     )
     if r.returncode != 0:
         pytest.skip("git diff failed (history may be shallow)")
-    changed = [
-        line for line in r.stdout.splitlines()
-        if line.endswith(".frag") or line.endswith(".qsb")
-    ]
+    changed = [line for line in r.stdout.splitlines() if line.endswith(".frag") or line.endswith(".qsb")]
     unexpected = set(changed) - DESKTOP_ALPHA_SHADER
     assert unexpected == set(), f"shader/qsb files changed after freeze: {sorted(unexpected)}"
 
 
 # ---- 7. QML imports nothing but QtQuick / local UI --------------------------
+
 
 def test_qml_import_boundary() -> None:
     # allowed: QtQuick family, or a local relative directory import ("x" or
@@ -156,11 +158,11 @@ def test_qml_import_boundary() -> None:
     for qml in UI_DEMO.rglob("*.qml"):
         for line in qml.read_text(encoding="utf-8", errors="ignore").splitlines():
             if line.startswith("import "):
-                assert allowed.match(line), (
-                    f"{qml.name}: unexpected QML import: {line}")
+                assert allowed.match(line), f"{qml.name}: unexpected QML import: {line}"
 
 
 # ---- 8. import command mutation boundary -----------------------------------
+
 
 def test_import_adapter_is_the_only_allowed_mutation_boundary() -> None:
     adapter = UI_DEMO / "pages" / "import_backend_adapter.py"
@@ -176,9 +178,7 @@ def test_import_adapter_is_the_only_allowed_mutation_boundary() -> None:
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         if mutation_calls.search(text):
-            assert path.resolve() in allowed, (
-                f"backend mutation outside import adapter: {path.name}"
-            )
+            assert path.resolve() in allowed, f"backend mutation outside import adapter: {path.name}"
 
 
 def test_import_ui_cannot_depend_on_mutation_adapter() -> None:
@@ -192,9 +192,7 @@ def test_import_ui_cannot_depend_on_mutation_adapter() -> None:
     )
     for path in files:
         text = path.read_text(encoding="utf-8", errors="ignore")
-        assert not forbidden.search(text), (
-            f"{path.name}: UI must not depend on the mutation adapter"
-        )
+        assert not forbidden.search(text), f"{path.name}: UI must not depend on the mutation adapter"
 
 
 def test_controller_depends_only_on_command_protocols() -> None:

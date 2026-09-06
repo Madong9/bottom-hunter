@@ -60,9 +60,7 @@ def test_gnome_request_uses_per_window_mutter_hint() -> None:
         brightness=1.4,
     )
     assert result.active is True
-    assert writer.calls == [
-        ("text", 4242, GNOME_MUTTER_HINT, "blur-provider=sigma:999,brightness:1.00")
-    ]
+    assert writer.calls == [("text", 4242, GNOME_MUTTER_HINT, "blur-provider=sigma:999,brightness:1.00")]
 
 
 def test_gnome_installs_hint_even_when_shell_reload_is_pending() -> None:

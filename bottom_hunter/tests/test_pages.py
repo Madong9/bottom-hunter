@@ -37,12 +37,12 @@ def _controller():
 
 # ---- page registry / view models --------------------------------------------
 
+
 def test_pages_registry_has_seven_pages() -> None:
     from bottom_hunter.ui_demo.pages import PAGES
 
     ids = [pid for pid, _t, _g in PAGES]
-    assert ids == ["overview", "watchlist", "research", "report",
-                   "import", "status", "chart"]
+    assert ids == ["overview", "watchlist", "research", "report", "import", "status", "chart"]
     titles = [t for _pid, t, _g in PAGES]
     assert titles == ["总览", "自选", "研究", "报告", "导入", "状态", "K线"]
 
@@ -61,6 +61,7 @@ def test_placeholder_viewmodels_built() -> None:
 
 
 # ---- navigation routing -----------------------------------------------------
+
 
 def test_navigation_default_current() -> None:
     c = _controller()
@@ -101,6 +102,7 @@ def test_navigation_pages_list() -> None:
 
 # ---- QML shell smoke --------------------------------------------------------
 
+
 @pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
 def test_application_shell_loads(monkeypatch) -> None:
     _software_env(monkeypatch)
@@ -124,6 +126,7 @@ def test_application_shell_loads(monkeypatch) -> None:
 
 
 # ---- business isolation -----------------------------------------------------
+
 
 def test_pages_do_not_import_business_modules() -> None:
     # Only sanctioned adapter boundaries may reference the backend; the

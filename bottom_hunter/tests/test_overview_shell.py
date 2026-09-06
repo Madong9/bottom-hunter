@@ -58,6 +58,7 @@ def _load_root(monkeypatch, qml: str):
 
 # ---- 1. required files ------------------------------------------------------
 
+
 def test_overview_shell_files_exist() -> None:
     for name in (
         "OverviewShell.qml",
@@ -75,6 +76,7 @@ def test_overview_shell_files_exist() -> None:
 
 
 # ---- 2/3. QML load smokes ---------------------------------------------------
+
 
 @pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
 def test_overview_shell_qml_load_smoke(monkeypatch) -> None:
@@ -106,25 +108,21 @@ def test_rain_terminal_velocity_respects_size_and_surface_friction() -> None:
     shader = (SHELL_DIR / "effects" / "StaticRainUI.frag").read_text(encoding="utf-8")
 
     def constants(name: str) -> list[float]:
-        match = re.search(
-            rf"const float {name}\[4\]\s*=\s*float\[4\]\(([^)]*)\);", shader
-        )
+        match = re.search(rf"const float {name}\[4\]\s*=\s*float\[4\]\(([^)]*)\);", shader)
         assert match, f"missing shader physics constant {name}"
         return [float(value) for value in match.group(1).replace(",", " ").split()]
 
     gravity = constants("GRAVITY_PX")
     friction = constants("SURFACE_FRICTION")
     drag = constants("VISCOUS_DRAG")
-    terminal = [
-        g * (1.0 - f) / d
-        for g, f, d in zip(gravity, friction, drag, strict=True)
-    ]
+    terminal = [g * (1.0 - f) / d for g, f, d in zip(gravity, friction, drag, strict=True)]
     assert terminal == sorted(terminal)
     assert terminal[0] < 0.2  # micro droplets remain almost pinned
     assert terminal[-1] > 8.0  # large droplets visibly overcome adhesion
 
 
 # ---- 4/5/7/8/9. viewports + dynamic zones + texture sizes -------------------
+
 
 def _vec2(v) -> tuple[float, float]:
     """QVector2D (or QJSValue) -> (x, y) tuple, tolerant of PySide6 shapes."""
@@ -167,9 +165,11 @@ def test_viewports_and_dynamic_zones(monkeypatch) -> None:
             assert zones, "protection registry produced no zones"
             for z in zones:
                 assert -40 <= z["x"] and z["x"] + z["w"] <= width + 40, (
-                    f"zone x out of viewport: {z} @ {width}x{height}")
+                    f"zone x out of viewport: {z} @ {width}x{height}"
+                )
                 assert -40 <= z["y"] and z["y"] + z["h"] <= height + 40, (
-                    f"zone y out of viewport: {z} @ {width}x{height}")
+                    f"zone y out of viewport: {z} @ {width}x{height}"
+                )
 
             # 6: each metric value zone has rain protection (critical level
             #    zones cover every registered value rect)
@@ -179,7 +179,8 @@ def test_viewports_and_dynamic_zones(monkeypatch) -> None:
             assert len(critical) >= 4
             for v in vals:
                 covered = any(
-                    c["x"] <= v["x"] and c["y"] <= v["y"]
+                    c["x"] <= v["x"]
+                    and c["y"] <= v["y"]
                     and c["x"] + c["w"] >= v["x"] + v["w"]
                     and c["y"] + c["h"] >= v["y"] + v["h"]
                     for c in critical
@@ -200,7 +201,8 @@ def test_viewports_and_dynamic_zones(monkeypatch) -> None:
             assert len(crit2) >= 4
             for v in vals:
                 assert any(
-                    c["x"] <= v["x"] and c["y"] <= v["y"]
+                    c["x"] <= v["x"]
+                    and c["y"] <= v["y"]
                     and c["x"] + c["w"] >= v["x"] + v["w"]
                     and c["y"] + c["h"] >= v["y"] + v["h"]
                     for c in crit2
@@ -208,8 +210,7 @@ def test_viewports_and_dynamic_zones(monkeypatch) -> None:
 
             # 8: scene capture textureSize matches the viewport
             tex = _vec2(root.property("captureTextureSize"))
-            assert (int(tex[0]), int(tex[1])) == (width, height), (
-                f"scene texture {tex} != viewport {width}x{height}")
+            assert (int(tex[0]), int(tex[1])) == (width, height), f"scene texture {tex} != viewport {width}x{height}"
 
             # 9: mask texture sizes are strictly below the scene texture size
             rain_mask = _vec2(root.property("rainMaskTextureSize"))
@@ -220,6 +221,7 @@ def test_viewports_and_dynamic_zones(monkeypatch) -> None:
 
 # ---- 10. Qt6 UBO regression -------------------------------------------------
 
+
 def test_shader_ubo_contract() -> None:
     """Qt6 fragment-only ShaderEffect: UBO (std140, binding 0) must start with
     mat4 qt_Matrix (offset 0) then float qt_Opacity (offset 64); custom
@@ -228,7 +230,8 @@ def test_shader_ubo_contract() -> None:
         text = frag.read_text(encoding="utf-8")
         m = re.search(
             r"layout\(std140,\s*binding\s*=\s*0\)\s*uniform\s+\w+\s*\{(.*?)\}\s*;",
-            text, re.S,
+            text,
+            re.S,
         )
         assert m, f"{frag.name}: std140 UBO block not found"
         members = [ln.strip() for ln in m.group(1).splitlines() if ln.strip()]
@@ -246,11 +249,11 @@ def test_shader_ubo_contract() -> None:
             and "color * qt_Opacity" in text
             and re.search(r"fragColor\s*=\s*vec4\(.*finalA\s*\)", text)
         )
-        assert opaque_output or transparent_output, (
-            f"{frag.name}: fragColor does not honor qt_Opacity (premultiplied)")
+        assert opaque_output or transparent_output, f"{frag.name}: fragColor does not honor qt_Opacity (premultiplied)"
 
 
 # ---- 11. forbidden legacy artifacts -----------------------------------------
+
 
 def test_no_legacy_droplet_artifacts() -> None:
     """DropletSplash / icosphere / matcap must not re-enter the shell or the
@@ -266,6 +269,7 @@ def test_no_legacy_droplet_artifacts() -> None:
 
 # ---- 12. no business imports ------------------------------------------------
 
+
 def test_no_production_business_imports() -> None:
     """The overview shell (QML + viewmodel) must not import production or
     business modules. The launcher is the ONLY file allowed to wire backend
@@ -280,8 +284,7 @@ def test_no_production_business_imports() -> None:
         if py.name == "overview_shell_launcher.py":
             # the launcher is the only sanctioned wire point (PHASE 2-A);
             # but it must never import gui_qt (pollution ban)
-            assert "gui_qt" not in py.read_text(encoding="utf-8"), (
-                "launcher imports gui_qt — pollution ban violated")
+            assert "gui_qt" not in py.read_text(encoding="utf-8"), "launcher imports gui_qt — pollution ban violated"
             continue
         text = py.read_text(encoding="utf-8", errors="ignore")
         assert not forbidden.search(text), f"business import in {py.name}"

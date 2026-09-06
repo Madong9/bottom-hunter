@@ -84,6 +84,7 @@ def _dto(**overrides):
 
 # ---- contract tests (PHASE 2-C) ---------------------------------------------
 
+
 def test_overview_dto_defaults() -> None:
     from bottom_hunter.ui_demo.overview_shell.contracts import OverviewDTO
 
@@ -116,20 +117,23 @@ def test_state_apply_dto() -> None:
 
 def test_state_apply_accepts_dict() -> None:
     state = _state()
-    state.apply({
-        "opportunity": {"count": "27", "hint": "x", "updated": "d"},
-        "health": {"level": "OK", "text": "正常"},
-        "validation": {"value": "63%", "hint": "y"},
-        "portfolio": {"value": "1.0845", "hint": "z"},
-        "market": {"status": "A股 开盘", "detail": ""},
-        "scan": {"status": "就绪", "detail": "报告 d"},
-    })
+    state.apply(
+        {
+            "opportunity": {"count": "27", "hint": "x", "updated": "d"},
+            "health": {"level": "OK", "text": "正常"},
+            "validation": {"value": "63%", "hint": "y"},
+            "portfolio": {"value": "1.0845", "hint": "z"},
+            "market": {"status": "A股 开盘", "detail": ""},
+            "scan": {"status": "就绪", "detail": "报告 d"},
+        }
+    )
     assert state.property("opportunityCount") == "27"
     assert state.property("validation") == "63%"
     assert state.property("portfolioValue") == "1.0845"
 
 
 # ---- 1. default lifecycle is INIT -------------------------------------------
+
 
 def test_default_lifecycle_is_init() -> None:
     state = _state()
@@ -141,6 +145,7 @@ def test_default_lifecycle_is_init() -> None:
 
 
 # ---- 2. LOADING -> READY -----------------------------------------------------
+
 
 def test_loading_to_ready() -> None:
     state = _state()
@@ -156,6 +161,7 @@ def test_loading_to_ready() -> None:
 
 
 # ---- 3. INIT -> ERROR --------------------------------------------------------
+
 
 def test_init_to_error() -> None:
     state = _state()
@@ -173,6 +179,7 @@ def test_init_to_error() -> None:
 
 # ---- 4. READY -> STALE keeps old data ---------------------------------------
 
+
 def test_ready_to_stale_preserves_data() -> None:
     state = _state()
     bridge = _bridge(state)
@@ -188,12 +195,13 @@ def test_ready_to_stale_preserves_data() -> None:
     bridge.setDtoProvider(_boom)
     bridge.refresh()
     assert state.property("lifecycle") == "STALE"
-    assert state.property("opportunityCount") == "27"       # NOT "--"
-    assert state.property("portfolioValue") == "1.0845"     # NOT cleared
+    assert state.property("opportunityCount") == "27"  # NOT "--"
+    assert state.property("portfolioValue") == "1.0845"  # NOT cleared
     assert "offline again" in state.property("lastError")
 
 
 # ---- 5. STALE -> READY recovery ---------------------------------------------
+
 
 def test_stale_to_ready_recovery() -> None:
     state = _state()
@@ -216,6 +224,7 @@ def test_stale_to_ready_recovery() -> None:
 
 # ---- 6. lastError updates ----------------------------------------------------
 
+
 def test_lasterror_updates() -> None:
     state = _state()
     bridge = _bridge(state)
@@ -229,6 +238,7 @@ def test_lasterror_updates() -> None:
 
 
 # ---- 7. notify signal --------------------------------------------------------
+
 
 def test_notify_signals_fire() -> None:
     state = _state()
@@ -246,6 +256,7 @@ def test_notify_signals_fire() -> None:
 
 # ---- 8. refresh controller --------------------------------------------------
 
+
 def test_refresh_controller() -> None:
     state = _state()
     bridge = _bridge(state)
@@ -258,6 +269,7 @@ def test_refresh_controller() -> None:
 
 
 # ---- 9. QML reads lifecycle -------------------------------------------------
+
 
 @pytest.mark.skipif(not QML_AVAILABLE, reason="PySide6 QtQuick unavailable")
 def test_qml_reads_lifecycle(monkeypatch) -> None:
@@ -283,6 +295,7 @@ def test_qml_reads_lifecycle(monkeypatch) -> None:
 
 
 # ---- 10. business isolation -------------------------------------------------
+
 
 def test_business_modules_do_not_import_qml() -> None:
     forbidden = re.compile(r"from\s+PySide6\.QtQml|import\s+PySide6\.QtQml|QtQuick", re.I)

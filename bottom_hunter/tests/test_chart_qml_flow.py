@@ -125,9 +125,7 @@ def test_chart_adapter_retries_a_transient_feed_failure() -> None:
             )
 
     service = FlakyService()
-    adapter = ChartReadAdapter(
-        service=service, assets=(asset,), retry_attempts=2, sleep=lambda _seconds: None
-    )
+    adapter = ChartReadAdapter(service=service, assets=(asset,), retry_attempts=2, sleep=lambda _seconds: None)
     dto = adapter.fetch(asset.canonical_id, "1m", 160)
     assert service.calls == 2
     assert len(dto.bars) == 2
@@ -158,9 +156,7 @@ def test_chart_adapter_uses_exact_last_good_data_after_refresh_failure() -> None
             )
 
     service = Service()
-    adapter = ChartReadAdapter(
-        service=service, assets=(asset,), retry_attempts=2, sleep=lambda _seconds: None
-    )
+    adapter = ChartReadAdapter(service=service, assets=(asset,), retry_attempts=2, sleep=lambda _seconds: None)
     fresh = adapter.fetch(asset.canonical_id, "1m", 160)
     service.fail = True
     cached = adapter.fetch(asset.canonical_id, "1m", 160)

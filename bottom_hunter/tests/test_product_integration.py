@@ -198,9 +198,7 @@ def test_application_shell_connects_accepted_rain_glass_pipeline() -> None:
 
 
 def test_product_pages_use_visible_daylight_liquid_glass() -> None:
-    surface = (PAGES_DIR.parent / "primitives" / "GlassSurface.qml").read_text(
-        encoding="utf-8"
-    )
+    surface = (PAGES_DIR.parent / "primitives" / "GlassSurface.qml").read_text(encoding="utf-8")
     assert "property real tintAlpha: 0.30" in surface
     assert "Pointer-driven reflection" in surface
     assert "Short lower caustic band" in surface
@@ -209,15 +207,11 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert 'property color accentTint: "transparent"' in surface
     assert "property real accentStrength: 0.0" in surface
     assert "GlassAppearance.strengthFor" in surface
-    appearance = (PAGES_DIR.parent / "primitives" / "GlassAppearance.qml").read_text(
-        encoding="utf-8"
-    )
+    appearance = (PAGES_DIR.parent / "primitives" / "GlassAppearance.qml").read_text(encoding="utf-8")
     assert "property real accentIntensity: 1.25" in appearance
     assert "property real surfaceRadius: GlassTokens.containerRadius" in surface
 
-    tokens = (PAGES_DIR.parent / "primitives" / "GlassTokens.qml").read_text(
-        encoding="utf-8"
-    )
+    tokens = (PAGES_DIR.parent / "primitives" / "GlassTokens.qml").read_text(encoding="utf-8")
     assert "readonly property real pageRadius: 32" in tokens
     assert "readonly property real cardRadius: 30" in tokens
     assert "readonly property real containerRadius: 28" in tokens
@@ -225,21 +219,17 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
     assert "function capsuleRadius(height)" in tokens
     assert "function circleRadius(size)" in tokens
 
-    glass_text = (PAGES_DIR.parent / "primitives" / "GlassText.qml").read_text(
-        encoding="utf-8"
-    )
+    glass_text = (PAGES_DIR.parent / "primitives" / "GlassText.qml").read_text(encoding="utf-8")
     assert '"primary": GlassTokens.textPrimary' in glass_text
     assert "opacity: 1.0" in glass_text
     assert "style: Text.Raised" in glass_text
     assert "styleColor: GlassTokens.textHighlight" in glass_text
 
     nav_symbol = PAGES_DIR.parent / "components" / "NavSymbol.qml"
-    nav_rail = (PAGES_DIR.parent / "components" / "GlassNavRail.qml").read_text(
-        encoding="utf-8"
-    )
+    nav_rail = (PAGES_DIR.parent / "components" / "GlassNavRail.qml").read_text(encoding="utf-8")
     assert nav_symbol.is_file()
     assert "NavSymbol {" in nav_rail
-    assert '⌂' not in nav_rail and '◆' not in nav_rail and '◎' not in nav_rail
+    assert "⌂" not in nav_rail and "◆" not in nav_rail and "◎" not in nav_rail
     assert "ToolTip {" in nav_rail
     assert "popupType: Popup.Item" in nav_rail
     assert "background: GlassSurface" in nav_rail
@@ -295,15 +285,11 @@ def test_product_shape_and_typography_roles_stay_semantic() -> None:
     for path in text_consumers:
         assert re.search(r"\bText\s*\{", path.read_text(encoding="utf-8")) is None, path
 
-    status_badge = (
-        PAGES_DIR.parent / "components" / "StatusBadge.qml"
-    ).read_text(encoding="utf-8")
+    status_badge = (PAGES_DIR.parent / "components" / "StatusBadge.qml").read_text(encoding="utf-8")
     assert "GlassTokens.capsuleRadius(height)" in status_badge
     assert "border.width: 0" in status_badge
 
-    glass_card = (PAGES_DIR.parent / "primitives" / "GlassCard.qml").read_text(
-        encoding="utf-8"
-    )
+    glass_card = (PAGES_DIR.parent / "primitives" / "GlassCard.qml").read_text(encoding="utf-8")
     assert "surfaceRadius: GlassTokens.cardRadius" in glass_card
     assert "edgeContrast: 0.48" in glass_card
 
