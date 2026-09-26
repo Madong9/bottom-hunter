@@ -179,7 +179,7 @@ button { color: inherit; }
 .module-plan > strong { flex: 0 0 auto; padding-top: 3px; color: #526b7e; font-size: 11px; }
 .module-plan > div { display: flex; flex-wrap: wrap; gap: 5px; }
 .module-plan span { padding: 3px 7px; border-radius: 99px; color: #6259a7; background: rgba(239,237,255,.68); font-size: 10px; }
-.report-toc { margin-top: 13px; padding: 13px 15px; border: 1px solid rgba(107, 145, 173, .2); border-radius: 13px; background: rgba(255,255,255,.58); }
+.report-toc { position: sticky; top: 78px; z-index: 18; margin: 13px 0 14px; padding: 11px 15px; border: 1px solid rgba(107, 145, 173, .26); border-radius: 13px; background: linear-gradient(135deg, rgba(247,252,255,.96), rgba(235,246,251,.92)); box-shadow: 0 9px 24px rgba(48, 78, 101, .13), inset 0 1px 0 rgba(255,255,255,.96); -webkit-backdrop-filter: blur(18px) saturate(145%); backdrop-filter: blur(18px) saturate(145%); }
 .report-toc > div { display: flex; align-items: center; gap: 7px; color: #526b7e; }
 .report-toc > div strong { font-size: 12px; }
 .report-toc > div span { margin-left: auto; color: #8c9ba6; font-size: 9px; }
@@ -200,7 +200,7 @@ button { color: inherit; }
 .source-index-links a, .source-index-links .source-no-url { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 3px; color: #39765e; font-size: 8px; text-decoration: none; }
 .source-index-links a:hover { color: #176f53; text-decoration: underline; }
 .source-index-links .source-no-url { color: #8b927d; }
-.report-section[id], .investor-guide[id], .intent-focus-panel[id] { scroll-margin-top: 78px; }
+.report-section[id], .investor-guide[id], .intent-focus-panel[id] { scroll-margin-top: 158px; }
 .intent-focus-panel { margin-top: 14px; padding: 15px; border: 1px solid var(--glass-edge); border-radius: 17px; box-shadow: var(--glass-shadow-soft); -webkit-backdrop-filter: var(--glass-blur-soft); backdrop-filter: var(--glass-blur-soft); }
 .intent-focus-panel--comparison { background: linear-gradient(145deg, rgba(239, 237, 255, .68), rgba(229, 244, 250, .52)); }
 .intent-focus-panel--risk { background: linear-gradient(145deg, rgba(255, 241, 238, .66), rgba(250, 246, 235, .5)); }
@@ -875,6 +875,8 @@ button, a, summary {
   .chat-scroll { padding-top: 76px; }
   .composer-shell { left: 0; right: 0; }
   .risk-priority-grid { grid-template-columns: 1fr; }
+  .report-toc { top: 76px; padding: 10px 11px; }
+  .report-section[id], .investor-guide[id], .intent-focus-panel[id] { scroll-margin-top: 145px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
