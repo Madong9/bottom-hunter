@@ -3,11 +3,9 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
-  BadgeCheck,
   BookOpen,
   BrainCircuit,
   Building2,
-  Check,
   CircleHelp,
   ExternalLink,
   FileCheck2,
@@ -79,6 +77,15 @@ function factSourceIds(factIds: string[], facts: ResearchResult["analysis"]["fac
 
 function sourceAnchorId(sourceId: string) {
   return `source-reference-${sourceId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
+function sourceIdsForStatement(text: string, result: ResearchResult, fallbackSourceIds: string[]) {
+  const relatedNews = result.news.selected.find((item) => text.includes(item.title));
+  if (relatedNews) return [relatedNews.news_id];
+  const relatedStock = result.data.stocks.find((stock) =>
+    text.includes(stock.company.name) || text.includes(stock.company.symbol),
+  );
+  return relatedStock ? stockSourceIds(relatedStock) : fallbackSourceIds;
 }
 
 function StockCard({ stock, sources }: { stock: StockData; sources: SourceReference[] }) {
@@ -241,7 +248,7 @@ function SourceTags({ sourceIds, sources }: { sourceIds: string[]; sources: Sour
     .filter((source): source is SourceReference => source !== undefined);
   if (!visibleSources.length) return null;
   return (
-    <div className="fact-sources" aria-label="本段内容的资料来源">
+    <span className="fact-sources" aria-label="本段内容的资料来源">
       {visibleSources.map((source) => {
         return source.url ? (
           <a href={source.url} target="_blank" rel="noreferrer" key={source.source_id} title={`打开来源：${readableText(source.name)}`}><BookOpen size={10} />{readableText(source.name)}<ExternalLink size={10} /></a>
@@ -249,7 +256,28 @@ function SourceTags({ sourceIds, sources }: { sourceIds: string[]; sources: Sour
           <a href={`#${sourceAnchorId(source.source_id)}`} key={source.source_id} title="跳转查看来源详情"><BookOpen size={10} />{readableText(source.name)}<ArrowRight size={10} /></a>
         );
       })}
-    </div>
+    </span>
+  );
+}
+
+function SourcedStatement({ text, result, fallbackSourceIds }: {
+  text: string;
+  result: ResearchResult;
+  fallbackSourceIds: string[];
+}) {
+  const sourceIds = sourceIdsForStatement(text, result, fallbackSourceIds);
+  const primarySource = sourceIds
+    .map((sourceId) => result.analysis.citations.find((source) => source.source_id === sourceId))
+    .find((source) => source !== undefined);
+  if (!primarySource) return <>{text}</>;
+  const href = primarySource.url || `#${sourceAnchorId(primarySource.source_id)}`;
+  return (
+    <>
+      <a className="sourced-statement" href={href} target={primarySource.url ? "_blank" : undefined} rel={primarySource.url ? "noreferrer" : undefined}>
+        {text}
+      </a>
+      <SourceTags sourceIds={sourceIds} sources={result.analysis.citations} />
+    </>
   );
 }
 
@@ -259,7 +287,6 @@ interface ResearchReportProps {
 }
 
 export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
-  const approved = result.risk_review.status === "approved";
   const isComparison = result.understanding.intent === "stock_comparison";
   const isRiskAnalysis = result.understanding.intent === "risk_analysis";
   const guideTitle = isComparison ? "比较这些公司时看什么？" : isRiskAnalysis ? "这家公司的风险重点是什么？" : "这家公司当前需要了解什么？";
@@ -273,7 +300,7 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
     (show("facts") || show("news")) && "evidence",
     show("analysis") && "analysis",
     show("future_watch") && "future",
-    (show("risk") || show("risk_review")) && "risk",
+    show("risk") && "risk",
   ].filter(Boolean) as string[];
   const sectionNumber = (key: string) => String(sectionKeys.indexOf(key) + 1).padStart(2, "0");
   const coreTitle = show("valuation") ? "估值与财务基础" : show("financial_snapshot") && !show("company_profile") ? "财务表现" : "公司当前画像";
@@ -299,7 +326,7 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
     ...((show("facts") || show("news")) ? [{ id: "report-evidence", label: show("news") && !show("facts") ? "新闻证据" : "当前已确认事实" }] : []),
     ...(show("analysis") ? [{ id: "report-analysis", label: "AI 分析" }] : []),
     ...(show("future_watch") ? [{ id: "report-future", label: "后续观察与情景" }] : []),
-    ...((show("risk") || show("risk_review")) ? [{ id: "report-risk", label: "风险因素与审核" }] : []),
+    ...(show("risk") ? [{ id: "report-risk", label: "风险因素" }] : []),
   ];
   return (
     <div className="report">
@@ -336,7 +363,7 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
       )}
       <div className="module-plan">
         <strong>本次报告模块</strong>
-        <div>{[...modules].map((module) => <span key={module}>{moduleLabels[module]}</span>)}</div>
+        <div>{[...modules].filter((module) => module !== "risk_review").map((module) => <span key={module}>{moduleLabels[module]}</span>)}</div>
       </div>
       {tocItems.length > 0 && <nav className="report-toc" aria-label="报告目录">
         <div><BookOpen size={15} /><strong>报告目录</strong><span>点击跳转到对应内容</span></div>
@@ -365,8 +392,8 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
         <section id="intent-focus" className="intent-focus-panel intent-focus-panel--risk">
           <div className="intent-focus-heading"><ShieldAlert size={17} /><div><strong>风险扫描核心结果</strong><span>先看下行因素，再看哪些信息仍需验证</span></div></div>
           <div className="risk-priority-grid">
-            <div><strong>已识别风险</strong>{result.analysis.negative_factors.map((item) => <p key={item}><AlertTriangle size={12} /><span>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></span></p>)}</div>
-            <div><strong>待验证事项</strong>{result.analysis.pending_verification.map((item) => <p key={item}><CircleHelp size={12} /><span>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></span></p>)}</div>
+            <div><strong>已识别风险</strong>{result.analysis.negative_factors.map((item) => <p key={item}><AlertTriangle size={12} /><span><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></span></p>)}</div>
+            <div><strong>待验证事项</strong>{result.analysis.pending_verification.map((item) => <p key={item}><CircleHelp size={12} /><span><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></span></p>)}</div>
           </div>
         </section>
       )}
@@ -453,9 +480,9 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
           <div className="layer-items">{result.analysis.ai_analysis.map((item, index) => <div className="sourced-report-item" key={index}><p>{item.content}</p><SourceTags sourceIds={factSourceIds(item.based_on_fact_ids, result.analysis.facts)} sources={result.analysis.citations} /></div>)}</div>
         </div>
         <div className="evidence-structure">
-          <div className="evidence-column evidence-column--positive"><h3><ArrowUpRight size={15} />积极因素</h3><ul>{result.analysis.positive_factors.map((item) => <li key={item}>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></li>)}</ul></div>
-          <div className="evidence-column evidence-column--negative"><h3><ArrowDownRight size={15} />负面因素</h3><ul>{result.analysis.negative_factors.map((item) => <li key={item}>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></li>)}</ul></div>
-          <div className="evidence-column evidence-column--pending"><h3><CircleHelp size={15} />待验证因素</h3><ul>{result.analysis.pending_verification.map((item) => <li key={item}>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></li>)}</ul></div>
+          <div className="evidence-column evidence-column--positive"><h3><ArrowUpRight size={15} />积极因素</h3><ul>{result.analysis.positive_factors.map((item) => <li key={item}><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></li>)}</ul></div>
+          <div className="evidence-column evidence-column--negative"><h3><ArrowDownRight size={15} />负面因素</h3><ul>{result.analysis.negative_factors.map((item) => <li key={item}><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></li>)}</ul></div>
+          <div className="evidence-column evidence-column--pending"><h3><CircleHelp size={15} />待验证因素</h3><ul>{result.analysis.pending_verification.map((item) => <li key={item}><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></li>)}</ul></div>
         </div>
       </section>}
 
@@ -472,24 +499,9 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
         </div>
       </section>}
 
-      {(show("risk") || show("risk_review")) && <section id="report-risk" className="report-section">
-        <div className="section-title"><span className="section-number">{sectionNumber("risk")}</span><h3>{show("risk") ? "风险因素与审核" : "风险审核"}</h3></div>
-        {show("risk") && !isRiskAnalysis && <div className="risk-factor-list">{result.analysis.negative_factors.map((item) => <div key={item}><AlertTriangle size={13} /><span>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></span></div>)}</div>}
-        {show("risk_review") &&
-        <div className={`risk-review ${approved ? "risk-review--approved" : "risk-review--rejected"}`}>
-          <div className="risk-icon">{approved ? <BadgeCheck size={21} /> : <ShieldAlert size={21} />}</div>
-          <div>
-            <div className="risk-title-row"><h3>{approved ? "风险审核检查通过" : "风险审核需要修订"}</h3><span>{result.risk_review.risk_level.toUpperCase()} RISK</span></div>
-            <div className="review-checks">
-              {result.risk_review.checks.map((check) => (
-                <div className={check.passed ? "review-check is-passed" : "review-check is-failed"} key={check.check_id}>
-                  {check.passed ? <Check size={13} /> : <AlertTriangle size={13} />}<span><strong>{check.label}</strong><small>{check.detail}</small></span>
-                </div>
-              ))}
-            </div>
-            <div className="coverage-note">证据覆盖率仅表示事实来源的完整程度，不代表投资判断正确率或投资成功概率。</div>
-          </div>
-        </div>}
+      {show("risk") && <section id="report-risk" className="report-section">
+        <div className="section-title"><span className="section-number">{sectionNumber("risk")}</span><h3>风险因素</h3></div>
+        {!isRiskAnalysis && <div className="risk-factor-list">{result.analysis.negative_factors.map((item) => <div key={item}><AlertTriangle size={13} /><span><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></span></div>)}</div>}
       </section>}
 
       <section className="follow-up">

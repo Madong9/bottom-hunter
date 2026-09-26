@@ -19,6 +19,7 @@ GlassSurface {
     property var draftPoint: null
     property var hoverBar: null
     property real hoverPreviousClose: 0
+    property real hoverCrossPrice: 0
 
     function formatPrice(value) {
         const number = Number(value)
@@ -64,6 +65,7 @@ GlassSurface {
             root.visibleCount = Math.min(Math.max(30, root.visibleCount), Math.max(30, root.vm.barCount))
             root.hoverBar = null
             root.hoverPreviousClose = 0
+            root.hoverCrossPrice = 0
             chartCanvas.crossX = -1
             chartCanvas.crossY = -1
             chartCanvas.requestPaint()
@@ -406,6 +408,7 @@ GlassSurface {
                         const index = Math.max(firstBar, Math.min(firstBar + shownBars - 1, firstBar + offset))
                         root.hoverBar = all[index]
                         root.hoverPreviousClose = index > 0 ? Number(all[index - 1].close) : Number(all[index].open)
+                        root.hoverCrossPrice = maxPrice - (py - plotTop) / Math.max(1, mainBottom - plotTop) * (maxPrice - minPrice)
                         crossX = barX(index)
                         crossY = py
                         requestPaint()
@@ -413,6 +416,7 @@ GlassSurface {
                     function clearHover() {
                         root.hoverBar = null
                         root.hoverPreviousClose = 0
+                        root.hoverCrossPrice = 0
                         crossX = -1
                         crossY = -1
                         requestPaint()
@@ -529,6 +533,12 @@ GlassSurface {
                             ctx.strokeStyle = Qt.rgba(0.15, 0.28, 0.38, 0.40); ctx.lineWidth = 1
                             ctx.beginPath(); ctx.moveTo(crossX, plotTop); ctx.lineTo(crossX, volumeBottom); ctx.stroke()
                             ctx.beginPath(); ctx.moveTo(plotLeft, crossY); ctx.lineTo(plotRight, crossY); ctx.stroke()
+                            const labelTop = Math.max(plotTop, Math.min(mainBottom - 18, crossY - 9))
+                            ctx.fillStyle = "#426B84"
+                            ctx.fillRect(0, labelTop, plotLeft - 5, 18)
+                            ctx.fillStyle = "#FFFFFF"
+                            ctx.font = "10px 'Noto Sans CJK SC'"
+                            ctx.fillText(root.formatPrice(root.hoverCrossPrice), 3, labelTop + 12)
                         }
                     }
                 }
