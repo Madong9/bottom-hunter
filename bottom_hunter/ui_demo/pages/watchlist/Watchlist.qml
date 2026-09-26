@@ -159,7 +159,7 @@ GlassSurface {
             width: parent.width
             height: root.tableHeaderHeight
             tintAlpha: 0.025
-            surfaceRadius: GlassTokens.compactContainerRadius
+            surfaceRadius: GlassTokens.capsuleRadius(height)
             accentTint: "#D8E8FA"
             accentStrength: 0.10
 
@@ -206,7 +206,10 @@ GlassSurface {
                 width: list.width
                 height: root.tableRowHeight
                 tintAlpha: 0.035
-                surfaceRadius: GlassTokens.compactContainerRadius
+                surfaceRadius: GlassTokens.capsuleRadius(height)
+                reactive: true
+                liftOnHover: true
+                pointerCursor: true
                 accentTint: modelData.change_percent.startsWith("+") ? "#FFE0E0" : "#D4F1E6"
                 accentStrength: 0.08
 

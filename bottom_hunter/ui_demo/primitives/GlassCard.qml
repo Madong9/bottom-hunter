@@ -7,25 +7,20 @@ GlassSurface {
 
     property bool interactive: true
     property real shadowOpacity: 0.14
-    surfaceRadius: Math.min(GlassTokens.cardRadius,
-                            GlassTokens.capsuleRadius(height))
+    // Compact cards are true capsules; only large structural panes retain a
+    // bounded corner radius so their content area remains practical.
+    surfaceRadius: height <= 180 ? GlassTokens.capsuleRadius(height)
+                                 : GlassTokens.cardRadius
     edgeContrast: 0.48
     depthStrength: 1.18
     tintAlpha: 0.30
-    reactive: interactive
-
-    // Rectangle.clip is axis-aligned even when Rectangle.radius is set. A
-    // real alpha mask is therefore required to keep the sheen, colour wash
-    // and caustic layers out of the four transparent corners.
-    readonly property Item roundedMask: ShaderEffectSource {
-        sourceItem: Rectangle {
-            width: root.width
-            height: root.height
-            radius: root.surfaceRadius
-            antialiasing: true
-            color: "white"
-        }
-    }
+    reactive: root.interactive || root.height <= 180
+    // Compact information cards lift on hover even when they have no click
+    // action.  Large workspaces (chart, long lists) stay geometrically stable
+    // so mouse coordinates and scrolling are never disturbed.
+    liftOnHover: root.interactive || root.height <= 180
+    pointerCursor: interactive
+    hoverScale: 1.016
 
     layer.enabled: true
     layer.effect: MultiEffect {
@@ -41,27 +36,15 @@ GlassSurface {
         autoPaddingEnabled: true
     }
 
-    Behavior on scale {
-        enabled: root.interactive
-        NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
-    }
-
-    states: [
-        State {
-            when: root.interactive && root.materialHovered
-            PropertyChanges { target: root; scale: 1.012 }
-        }
-    ]
-
     // Directional elasticity is intentionally restrained: the optical slab
     // yields toward the pointer while text remains fully legible.
     transform: Scale {
         origin.x: root.width / 2
         origin.y: root.height / 2
-        xScale: root.interactive && root.materialHovered
+        xScale: root.materialHovered
                 ? 1.0 + Math.abs(root.materialOffsetX) * 0.006
                       - Math.abs(root.materialOffsetY) * 0.002 : 1.0
-        yScale: root.interactive && root.materialHovered
+        yScale: root.materialHovered
                 ? 1.0 + Math.abs(root.materialOffsetY) * 0.006
                       - Math.abs(root.materialOffsetX) * 0.002 : 1.0
         Behavior on xScale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }

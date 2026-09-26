@@ -13,10 +13,13 @@ QtObject {
     readonly property real structuralEdgeContrast: 0.18
     readonly property real structuralDepthStrength: 0.32
 
-    readonly property color textPrimary: "#0E1B27"
-    readonly property color textSecondary: "#263B4D"
-    readonly property color textMuted: "#4C667A"
-    readonly property color textHighlight: Qt.rgba(1, 1, 1, 0.48)
+    // Cool ink colours remain legible over both bright desktop windows and
+    // darker refracted patches.  Muted text is intentionally blue-gray rather
+    // than low-opacity gray, so hierarchy never depends on transparency.
+    readonly property color textPrimary: "#071722"
+    readonly property color textSecondary: "#173247"
+    readonly property color textMuted: "#294A60"
+    readonly property color textHighlight: Qt.rgba(1, 1, 1, 0.20)
 
     function capsuleRadius(height) {
         return Math.max(0, height / 2)

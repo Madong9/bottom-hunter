@@ -1,0 +1,38 @@
+schema_version: 2
+mode: account_watchlists
+generated_at: ''
+description: 由本地导入的同花顺、币安和欧易自选生成；初始观察池为空。
+markets:
+  CN:
+    name: A股
+    category: cn_equity
+    calendar: XSHG
+    timezone: Asia/Shanghai
+    close_time: '15:00'
+    benchmark: 000001.SS
+  HK:
+    name: 港股
+    category: global_equity
+    calendar: XHKG
+    timezone: Asia/Hong_Kong
+    close_time: '16:00'
+    benchmark: ^HSI
+  US:
+    name: 美股
+    category: global_equity
+    calendar: XNYS
+    timezone: America/New_York
+    close_time: '16:00'
+    benchmark: ^GSPC
+  CRYPTO:
+    name: 加密货币
+    category: crypto
+    calendar: 24/7
+    timezone: UTC
+    close_time: '00:00'
+    benchmark: BTC-USDT
+    benchmark_source_symbols:
+      binance: BTCUSDT
+      okx: BTC-USDT
+sectors: {}
+risk_appetite: []

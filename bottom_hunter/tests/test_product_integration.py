@@ -1,4 +1,4 @@
-"""PHASE 5 product composition, Status page and seven-route tests."""
+"""Product composition, Status page and eight-route tests."""
 
 from __future__ import annotations
 
@@ -119,6 +119,7 @@ def test_build_production_flow_exposes_all_context_positions(tmp_path: Path) -> 
         "overviewRefreshController",
         "watchlistVm",
         "researchVm",
+        "researchAssistantVm",
         "reportVm",
         "importVm",
         "statusVm",
@@ -160,7 +161,7 @@ def test_product_flow_uses_fallback_states_when_snapshots_are_missing(tmp_path: 
     assert flow.status_view_model.lifecycle == "EMPTY"
 
 
-def test_application_shell_loads_all_seven_product_routes(monkeypatch, tmp_path: Path) -> None:
+def test_application_shell_loads_all_eight_product_routes(monkeypatch, tmp_path: Path) -> None:
     _software_env(monkeypatch)
     app = QGuiApplication.instance() or QGuiApplication([])
     flow = _product_flow(tmp_path)
@@ -170,7 +171,16 @@ def test_application_shell_loads_all_seven_product_routes(monkeypatch, tmp_path:
     roots = engine.rootObjects()
     try:
         assert roots
-        for page_id in ("overview", "watchlist", "research", "report", "import", "status", "chart"):
+        for page_id in (
+            "overview",
+            "watchlist",
+            "research",
+            "research_assistant",
+            "report",
+            "import",
+            "status",
+            "chart",
+        ):
             flow.navigation.navigate(page_id)
             QCoreApplication.processEvents()
             loader = roots[0].findChild(QObject, f"{page_id}PageLoader")
@@ -265,6 +275,7 @@ def test_product_pages_use_visible_daylight_liquid_glass() -> None:
         "overview/Overview.qml",
         "watchlist/Watchlist.qml",
         "research/Research.qml",
+        "research_assistant/ResearchAssistant.qml",
         "report/Report.qml",
         "import/Import.qml",
         "status/Status.qml",
@@ -283,6 +294,7 @@ def test_product_shape_and_typography_roles_stay_semantic() -> None:
         PAGES_DIR / "overview" / "Overview.qml",
         PAGES_DIR / "watchlist" / "Watchlist.qml",
         PAGES_DIR / "research" / "Research.qml",
+        PAGES_DIR / "research_assistant" / "ResearchAssistant.qml",
         PAGES_DIR / "report" / "Report.qml",
         PAGES_DIR / "import" / "Import.qml",
         PAGES_DIR / "status" / "Status.qml",
@@ -305,7 +317,7 @@ def test_product_shape_and_typography_roles_stay_semantic() -> None:
     assert "border.width: 0" in status_badge
 
     glass_card = (PAGES_DIR.parent / "primitives" / "GlassCard.qml").read_text(encoding="utf-8")
-    assert "Math.min(GlassTokens.cardRadius" in glass_card
+    assert "height <= 180 ? GlassTokens.capsuleRadius(height)" in glass_card
     assert "GlassTokens.capsuleRadius(height)" in glass_card
     assert "edgeContrast: 0.48" in glass_card
     assert "depthStrength: 1.18" in glass_card

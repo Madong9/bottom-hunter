@@ -127,11 +127,12 @@ python gui.py
 bottom-hunter-gui
 ```
 
-操作台使用类似微信的三栏桌面布局：左侧深色功能导航、中间上下文列表、右侧工作区。界面使用 Qt 矢量绘制和高清中文字体，支持系统缩放，包含七个页面：
+操作台使用类似微信的三栏桌面布局：左侧深色功能导航、中间上下文列表、右侧工作区。界面使用 Qt 矢量绘制和高清中文字体，支持系统缩放，包含八个页面：
 
 - **总览**：聚焦今日机会、数据健康、滚动验证和模拟组合四项核心信息；双击信号可查看中文分项、触发依据、关键价位与失效条件。
 - **我的自选**：查看加密货币、美港股、A 股、跨来源重合和链上股票标识，按类别/行业过滤，也可人工修正股票行业。
 - **研究中心**：按自选股查看财务指标、财报/公告、新闻、媒体与雪球等社区观点，并用归一化趋势图比较不同量纲的财务/宏观变化。
+- **投研助手**：在上位机内嵌入 FastAPI + React 七 Agent 投研工作台，由 Query Router 识别六类金融任务，再由 Stock Entity Resolver 将公司名称或代码解析为 A 股、港股或美股标准代码，最后进入五个专项研究阶段，不跳转外部浏览器。
 - **报告中心**：按时间浏览 Markdown 日报和回测报告，也可以交给系统默认应用打开。
 - **自选导入**：同花顺、币安和欧易统一通过文件或手动添加维护，不需要平台 API Key；长桥认证行情作为独立的可选数据源保留。
 - **系统状态**：检查组件、配置、SQLite、日报和各市场实际数据源，显示行情日、完整信号数、异常数及中文批次状态。
@@ -157,7 +158,26 @@ bottom-hunter-qml
 python -m bottom_hunter.ui_demo.pages.application_shell_launcher
 ```
 
-该入口通过 `build_production_flow()` 统一注入总览、自选、研究、报告、导入、状态和 K 线七个路由的 ViewModel。总览可在后台启动扫描/回测并显示实时日志；导入页支持异步事务文件导入、手动添加和来源维护；研究页只读聚合日报与 SQLite 已有财务/资讯缓存；K 线页支持后台加载、定时刷新、周期切换、MA/BOLL/MACD/RSI/KDJ、Ctrl+滚轮缩放，并按“标的 + 周期”持久化趋势线/水平线。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
+该入口通过 `build_production_flow()` 统一注入总览、自选、研究、投研助手、报告、导入、状态和 K 线八个路由的 ViewModel/运行时控制器。总览可在后台启动扫描/回测并显示实时日志；导入页支持异步事务文件导入、手动添加和来源维护；研究页只读聚合日报与 SQLite 已有财务/资讯缓存；投研助手页托管 Web 应用生命周期，并通过 Qt WebEngine 直接嵌入当前 QML 工作区；K 线页支持后台加载、定时刷新、周期切换、MA/BOLL/MACD/RSI/KDJ、Ctrl+滚轮缩放，并按“标的 + 周期”持久化趋势线/水平线。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
+
+投研助手的安装、配置和独立启动方式见仓库根目录
+[research_assistant/README.md](../research_assistant/README.md)。
+
+### Linux 安装包
+
+在仓库根目录构建 AppImage 和 `.deb`：
+
+```bash
+.venv/bin/python -m pip install -e './bottom_hunter[package]'
+bottom_hunter/packaging/build_linux.sh --all
+```
+
+安装 `.deb` 时请使用当前仓库中的绝对路径；Conda 环境存在同名扫描命令时，
+用 `/usr/bin/bottom-hunter` 启动安装版，或直接从桌面应用菜单启动。
+
+打包版在 `~/.config/bottom-hunter` 保存配置，在
+`~/.local/share/bottom-hunter` 保存自选、数据、报告和状态。构建时不打包个人
+自选、运行数据或通知密钥。
 
 产品外壳的雨滴使用重力、表面附着摩擦和黏滞阻力模型沿玻璃加速下滑：微小雨滴接近静止，大滴逐渐接近终端速度并留下克制的透明水痕；窗口失焦或隐藏时动画自动暂停。左侧导航底部的调色按钮可在 `25%–300%` 范围调节整体色彩浓度；开启“选择玻璃块”后，点击任意玻璃卡片可单独选择淡玫瑰、天蓝、薄荷、暖金、蓝紫或冰白，并在 `0%–90%` 范围设定该块深浅。调节只在当前运行会话内生效。
 
@@ -375,6 +395,10 @@ cp bottom_hunter/deploy/bottom-hunter-scan.{service,timer} ~/.config/systemd/use
 systemctl --user daemon-reload
 systemctl --user enable --now bottom-hunter-scan.timer
 ```
+
+该服务与安装版共用 `~/.config/bottom-hunter` 和
+`~/.local/share/bottom-hunter`，因此定时扫描生成的日报、状态与通知回执会直接
+显示在桌面应用中，不再维护第二套运行数据。
 
 定时器会在 A/H 股收盘后、美股收盘后以及加密货币周末分别运行。扫描器内置**数据看门狗**：若某市场基准数据缺失或过期，自动重试一次，仍失败才标记“部分完成”并继续其他市场。
 

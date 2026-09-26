@@ -58,6 +58,12 @@ Canvas {
         } else if (symbol === "research") {
             ctx.beginPath(); ctx.arc(10.5, 10.5, 6.2, 0, Math.PI * 2); ctx.stroke()
             line(ctx, [[15.2, 15.2], [20.5, 20.5]])
+        } else if (symbol === "assistant") {
+            ctx.beginPath(); ctx.arc(12, 12, 7.3, 0, Math.PI * 2); ctx.stroke()
+            ctx.beginPath(); ctx.arc(9.3, 11.2, 0.9, 0, Math.PI * 2); ctx.fill()
+            ctx.beginPath(); ctx.arc(14.7, 11.2, 0.9, 0, Math.PI * 2); ctx.fill()
+            line(ctx, [[9, 15], [10.5, 16], [13.5, 16], [15, 15]])
+            line(ctx, [[12, 4.7], [12, 2.5], [15, 2.5]])
         } else if (symbol === "report") {
             ctx.strokeRect(5, 3.5, 14, 17)
             line(ctx, [[8, 8], [16, 8]])

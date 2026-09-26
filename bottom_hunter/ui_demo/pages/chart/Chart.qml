@@ -17,6 +17,42 @@ GlassSurface {
     property string drawingMode: ""
     property var annotations: []
     property var draftPoint: null
+    property var hoverBar: null
+    property real hoverPreviousClose: 0
+
+    function formatPrice(value) {
+        const number = Number(value)
+        if (!isFinite(number)) return "--"
+        const absolute = Math.abs(number)
+        const digits = absolute >= 1000 ? 2 : absolute >= 1 ? 3 : 6
+        return number.toFixed(digits)
+    }
+
+    function formatVolume(value) {
+        const number = Number(value)
+        if (!isFinite(number)) return "--"
+        if (Math.abs(number) >= 100000000) return (number / 100000000).toFixed(2) + "亿"
+        if (Math.abs(number) >= 10000) return (number / 10000).toFixed(2) + "万"
+        return number.toFixed(0)
+    }
+
+    function formatTimestamp(value) {
+        if (value === null || value === undefined || value === "") return "--"
+        return String(value).replace("T", " ").replace("Z", "").slice(0, 16)
+    }
+
+    function hoverChange() {
+        if (hoverBar === null) return 0
+        const close = Number(hoverBar.close)
+        const base = hoverPreviousClose > 0 ? hoverPreviousClose : Number(hoverBar.open)
+        return isFinite(close) && isFinite(base) ? close - base : 0
+    }
+
+    function hoverChangePercent() {
+        const base = hoverPreviousClose > 0 ? hoverPreviousClose
+                                             : hoverBar !== null ? Number(hoverBar.open) : 0
+        return base !== 0 ? hoverChange() / base * 100 : 0
+    }
 
     Component.onCompleted: {
         if (vm !== null) vm.activate()
@@ -26,6 +62,10 @@ GlassSurface {
         target: root.vm
         function onChanged() {
             root.visibleCount = Math.min(Math.max(30, root.visibleCount), Math.max(30, root.vm.barCount))
+            root.hoverBar = null
+            root.hoverPreviousClose = 0
+            chartCanvas.crossX = -1
+            chartCanvas.crossY = -1
             chartCanvas.requestPaint()
         }
         function onDrawingsChanged() {
@@ -39,6 +79,7 @@ GlassSurface {
         interval: root.vm !== null && root.vm.selectedMarket === "CRYPTO" ? 5000 : 15000
         repeat: true
         running: root.visible && root.vm !== null && root.vm.lifecycle === "READY"
+                 && !root.vm.refreshing
         onTriggered: root.vm.refresh()
     }
 
@@ -130,6 +171,7 @@ GlassSurface {
             GlassText {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.vm === null ? "未连接" : root.vm.lifecycle === "LOADING" ? "● 正在加载"
+                      : root.vm.refreshing ? "● 后台刷新"
                       : root.vm.lifecycle === "READY" ? "● 自动更新"
                       : root.vm.lifecycle === "ERROR" ? "● 行情异常" : "● 等待数据"
                 color: root.vm !== null && root.vm.lifecycle === "READY" ? "#128653" : "#61778B"
@@ -206,6 +248,7 @@ GlassSurface {
                     MouseArea {
                         anchors.fill: parent
                         enabled: root.vm !== null && root.vm.lifecycle !== "LOADING"
+                                 && !root.vm.refreshing
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.vm.refresh()
                     }
@@ -326,7 +369,7 @@ GlassSurface {
 
                     property real plotLeft: 58
                     property real plotRight: width - 18
-                    property real plotTop: 18
+                    property real plotTop: 58
                     property real mainBottom: root.panelIndicator === "无" ? height * 0.74 : height * 0.61
                     property real volumeTop: mainBottom + 10
                     property real volumeBottom: root.panelIndicator === "无" ? height - 28 : height * 0.73
@@ -350,6 +393,29 @@ GlassSurface {
                         const index = firstBar + (px - plotLeft) / Math.max(1, plotRight - plotLeft) * shownBars - 0.5
                         const price = maxPrice - (py - plotTop) / Math.max(1, mainBottom - plotTop) * (maxPrice - minPrice)
                         return { x: index, price: price }
+                    }
+                    function updateHover(px, py) {
+                        const candidateBars = root.vm !== null ? root.vm.bars : null
+                        const all = candidateBars === null || candidateBars === undefined ? [] : candidateBars
+                        if (!all.length || shownBars <= 0 || px < plotLeft || px > plotRight
+                                || py < plotTop || py > mainBottom) {
+                            clearHover()
+                            return
+                        }
+                        const offset = Math.floor((px - plotLeft) / Math.max(1, plotRight - plotLeft) * shownBars)
+                        const index = Math.max(firstBar, Math.min(firstBar + shownBars - 1, firstBar + offset))
+                        root.hoverBar = all[index]
+                        root.hoverPreviousClose = index > 0 ? Number(all[index - 1].close) : Number(all[index].open)
+                        crossX = barX(index)
+                        crossY = py
+                        requestPaint()
+                    }
+                    function clearHover() {
+                        root.hoverBar = null
+                        root.hoverPreviousClose = 0
+                        crossX = -1
+                        crossY = -1
+                        requestPaint()
                     }
                     function lineSeries(ctx, values, key, color, low, high, top, bottom) {
                         ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 1.35
@@ -467,19 +533,79 @@ GlassSurface {
                     }
                 }
 
+                GlassSurface {
+                    id: hoverReadout
+                    objectName: "chartHoverReadout"
+                    visible: root.hoverBar !== null
+                    z: 2
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: chartCanvas.plotLeft
+                    anchors.rightMargin: Math.max(0, chartCanvas.width - chartCanvas.plotRight)
+                    height: 44
+                    surfaceRadius: GlassTokens.capsuleRadius(height)
+                    tint: "#EDF7FC"
+                    tintAlpha: 0.78
+                    accentTint: root.hoverChange() >= 0 ? "#FFD9D9" : "#D3F1E5"
+                    accentStrength: 0.14
+
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        spacing: Math.max(10, (width - 670) / 7)
+
+                        GlassText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 132
+                            text: root.formatTimestamp(root.hoverBar !== null ? root.hoverBar.timestamp : "")
+                            tone: "secondary"
+                            sizeHint: 12
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+                        GlassText { anchors.verticalCenter: parent.verticalCenter; text: "开 " + root.formatPrice(root.hoverBar !== null ? root.hoverBar.open : null); tone: "primary"; sizeHint: 12 }
+                        GlassText { anchors.verticalCenter: parent.verticalCenter; text: "高 " + root.formatPrice(root.hoverBar !== null ? root.hoverBar.high : null); color: "#C84444"; sizeHint: 12 }
+                        GlassText { anchors.verticalCenter: parent.verticalCenter; text: "低 " + root.formatPrice(root.hoverBar !== null ? root.hoverBar.low : null); color: "#087B54"; sizeHint: 12 }
+                        GlassText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "收 " + root.formatPrice(root.hoverBar !== null ? root.hoverBar.close : null)
+                            color: root.hoverChange() >= 0 ? "#C84444" : "#087B54"
+                            sizeHint: 12
+                            font.weight: Font.DemiBold
+                        }
+                        GlassText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "涨跌 " + (root.hoverChange() >= 0 ? "+" : "") + root.formatPrice(root.hoverChange())
+                                  + "  " + (root.hoverChangePercent() >= 0 ? "+" : "")
+                                  + root.hoverChangePercent().toFixed(2) + "%"
+                            color: root.hoverChange() >= 0 ? "#C84444" : "#087B54"
+                            sizeHint: 12
+                            font.weight: Font.DemiBold
+                        }
+                        GlassText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "量 " + root.formatVolume(root.hoverBar !== null ? root.hoverBar.volume : null)
+                            tone: "secondary"
+                            sizeHint: 12
+                        }
+                    }
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: root.drawingMode === "" ? Qt.ArrowCursor : Qt.CrossCursor
                     onPositionChanged: function(mouse) {
-                        chartCanvas.crossX = mouse.x; chartCanvas.crossY = mouse.y; chartCanvas.requestPaint()
+                        chartCanvas.updateHover(mouse.x, mouse.y)
                     }
-                    onExited: { chartCanvas.crossX = -1; chartCanvas.crossY = -1; chartCanvas.requestPaint() }
+                    onExited: chartCanvas.clearHover()
                     onWheel: function(wheel) {
                         if (wheel.modifiers & Qt.ControlModifier) {
                             const direction = wheel.angleDelta.y > 0 ? -10 : 10
                             root.visibleCount = Math.max(20, Math.min(root.vm !== null ? Math.max(20, root.vm.barCount) : 500, root.visibleCount + direction))
-                            chartCanvas.requestPaint(); wheel.accepted = true
+                            chartCanvas.clearHover(); wheel.accepted = true
                         }
                     }
                     onClicked: function(mouse) {
@@ -511,7 +637,8 @@ GlassSurface {
                     text: root.vm === null ? "K线 ViewModel 未连接"
                           : root.vm.lifecycle === "ERROR" ? "行情加载失败：" + root.vm.error
                           : root.vm.lifecycle === "EMPTY" ? "自选为空，请先在导入页添加标的"
-                          : root.vm.lifecycle === "LOADING" ? "正在后台加载行情…"
+                          : root.vm.lifecycle === "LOADING" ? "正在加载首屏行情…"
+                          : root.vm.refreshing ? "正在后台刷新，当前 K 线可继续查看"
                           : root.vm.note || "行情仅供研究，可能存在延迟"
                     elide: Text.ElideRight
                     tone: root.vm !== null && root.vm.lifecycle === "ERROR" ? "secondary" : "muted"

@@ -495,7 +495,8 @@ GlassSurface {
                             width: previewList.width
                             height: 54
                             tintAlpha: 0.025
-                            surfaceRadius: GlassTokens.compactContainerRadius
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
+                            liftOnHover: true
 
                             Row {
                                 anchors.fill: parent

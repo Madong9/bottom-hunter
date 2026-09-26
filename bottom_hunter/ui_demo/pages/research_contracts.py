@@ -8,11 +8,14 @@ it performs no refresh, persistence, scoring, or sentiment analysis.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-BACKEND_DIR = Path(__file__).resolve().parents[2]
+BACKEND_DIR = Path(
+    os.environ.get("BOTTOM_HUNTER_PROJECT_DIR", Path(__file__).resolve().parents[2])
+).resolve()
 REPORT_DIR = BACKEND_DIR / "reports"
 
 

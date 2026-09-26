@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +10,9 @@ import yaml
 
 from .models import Instrument
 
-PROJECT_DIR = Path(__file__).resolve().parents[1]
+PROJECT_DIR = Path(
+    os.environ.get("BOTTOM_HUNTER_PROJECT_DIR", Path(__file__).resolve().parents[1])
+).resolve()
 
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -108,6 +111,11 @@ class AppConfig:
             )
             result.setdefault(benchmark.symbol, benchmark)
         return list(result.values())
+
+    def market_instruments(self, market: str) -> list[Instrument]:
+        """Return the complete fetch universe for one configured market."""
+
+        return [instrument for instrument in self.all_instruments() if instrument.market == market]
 
     def risk_instruments(self, market: str) -> list[Instrument]:
         return [_instrument(item, None) for item in self.watchlist.get("risk_appetite", []) if item["market"] == market]

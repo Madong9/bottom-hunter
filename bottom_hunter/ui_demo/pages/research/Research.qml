@@ -130,7 +130,8 @@ GlassSurface {
                             width: assetList.width
                             height: 104
                             tintAlpha: 0.025
-                            surfaceRadius: GlassTokens.compactContainerRadius
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
+                            liftOnHover: true
                             accentTint: "#DFE7FF"
                             accentStrength: 0.10
 
@@ -212,7 +213,8 @@ GlassSurface {
                             width: macroList.width
                             height: 66
                             tintAlpha: 0.025
-                            surfaceRadius: GlassTokens.compactContainerRadius
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
+                            liftOnHover: true
                             accentTint: modelData.signal > 0 ? "#CDEFE0"
                                         : (modelData.signal < 0 ? "#FFE0D6" : "#DDEBFA")
                             accentStrength: 0.10

@@ -34,6 +34,11 @@ Rectangle {
     // keeps a thick, rounded lens without recreating ruler-straight borders.
     property real depthStrength: 0.90
     property bool reactive: false
+    // Card-like surfaces may lift without implying that the whole surface is
+    // clickable.  This keeps pointer semantics separate from material motion.
+    property bool liftOnHover: false
+    property bool pointerCursor: false
+    property real hoverScale: 1.018
     readonly property bool capsuleShape: height > 0
         && surfaceRadius >= height / 2 - 0.5
     readonly property bool materialHovered: liquidHover.hovered
@@ -47,6 +52,37 @@ Rectangle {
     color: Qt.rgba(tint.r, tint.g, tint.b, tintAlpha)
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.66 * root.edgeContrast)
+    scale: root.liftOnHover && root.materialHovered ? root.hoverScale : 1.0
+    transformOrigin: Item.Center
+
+    // Rectangle.clip is axis-aligned.  Mask the complete composited material
+    // so reflection/highlight layers cannot leak into transparent corners and
+    // reveal a faint rectangular texture boundary around capsule controls.
+    readonly property Item roundedMask: ShaderEffectSource {
+        sourceItem: Rectangle {
+            width: root.width
+            height: root.height
+            radius: root.surfaceRadius
+            antialiasing: true
+            color: "white"
+        }
+    }
+
+    layer.enabled: true
+    layer.effect: MultiEffect {
+        maskEnabled: true
+        maskSource: root.roundedMask
+        shadowEnabled: root.liftOnHover
+        shadowColor: "#263A49"
+        shadowBlur: root.materialHovered ? 0.70 : 0.45
+        shadowVerticalOffset: root.materialHovered ? 7 : 3
+        shadowOpacity: root.materialHovered ? 0.18 : 0.045
+        autoPaddingEnabled: true
+    }
+
+    Behavior on scale {
+        NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+    }
 
     Component.onCompleted: runtimeAppearanceKey = GlassAppearance.keyFor(root)
 
@@ -281,7 +317,7 @@ Rectangle {
 
     HoverHandler {
         id: liquidHover
-        enabled: root.reactive
-        cursorShape: root.reactive ? Qt.PointingHandCursor : Qt.ArrowCursor
+        enabled: root.reactive || root.liftOnHover
+        cursorShape: root.pointerCursor ? Qt.PointingHandCursor : Qt.ArrowCursor
     }
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import os
 import shutil
 import sqlite3
 import sys
@@ -15,7 +16,9 @@ import yaml
 
 from .config import AppConfig
 
-PACKAGE_DIR = Path(__file__).resolve().parents[1]
+PACKAGE_DIR = Path(
+    os.environ.get("BOTTOM_HUNTER_PROJECT_DIR", Path(__file__).resolve().parents[1])
+).resolve()
 WORKSPACE_DIR = PACKAGE_DIR.parent
 
 

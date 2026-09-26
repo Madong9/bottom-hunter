@@ -1,4 +1,4 @@
-"""PHASE 5 composition root for the seven-page QML product shell."""
+"""Composition root for the eight-page QML product shell."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from .import_runtime_adapter import RealRuntimeActivityPort, RuntimeStatusDTO
 from .overview_adapter import build_overview_dto
 from .report_status import ReportViewModel
 from .research_adapter import build_research_dto
+from .research_assistant_runtime import ResearchAssistantRuntime
 from .research_contracts import ResearchDTO
 from .research_viewmodel import ResearchViewModel
 from .routing import NavigationController
@@ -73,6 +74,7 @@ class ProductFlow:
     overview_refresh_controller: object
     watchlist_view_model: WatchlistViewModel
     research_view_model: ResearchViewModel
+    research_assistant_runtime: ResearchAssistantRuntime
     report_view_model: ReportViewModel
     import_flow: ProductionImportFlow
     status_view_model: StatusViewModel
@@ -91,6 +93,7 @@ class ProductFlow:
             "overviewRefreshController": self.overview_refresh_controller,
             "watchlistVm": self.watchlist_view_model,
             "researchVm": self.research_view_model,
+            "researchAssistantVm": self.research_assistant_runtime,
             "reportVm": self.report_view_model,
             "importVm": self.import_flow.view_model,
             "statusVm": self.status_view_model,
@@ -128,6 +131,7 @@ def build_production_flow(
     chart_port: ChartReadPort | None = None,
     chart_assets: tuple[ChartAssetDTO, ...] | None = None,
     chart_drawing_adapter: ChartDrawingAdapter | None = None,
+    research_assistant_runtime: ResearchAssistantRuntime | None = None,
 ) -> ProductFlow:
     """Build adapters, DTO providers, ViewModels and QML context objects."""
 
@@ -147,6 +151,7 @@ def build_production_flow(
 
     watchlist_vm = WatchlistViewModel()
     research_vm = ResearchViewModel()
+    assistant_runtime = research_assistant_runtime or ResearchAssistantRuntime()
     report_vm = ReportViewModel()
     status_vm = StatusViewModel()
     task_vm = TaskViewModel()
@@ -199,6 +204,7 @@ def build_production_flow(
     chart_vm.requestDrawings()
     coordinator = ProductCoordinator(navigation, chart_vm)
     watchlist_vm.chartRequested.connect(coordinator.openChart)
+    report_vm.chartRequested.connect(coordinator.openChart)
     watchlist_vm.importRequested.connect(coordinator.openImport)
     watchlist_vm.refreshRequested.connect(
         lambda: _load_read_only(watchlist_vm, watchlist_provider, WatchlistDTO())
@@ -247,6 +253,7 @@ def build_production_flow(
         overview_refresh_controller=overview_refresh_controller,
         watchlist_view_model=watchlist_vm,
         research_view_model=research_vm,
+        research_assistant_runtime=assistant_runtime,
         report_view_model=report_vm,
         import_flow=import_flow,
         status_view_model=status_vm,

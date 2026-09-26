@@ -24,6 +24,7 @@ from PySide6.QtCore import Property, QObject, Signal
 PAGE_OVERVIEW = "overview"
 PAGE_WATCHLIST = "watchlist"
 PAGE_RESEARCH = "research"
+PAGE_RESEARCH_ASSISTANT = "research_assistant"
 PAGE_REPORT = "report"
 PAGE_IMPORT = "import"
 PAGE_STATUS = "status"
@@ -33,6 +34,7 @@ PAGES = (
     (PAGE_OVERVIEW, "总览", "⌂"),
     (PAGE_WATCHLIST, "自选", "◆"),
     (PAGE_RESEARCH, "研究", "◎"),
+    (PAGE_RESEARCH_ASSISTANT, "投研助手", "✦"),
     (PAGE_REPORT, "报告", "▤"),
     (PAGE_IMPORT, "导入", "✚"),
     (PAGE_STATUS, "状态", "◐"),
@@ -77,7 +79,7 @@ class PageViewModel(QObject):
 class PlaceholderViewModel(PageViewModel):
     """Empty page view model: no data, just the page identity/title.
 
-    Used by all seven pages until their DTO/view model is built in
+    Used by registered pages until their DTO/view model is built in
     PHASE 3-C. QML renders "«title» module ready".
     """
 
@@ -86,7 +88,7 @@ class PlaceholderViewModel(PageViewModel):
 
 
 def build_page_viewmodels(parent: QObject | None = None) -> dict[str, PageViewModel]:
-    """Construct the seven placeholder view models (one per page)."""
+    """Construct placeholder view models for all registered pages."""
     return {
         page_id: PlaceholderViewModel(page_id, title, parent)
         for page_id, title, _glyph in PAGES
@@ -101,6 +103,7 @@ __all__ = [
     "PAGE_OVERVIEW",
     "PAGE_WATCHLIST",
     "PAGE_RESEARCH",
+    "PAGE_RESEARCH_ASSISTANT",
     "PAGE_REPORT",
     "PAGE_IMPORT",
     "PAGE_STATUS",
@@ -109,4 +112,3 @@ __all__ = [
     "PlaceholderViewModel",
     "build_page_viewmodels",
 ]
-

@@ -26,12 +26,15 @@ does not request quotes or calculate a new signal.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 # backend package dir (frozen; read-only file reference only)
-BACKEND_DIR = Path(__file__).resolve().parents[2]
+BACKEND_DIR = Path(
+    os.environ.get("BOTTOM_HUNTER_PROJECT_DIR", Path(__file__).resolve().parents[2])
+).resolve()
 STATE_DIR = BACKEND_DIR / "state"
 SUMMARY_PATH = STATE_DIR / "watchlist_summary.json"
 REPORT_DIR = BACKEND_DIR / "reports"

@@ -85,11 +85,12 @@ def test_load_notify_config_reads_wecom(tmp_path) -> None:
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "notify.yaml").write_text(
-        "enabled: true\nchannels:\n  wecom:\n    webhook: https://qy.example/hook\n",
+        "enabled: true\ndaily_summary: true\nchannels:\n  wecom:\n    webhook: https://qy.example/hook\n",
         encoding="utf-8",
     )
     config = load_notify_config(config_dir)
     assert config.enabled is True
+    assert config.daily_summary is True
     assert config.wecom_webhook == "https://qy.example/hook"
     assert config.has_channel is True
 
@@ -151,6 +152,25 @@ def test_push_sends_to_wxpusher(monkeypatch) -> None:
     assert errors == []
     assert captured["json"]["uids"] == ["UID_1"]
     assert captured["json"]["contentType"] == 3
+
+
+def test_push_sends_one_daily_summary_when_no_alerts(monkeypatch, tmp_path) -> None:
+    captured: dict = {}
+
+    def fake_post(url, json=None, timeout=8, **_kwargs):
+        captured["json"] = json
+        return _FakeResponse(200, {"success": True})
+
+    monkeypatch.setattr("bottom_hunter.src.notify.requests.post", fake_post)
+    monkeypatch.setattr(bottom_hunter_notify, "PROJECT_DIR", tmp_path)
+    config = NotifyConfig(enabled=True, daily_summary=True, wxpusher_app_token="AT_x", wxpusher_uid="UID_1")
+
+    assert push([], [], config) == []
+    assert "今日无新增提醒" in captured["json"]["summary"]
+    assert len(list((tmp_path / "state" / "notification_receipts").glob("*.sent"))) == 1
+    captured.clear()
+    assert push([], [], config) == []
+    assert captured == {}
 
 
 def test_digest_is_chinese_mobile_summary_for_new_entity() -> None:

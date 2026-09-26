@@ -1,7 +1,7 @@
 """PHASE 3 / 3-A — page framework + routing tests.
 
 Covers: PageViewModel base, NavigationController routing (valid/invalid
-navigate, signal), placeholder view models for all 7 pages, QML
+navigate, signal), placeholder view models for all 8 pages, QML
 ApplicationShell load smoke, and business isolation.
 """
 
@@ -38,20 +38,29 @@ def _controller():
 # ---- page registry / view models --------------------------------------------
 
 
-def test_pages_registry_has_seven_pages() -> None:
+def test_pages_registry_has_eight_pages() -> None:
     from bottom_hunter.ui_demo.pages import PAGES
 
     ids = [pid for pid, _t, _g in PAGES]
-    assert ids == ["overview", "watchlist", "research", "report", "import", "status", "chart"]
+    assert ids == [
+        "overview",
+        "watchlist",
+        "research",
+        "research_assistant",
+        "report",
+        "import",
+        "status",
+        "chart",
+    ]
     titles = [t for _pid, t, _g in PAGES]
-    assert titles == ["总览", "自选", "研究", "报告", "导入", "状态", "K线"]
+    assert titles == ["总览", "自选", "研究", "投研助手", "报告", "导入", "状态", "K线"]
 
 
 def test_placeholder_viewmodels_built() -> None:
     from bottom_hunter.ui_demo.pages import build_page_viewmodels
 
     vms = build_page_viewmodels()
-    assert len(vms) == 7
+    assert len(vms) == 8
     vm = vms["research"]
     assert vm.property("pageId") == "research"
     assert vm.property("title") == "研究"
@@ -95,7 +104,7 @@ def test_navigation_signal() -> None:
 def test_navigation_pages_list() -> None:
     c = _controller()
     pages = c.property("pages")
-    assert len(pages) == 7
+    assert len(pages) == 8
     assert pages[0]["id"] == "overview"
     assert pages[0]["glyph"] == "⌂"
 

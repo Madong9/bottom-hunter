@@ -9,6 +9,11 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .coverage
+.packaging-build/
+dist/
+.env
+.env.*
+!.env.example
 
 # Temporary files
 tmp/
@@ -21,6 +26,7 @@ ui_demo/**/shots/tmp/
 # Runtime/cache data
 bottom_hunter/state/research_cache/
 bottom_hunter/state/chart_drawings.json
+bottom_hunter/state/notification_receipts/
 bottom_hunter/config/notify.yaml
 
 # IDE

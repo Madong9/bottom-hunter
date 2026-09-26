@@ -222,6 +222,51 @@ def test_equity_profile_fills_code_only_name_and_industry(tmp_path, monkeypatch)
     assert len(calls) == 1
 
 
+def test_cn_profile_failure_is_cached_without_known_failing_yahoo_retry(tmp_path, monkeypatch) -> None:
+    calls: list[str] = []
+
+    def failing_urlopen(request, timeout):
+        calls.append(request.full_url)
+        raise OSError("temporary upstream failure")
+
+    monkeypatch.setattr(watchlist_module, "urlopen", failing_urlopen)
+    resolver = IndustryResolver(tmp_path / "industry_cache.json")
+    asset = normalize_import_row(
+        "tonghuashun",
+        {"股票代码": "603288", "股票名称": "海天味业"},
+    )
+
+    first = resolver.resolve_profile(asset)
+    second = resolver.resolve_profile(asset)
+
+    assert first["industry"] == UNKNOWN_INDUSTRY
+    assert second["industry"] == UNKNOWN_INDUSTRY
+    assert len(calls) == 1
+    assert "query2.finance.yahoo.com" not in calls[0]
+
+
+def test_industry_override_bypasses_remote_profile_lookup(tmp_path, monkeypatch) -> None:
+    project = tmp_path / "project"
+    config_dir = project / "config"
+    state_dir = project / "state"
+    config_dir.mkdir(parents=True)
+    state_dir.mkdir(parents=True)
+    (config_dir / "industry_overrides.yaml").write_text("overrides:\n  equity:CN:603288.SS: 调味品\n", encoding="utf-8")
+    repository = AccountWatchlistRepository(project, state_dir=state_dir, config_dir=config_dir)
+    asset = normalize_import_row(
+        "tonghuashun",
+        {"股票代码": "603288", "股票名称": "海天味业"},
+    )
+
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("配置的行业不应再请求远程资料")
+
+    monkeypatch.setattr(IndustryResolver, "resolve_profile", fail_if_called)
+    resolved, _, _ = repository._resolve_industries_in_memory([asset])
+
+    assert resolved[0].industry == "调味品"
+
+
 def test_repository_merges_overlaps_and_generates_only_account_sectors(tmp_path) -> None:
     project = tmp_path / "project"
     config_dir = project / "config"

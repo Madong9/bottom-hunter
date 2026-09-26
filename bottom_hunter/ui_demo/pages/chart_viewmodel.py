@@ -32,6 +32,7 @@ class ChartViewModel(PageViewModel):
         self._updated_at = ""
         self._note = ""
         self._error = ""
+        self._refreshing = False
         self._annotations: list[dict[str, str | float]] = []
         self._lifecycle = "INIT" if self._assets else "EMPTY"
 
@@ -85,6 +86,12 @@ class ChartViewModel(PageViewModel):
     def error(self) -> str:
         return self._error
 
+    @Property(bool, notify=changed)
+    def refreshing(self) -> bool:
+        """Whether existing bars are being refreshed in the background."""
+
+        return self._refreshing
+
     @Property(str, notify=lifecycleChanged)
     def lifecycle(self) -> str:
         return self._lifecycle
@@ -115,6 +122,7 @@ class ChartViewModel(PageViewModel):
         if not values:
             self._bars = []
             self._annotations = []
+            self._refreshing = False
             self._set_lifecycle("EMPTY")
             self.drawingsChanged.emit()
         self.changed.emit()
@@ -157,6 +165,7 @@ class ChartViewModel(PageViewModel):
         self._bars = []
         self._annotations = []
         self._error = ""
+        self._refreshing = False
         self._set_lifecycle("INIT")
         self.changed.emit()
         self.drawingsChanged.emit()
@@ -167,7 +176,7 @@ class ChartViewModel(PageViewModel):
     def selectCanonicalId(self, canonical_id: str) -> None:  # noqa: N802
         requested = str(canonical_id)
         for index, asset in enumerate(self._assets):
-            if asset.canonical_id != requested:
+            if requested not in {asset.canonical_id, asset.symbol}:
                 continue
             if index == self._selected_index:
                 self.activate()
@@ -183,6 +192,7 @@ class ChartViewModel(PageViewModel):
         self._bars = []
         self._annotations = []
         self._error = ""
+        self._refreshing = False
         self._set_lifecycle("INIT")
         self.changed.emit()
         self.drawingsChanged.emit()
@@ -203,7 +213,9 @@ class ChartViewModel(PageViewModel):
         if canonical_id != self.selectedCanonicalId or timeframe != self._timeframe:
             return
         self._error = ""
-        self._set_lifecycle("LOADING")
+        self._refreshing = bool(self._bars)
+        if not self._bars:
+            self._set_lifecycle("LOADING")
         self.changed.emit()
 
     @Slot(object)
@@ -215,18 +227,27 @@ class ChartViewModel(PageViewModel):
         self._updated_at = dto.updated_at
         self._note = dto.note
         self._error = ""
+        self._refreshing = False
         self._set_lifecycle("READY" if self._bars else "EMPTY")
         self.changed.emit()
 
     @Slot(str)
     def applyError(self, message: str) -> None:  # noqa: N802
         self._error = str(message) or "行情加载失败"
+        self._refreshing = False
         self._set_lifecycle("ERROR")
         self.changed.emit()
 
     @Slot(str, str, str)
     def applyLoadError(self, canonical_id: str, timeframe: str, message: str) -> None:  # noqa: N802
         if canonical_id != self.selectedCanonicalId or timeframe != self._timeframe:
+            return
+        if self._bars:
+            self._error = str(message) or "实时刷新失败"
+            self._note = f"实时刷新失败，继续显示最近成功数据。原因：{self._error}"
+            self._refreshing = False
+            self._set_lifecycle("READY")
+            self.changed.emit()
             return
         self.applyError(message)
 

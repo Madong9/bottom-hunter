@@ -48,6 +48,7 @@ GlassSurface {
                 { icon: "overview", tip: "总览" },
                 { icon: "watchlist", tip: "自选" },
                 { icon: "research", tip: "研究" },
+                { icon: "assistant", tip: "投研助手" },
                 { icon: "report", tip: "报告" },
                 { icon: "import", tip: "导入" },
                 { icon: "status", tip: "状态" },

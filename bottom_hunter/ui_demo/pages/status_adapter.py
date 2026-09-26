@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -10,7 +11,9 @@ from pathlib import Path
 
 from .status_contracts import StatusDTO, StatusItemDTO, StatusMarketDTO, StatusRunDTO
 
-REPORT_DIR = Path(__file__).resolve().parents[2] / "reports"
+REPORT_DIR = Path(
+    os.environ.get("BOTTOM_HUNTER_PROJECT_DIR", Path(__file__).resolve().parents[2])
+).resolve() / "reports"
 
 
 def _latest_report(report_dir: Path) -> Path | None:

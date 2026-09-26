@@ -14,6 +14,17 @@ def test_rain_effect_support_follows_selected_rhi(monkeypatch) -> None:
     assert rain_effect_supported() is False
 
 
+def test_desktop_blur_skips_headless_qt_platforms(monkeypatch) -> None:
+    from bottom_hunter.ui_demo.pages.application_shell_launcher import desktop_blur_supported
+
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    assert desktop_blur_supported() is False
+    monkeypatch.setenv("QT_QPA_PLATFORM", "minimal")
+    assert desktop_blur_supported() is False
+    monkeypatch.setenv("QT_QPA_PLATFORM", "xcb")
+    assert desktop_blur_supported() is True
+
+
 def test_product_window_has_user_facing_title() -> None:
     from inspect import getsource
 

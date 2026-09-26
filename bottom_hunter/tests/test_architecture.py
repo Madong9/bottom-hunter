@@ -123,9 +123,9 @@ def test_page_registry_integrity() -> None:
     from bottom_hunter.ui_demo.pages import PAGES
 
     ids = [pid for pid, _t, _g in PAGES]
-    assert len(ids) == len(set(ids)) == 7, "page ids must be unique"
+    assert len(ids) == len(set(ids)) == 8, "page ids must be unique"
     glyphs = [g for _i, _t, g in PAGES]
-    assert len(set(glyphs)) == 7, "page glyphs must be unique"
+    assert len(set(glyphs)) == 8, "page glyphs must be unique"
 
 
 # ---- 6. shader/qsb freeze (git-based, skip when git unavailable) ------------
@@ -157,7 +157,10 @@ def test_qml_import_boundary() -> None:
     # "../x"). Disallowed: any foreign/absolute module (e.g. business).
     # allowed: QtQuick family (unquoted module), or any quoted local/relative
     # directory import. Disallowed: foreign unquoted namespaced modules.
-    allowed = re.compile(r'^import\s+QtQuick(\.[A-Za-z][\w.]*)?\s*$|^import\s+"', re.M)
+    allowed = re.compile(
+        r'^import\s+(?:QtQuick(?:\.[A-Za-z][\w.]*)?|QtWebEngine)\s*$|^import\s+"',
+        re.M,
+    )
     for qml in UI_DEMO.rglob("*.qml"):
         for line in qml.read_text(encoding="utf-8", errors="ignore").splitlines():
             if line.startswith("import "):

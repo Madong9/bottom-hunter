@@ -52,6 +52,7 @@ def test_all_product_routes_have_page_loader_and_qml() -> None:
         "overview": "overview/Overview.qml",
         "watchlist": "watchlist/Watchlist.qml",
         "research": "research/Research.qml",
+        "research_assistant": "research_assistant/ResearchAssistant.qml",
         "report": "report/Report.qml",
         "import": "import/Import.qml",
         "status": "status/Status.qml",

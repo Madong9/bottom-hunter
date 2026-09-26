@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -11,7 +12,9 @@ from typing import Any
 
 from .chart_contracts import ChartAssetDTO, ChartBarDTO, ChartDrawingDTO, ChartDTO
 
-BACKEND_DIR = Path(__file__).resolve().parents[2]
+BACKEND_DIR = Path(
+    os.environ.get("BOTTOM_HUNTER_PROJECT_DIR", Path(__file__).resolve().parents[2])
+).resolve()
 SUMMARY_PATH = BACKEND_DIR / "state" / "watchlist_summary.json"
 DRAWINGS_PATH = BACKEND_DIR / "state" / "chart_drawings.json"
 

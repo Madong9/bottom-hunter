@@ -21,6 +21,7 @@ class ReportViewModel(PageViewModel):
     changed = Signal()
     lifecycleChanged = Signal()
     refreshRequested = Signal()
+    chartRequested = Signal(str)
 
     def __init__(self, parent=None) -> None:
         super().__init__(PAGE_REPORT, "报告", parent)
@@ -33,6 +34,7 @@ class ReportViewModel(PageViewModel):
         self._generated_at = ""
         self._market_text = "--"
         self._signals: list[dict] = []
+        self._selected_signal_index = -1
         self._sectors: list[dict] = []
         self._alerts: list[str] = []
         self._data_errors: list[str] = []
@@ -77,6 +79,16 @@ class ReportViewModel(PageViewModel):
     def signals(self) -> list[dict]:
         return self._signals
 
+    @Property("QVariantMap", notify=changed)
+    def selectedSignal(self) -> dict:  # noqa: N802
+        if 0 <= self._selected_signal_index < len(self._signals):
+            return self._signals[self._selected_signal_index]
+        return {}
+
+    @Property(bool, notify=changed)
+    def hasSelectedSignal(self) -> bool:  # noqa: N802
+        return bool(self.selectedSignal)
+
     @Property("QVariantList", notify=changed)
     def sectors(self) -> list[dict]:
         return self._sectors
@@ -115,6 +127,7 @@ class ReportViewModel(PageViewModel):
         self._generated_at = str(dto.generated_at)
         self._market_text = " · ".join(f"{key} {value}" for key, value in dto.market_sessions) or "--"
         self._signals = [item.as_dict() for item in dto.signals]
+        self._selected_signal_index = -1
         self._sectors = [item.as_dict() for item in dto.sectors]
         self._alerts = [str(item) for item in dto.alerts]
         self._data_errors = [str(item) for item in dto.data_errors]
@@ -142,6 +155,28 @@ class ReportViewModel(PageViewModel):
     def refresh(self) -> None:
         self.markLoading()
         self.refreshRequested.emit()
+
+    @Slot(int)
+    def selectSignal(self, index: int) -> None:  # noqa: N802
+        normalized = int(index)
+        if not 0 <= normalized < len(self._signals):
+            return
+        if normalized != self._selected_signal_index:
+            self._selected_signal_index = normalized
+            self.changed.emit()
+
+    @Slot()
+    def clearSelectedSignal(self) -> None:  # noqa: N802
+        if self._selected_signal_index >= 0:
+            self._selected_signal_index = -1
+            self.changed.emit()
+
+    @Slot()
+    def openSelectedChart(self) -> None:  # noqa: N802
+        selected = self.selectedSignal
+        chart_key = str(selected.get("chart_key") or selected.get("symbol") or "")
+        if chart_key:
+            self.chartRequested.emit(chart_key)
 
 
 __all__ = ["ReportViewModel", "StatusViewModel"]

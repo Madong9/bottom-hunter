@@ -113,7 +113,8 @@ GlassSurface {
                             width: parent.width
                             height: 52
                             tintAlpha: 0.025
-                            surfaceRadius: GlassTokens.compactContainerRadius
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
+                            liftOnHover: true
                             accentTint: modelData.ok ? "#CDEFE0" : "#FFD8CF"
                             accentStrength: 0.12
                             Row {
@@ -151,7 +152,8 @@ GlassSurface {
                             width: marketHealthList.width
                             height: 54
                             tintAlpha: 0.05
-                            surfaceRadius: GlassTokens.compactContainerRadius
+                            surfaceRadius: GlassTokens.capsuleRadius(height)
+                            liftOnHover: true
                             accentTint: modelData.errors > 0 ? "#FFD8CF" : "#D4F1E6"
                             accentStrength: 0.10
                             Row {

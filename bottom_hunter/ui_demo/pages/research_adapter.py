@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from collections import defaultdict
 from pathlib import Path
@@ -16,7 +17,9 @@ from .research_contracts import (
 )
 from .research_contracts import build_research_dto as build_report_research_dto
 
-BACKEND_DIR = Path(__file__).resolve().parents[2]
+BACKEND_DIR = Path(
+    os.environ.get("BOTTOM_HUNTER_PROJECT_DIR", Path(__file__).resolve().parents[2])
+).resolve()
 DATABASE_PATH = BACKEND_DIR / "state" / "signals.db"
 WATCHLIST_PATH = BACKEND_DIR / "state" / "watchlist_summary.json"
 

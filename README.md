@@ -19,8 +19,9 @@
 - **数据质量保护**：记录实际数据源、行情日期和覆盖率；停牌、缺失、过期或板块覆盖不足时不出信号。
 - **滚动验证**：实时扫描与回测复用同一评分逻辑，并支持市场基准、费用、规则退出和时间分段。
 - **研究中心**：展示财务指标、公告、新闻、媒体/社区观点和宏观数据；来源不足时保持 `N/A`。
+- **AI 投研助手**：五 Agent 协作完成问题理解、数据检索、新闻过滤、分析与风险审核。
 - **安全导入**：文件先预览，再执行 `prepare -> stage -> verify -> commit`；失败时自动回滚。
-- **桌面操作台**：总览、自选、研究、报告、导入、状态和 K 线七个入口。
+- **桌面操作台**：总览、自选、研究、投研助手、报告、导入、状态和 K 线八个入口。
 - **通知去重**：支持 Server酱、企业微信、WxPusher 等可选通道，同一事件不会重复推送。
 
 ## 界面
@@ -127,6 +128,79 @@ python -m pip install -e "./bottom_hunter[dev,longbridge]"
 ```bash
 bottom-hunter-qml
 ```
+
+## AI 投研助手
+
+`投研助手` 已作为独立模块合并到 [research_assistant](research_assistant/README.md)，
+保留 FastAPI 后端、React 前端、五 Agent 工作流、测试和产品文档。首次使用先安装可选依赖：
+
+```bash
+.venv/bin/python -m pip install -e './bottom_hunter[research-assistant]'
+npm --prefix research_assistant/frontend ci
+```
+
+不创建 `.env` 时默认使用离线 Mock。如需 Yahoo Finance 真实公开数据或千问，
+再复制 `research_assistant/backend/.env.example` 为 `research_assistant/backend/.env`
+并编辑。启动桌面端后点击左侧“投研助手”，服务会自动启动，
+完整投研工作台会直接显示在 Bottom Hunter 页面内，不会跳转系统浏览器。
+也可脱离上位机独立启动：
+
+```bash
+.venv/bin/python research_assistant/run.py --open
+```
+
+统一启动器会托管 `127.0.0.1:8000` 的后端和 `127.0.0.1:5173` 的前端，
+上位机通过 Qt WebEngine 在当前 QML 页面内显示 React 工作台；
+桌面端退出时会回收由它启动的子进程。
+
+## Linux 桌面应用包
+
+可构建双击运行的 AppImage 和 Ubuntu/Debian 安装包。构建仅包含程序、QML、
+`.qsb` 着色器和无密钥默认配置，不会收录当前自选、数据库、行情缓存、报告或
+`notify.yaml`。
+
+```bash
+.venv/bin/python -m pip install -e './bottom_hunter[package]'
+bottom_hunter/packaging/build_linux.sh --all
+```
+
+产物位于：
+
+```text
+dist/BottomHunter-<version>-x86_64.AppImage
+dist/bottom-hunter_<version>_amd64.deb
+dist/SHA256SUMS
+```
+
+AppImage 可直接运行：
+
+```bash
+chmod +x dist/BottomHunter-*.AppImage
+./dist/BottomHunter-*.AppImage
+```
+
+Debian 包安装后可从应用菜单启动：
+
+```bash
+sudo apt install "$PWD"/dist/bottom-hunter_*_amd64.deb
+/usr/bin/bottom-hunter
+```
+
+安装命令应在仓库根目录执行，也可以直接传入 `.deb` 的绝对路径。如果 Conda
+环境中已有同名的 `bottom-hunter` 扫描命令，请从应用菜单启动，或明确运行
+`/usr/bin/bottom-hunter`，避免命令被 Conda 的 PATH 优先级遮蔽。
+
+打包版使用独立的可写用户目录：
+
+| 路径 | 内容 |
+| --- | --- |
+| `~/.config/bottom-hunter/` | 策略、研究和通知配置 |
+| `~/.local/share/bottom-hunter/state/` | SQLite、自选快照和画线 |
+| `~/.local/share/bottom-hunter/data/raw/` | 行情缓存 |
+| `~/.local/share/bottom-hunter/reports/` | 日报、回测和图表 |
+
+首次启动为空自选，请在“自选导入”页面导入文件或手动添加。真实桌面
+模糊仍由 GNOME/KWin 合成器提供；Ubuntu 的 Qt/X11 环境需要 `libxcb-cursor0`。
 
 保留的 QtWidgets 完整操作台：
 
@@ -255,7 +329,7 @@ python backtest.py \
 
 ## 测试
 
-当前回归基线为 273 项测试：
+当前回归基线为 317 项测试：
 
 ```bash
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \

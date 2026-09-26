@@ -1,0 +1,79 @@
+[
+  {
+    "news_id": "news-001",
+    "symbols": ["600519.SH"],
+    "title": "贵州茅台发布年度经营数据",
+    "summary": "公司披露年度收入和利润保持增长，直销渠道占比继续提升。",
+    "source": "Mock交易所公告",
+    "published_at": "2026-08-28T18:30:00+08:00",
+    "url": "https://example.com/mock/news-001",
+    "sentiment": "positive",
+    "credibility": 0.98
+  },
+  {
+    "news_id": "news-002",
+    "symbols": ["600519.SH"],
+    "title": "白酒行业动销仍待观察",
+    "summary": "行业渠道调研显示库存改善存在分化，高端产品价格稳定性仍是观察重点。",
+    "source": "Mock财经媒体",
+    "published_at": "2026-08-15T09:20:00+08:00",
+    "url": "https://example.com/mock/news-002",
+    "sentiment": "neutral",
+    "credibility": 0.78
+  },
+  {
+    "news_id": "news-003",
+    "symbols": ["300750.SZ"],
+    "title": "宁德时代扩建储能产线",
+    "summary": "公司宣布增加储能电芯产能，项目将分阶段投产。",
+    "source": "Mock公司公告",
+    "published_at": "2026-09-01T19:00:00+08:00",
+    "url": "https://example.com/mock/news-003",
+    "sentiment": "positive",
+    "credibility": 0.96
+  },
+  {
+    "news_id": "news-004",
+    "symbols": ["300750.SZ"],
+    "title": "动力电池价格竞争延续",
+    "summary": "产业链价格竞争可能继续影响电池厂商单位盈利能力。",
+    "source": "Mock行业研究",
+    "published_at": "2026-08-22T10:10:00+08:00",
+    "url": "https://example.com/mock/news-004",
+    "sentiment": "negative",
+    "credibility": 0.82
+  },
+  {
+    "news_id": "news-005",
+    "symbols": ["AAPL.US"],
+    "title": "Apple发布新一代硬件产品",
+    "summary": "公司更新核心硬件产品线，并进一步增加端侧智能功能。",
+    "source": "Mock公司新闻室",
+    "published_at": "2026-09-03T10:00:00-07:00",
+    "url": "https://example.com/mock/news-005",
+    "sentiment": "positive",
+    "credibility": 0.97
+  },
+  {
+    "news_id": "news-006",
+    "symbols": ["AAPL.US"],
+    "title": "智能手机市场需求增速放缓",
+    "summary": "行业机构预计成熟市场换机周期延长，短期出货量增长承压。",
+    "source": "Mock市场研究机构",
+    "published_at": "2026-08-18T08:00:00Z",
+    "url": "https://example.com/mock/news-006",
+    "sentiment": "negative",
+    "credibility": 0.84
+  },
+  {
+    "news_id": "news-007",
+    "symbols": ["600519.SH"],
+    "title": "网传茅台即将大幅提价",
+    "summary": "自媒体援引匿名人士称产品可能提价，但公司未予确认。",
+    "source": "Mock自媒体",
+    "published_at": "2026-09-02T12:00:00+08:00",
+    "url": "https://example.com/mock/news-007",
+    "sentiment": "positive",
+    "credibility": 0.35
+  }
+]

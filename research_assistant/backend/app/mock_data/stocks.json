@@ -1,0 +1,86 @@
+[
+  {
+    "symbol": "600519.SH",
+    "aliases": ["600519", "贵州茅台", "茅台"],
+    "name": "贵州茅台",
+    "market": "A股",
+    "industry": "白酒",
+    "description": "以贵州茅台酒系列产品生产和销售为主的高端白酒企业。",
+    "quote": {
+      "price": 1488.60,
+      "currency": "CNY",
+      "change_percent": 0.82,
+      "pe_ttm": 23.6,
+      "pb": 7.9,
+      "market_cap_billion": 1869.9,
+      "as_of": "2026-09-08T15:00:00+08:00"
+    },
+    "financial": {
+      "fiscal_period": "2025A",
+      "revenue_billion": 187.5,
+      "revenue_growth_percent": 14.2,
+      "net_profit_billion": 91.8,
+      "net_profit_growth_percent": 13.6,
+      "gross_margin_percent": 91.4,
+      "roe_percent": 34.8,
+      "debt_ratio_percent": 18.7,
+      "operating_cash_flow_billion": 96.1
+    }
+  },
+  {
+    "symbol": "300750.SZ",
+    "aliases": ["300750", "宁德时代", "CATL"],
+    "name": "宁德时代",
+    "market": "A股",
+    "industry": "动力电池",
+    "description": "全球动力电池与储能系统供应商。",
+    "quote": {
+      "price": 312.40,
+      "currency": "CNY",
+      "change_percent": -0.46,
+      "pe_ttm": 25.8,
+      "pb": 5.1,
+      "market_cap_billion": 1421.3,
+      "as_of": "2026-09-08T15:00:00+08:00"
+    },
+    "financial": {
+      "fiscal_period": "2025A",
+      "revenue_billion": 402.8,
+      "revenue_growth_percent": 11.7,
+      "net_profit_billion": 58.4,
+      "net_profit_growth_percent": 19.3,
+      "gross_margin_percent": 25.1,
+      "roe_percent": 24.6,
+      "debt_ratio_percent": 63.2,
+      "operating_cash_flow_billion": 83.6
+    }
+  },
+  {
+    "symbol": "AAPL.US",
+    "aliases": ["AAPL", "Apple", "苹果公司", "苹果"],
+    "name": "Apple",
+    "market": "美股",
+    "industry": "消费电子",
+    "description": "设计、制造并销售智能手机、个人电脑及数字服务的科技公司。",
+    "quote": {
+      "price": 248.15,
+      "currency": "USD",
+      "change_percent": 0.35,
+      "pe_ttm": 31.2,
+      "pb": 42.7,
+      "market_cap_billion": 3745.0,
+      "as_of": "2026-09-08T16:00:00-04:00"
+    },
+    "financial": {
+      "fiscal_period": "FY2025",
+      "revenue_billion": 421.6,
+      "revenue_growth_percent": 5.8,
+      "net_profit_billion": 103.2,
+      "net_profit_growth_percent": 4.9,
+      "gross_margin_percent": 46.8,
+      "roe_percent": 151.3,
+      "debt_ratio_percent": 84.1,
+      "operating_cash_flow_billion": 126.4
+    }
+  }
+]

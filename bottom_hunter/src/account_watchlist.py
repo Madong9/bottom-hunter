@@ -9,7 +9,7 @@ import re
 from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -828,6 +828,7 @@ class IndustryResolver:
     """Best-effort stock name/industry resolver with a persistent cache."""
 
     PROFILE_URL = "https://push2.eastmoney.com/api/qt/stock/get"
+    FAILURE_RETRY_HOURS = 6
 
     def __init__(self, cache_path: Path, timeout: int = 4) -> None:
         self.cache_path = cache_path
@@ -853,7 +854,23 @@ class IndustryResolver:
             cached = dict(self.cache.get(asset.canonical_id) or {})
         name = _clean(cached.get("name")) if needs_name else asset.name
         industry = _clean(cached.get("industry")) if needs_industry else asset.industry
+        if industry == UNKNOWN_INDUSTRY:
+            industry = ""
         sources = [_clean(cached.get("source"))] if cached else []
+        retry_after = _clean(cached.get("retry_after"))
+        if retry_after:
+            try:
+                retry_time = datetime.fromisoformat(retry_after)
+                if retry_time.tzinfo is None:
+                    retry_time = retry_time.replace(tzinfo=UTC)
+            except ValueError:
+                retry_time = datetime.min.replace(tzinfo=UTC)
+            if retry_time > datetime.now(UTC):
+                return {
+                    "name": name or asset.name,
+                    "industry": industry or asset.industry,
+                    "source": "+".join(filter(None, sources)) or "unresolved_cached",
+                }
 
         if (needs_name and not name) or (needs_industry and not industry):
             eastmoney = self._eastmoney_profile(asset)
@@ -864,7 +881,10 @@ class IndustryResolver:
             if eastmoney:
                 sources.append("eastmoney_stock_profile")
 
-        if needs_industry and not industry:
+        # Yahoo's quoteSummary profile endpoint now commonly returns 401 for
+        # A-shares. Eastmoney is authoritative for CN; on failure we retain
+        # the imported/local value instead of making a known-failing request.
+        if needs_industry and not industry and asset.market != "CN":
             industry = self._yahoo_industry(asset)
             if industry:
                 sources.append("yahoo_asset_profile")
@@ -874,12 +894,18 @@ class IndustryResolver:
             "industry": industry or UNKNOWN_INDUSTRY,
             "source": "+".join(filter(None, sources)) or "unresolved",
         }
-        if resolved["name"] != asset.name or resolved["industry"] != asset.industry:
+        unresolved = needs_industry and resolved["industry"] == UNKNOWN_INDUSTRY
+        if resolved["name"] != asset.name or resolved["industry"] != asset.industry or unresolved:
             with self._cache_lock:
                 self.cache[asset.canonical_id] = {
                     **cached,
                     **resolved,
                     "updated_at": _utc_now(),
+                    "retry_after": (
+                        (datetime.now(UTC) + timedelta(hours=self.FAILURE_RETRY_HOURS)).isoformat()
+                        if unresolved
+                        else ""
+                    ),
                 }
         return resolved
 
@@ -916,7 +942,7 @@ class IndustryResolver:
             with urlopen(request, timeout=self.timeout) as response:
                 payload = json.load(response)
         except Exception as exc:
-            LOGGER.warning("东财资料获取失败 (%s)：%s", asset.symbol, exc)
+            LOGGER.debug("东财资料获取失败 (%s)：%s", asset.symbol, exc)
             return {}
         data = payload.get("data") if isinstance(payload, dict) else None
         if not isinstance(data, dict):
@@ -937,7 +963,7 @@ class IndustryResolver:
             with urlopen(request, timeout=self.timeout) as response:
                 payload = json.load(response)
         except Exception as exc:
-            LOGGER.warning("Yahoo 行业资料获取失败 (%s)：%s", asset.symbol, exc)
+            LOGGER.debug("Yahoo 行业资料获取失败 (%s)：%s", asset.symbol, exc)
             return ""
         results = payload.get("quoteSummary", {}).get("result") or []
         if not results:
@@ -1340,13 +1366,23 @@ class AccountWatchlistRepository:
     ) -> tuple[list[WatchAsset], IndustryResolver, bool]:
         """Resolve profiles and return a cache plan without persisting it."""
 
+        overrides = self._industry_overrides()
+        assets = [
+            WatchAsset(
+                **{
+                    **asdict(asset),
+                    "industry": overrides.get(asset.canonical_id, asset.industry),
+                }
+            )
+            for asset in assets
+        ]
         resolver = IndustryResolver(self.industry_cache_path)
         original_cache = dict(resolver.cache)
-        unresolved = [
-            asset
-            for asset in assets
-            if asset.category != "crypto" and (asset.industry == UNKNOWN_INDUSTRY or _is_placeholder_name(asset))
-        ]
+        unresolved_by_id: dict[str, WatchAsset] = {}
+        for asset in assets:
+            if asset.category != "crypto" and (asset.industry == UNKNOWN_INDUSTRY or _is_placeholder_name(asset)):
+                unresolved_by_id.setdefault(asset.canonical_id, asset)
+        unresolved = list(unresolved_by_id.values())
         resolved: dict[str, dict[str, str]] = {}
         with ThreadPoolExecutor(max_workers=min(6, max(1, len(unresolved)))) as executor:
             futures = {executor.submit(resolver.resolve_profile, asset): asset for asset in unresolved}

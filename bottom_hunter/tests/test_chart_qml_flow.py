@@ -193,6 +193,45 @@ def test_chart_viewmodel_lifecycle_and_selection() -> None:
     assert vm.lifecycle == "ERROR" and vm.error == "network"
 
 
+def test_chart_background_refresh_keeps_existing_bars_visible() -> None:
+    asset = ChartAssetDTO("crypto:ADA", "ADA-USDT", "Cardano", "CRYPTO", "crypto")
+    vm = ChartViewModel((asset,))
+    vm.apply(
+        ChartDTO(
+            canonical_id=asset.canonical_id,
+            timeframe="1d",
+            bars=(ChartBarDTO("2026-09-06", 0.2, 0.3, 0.1, 0.25, 100),),
+            provider="fake",
+        )
+    )
+
+    vm.markLoading(asset.canonical_id, "1d")
+    assert vm.lifecycle == "READY"
+    assert vm.refreshing is True
+    assert vm.barCount == 1
+
+    vm.applyLoadError(asset.canonical_id, "1d", "temporary outage")
+    assert vm.lifecycle == "READY"
+    assert vm.refreshing is False
+    assert vm.barCount == 1
+    assert "temporary outage" in vm.note
+
+
+def test_chart_selection_accepts_report_symbol() -> None:
+    assets = (
+        ChartAssetDTO("equity:US:AAPL", "AAPL", "Apple", "US", "global_equity"),
+        ChartAssetDTO("crypto:ADA", "ADA-USDT", "Cardano", "CRYPTO", "crypto"),
+    )
+    vm = ChartViewModel(assets)
+    requests = []
+    vm.loadRequested.connect(lambda *args: requests.append(args))
+
+    vm.selectCanonicalId("ADA-USDT")
+
+    assert vm.selectedCanonicalId == "crypto:ADA"
+    assert requests[-1][0] == "crypto:ADA"
+
+
 def test_chart_controller_runs_port_off_ui_thread(monkeypatch) -> None:
     asset = ChartAssetDTO("equity:US:AAPL", "AAPL", "Apple", "US", "global_equity")
 
@@ -245,3 +284,12 @@ def test_chart_qml_supports_indicators_drawing_and_ctrl_wheel() -> None:
     assert "candidateBars === null || candidateBars === undefined" in source
     assert "暂时无法读取 K 线" in source
     assert "重新加载" in source
+
+
+def test_chart_qml_shows_hovered_ohlcv_in_fixed_top_readout() -> None:
+    source = (PAGES_DIR / "chart" / "Chart.qml").read_text(encoding="utf-8")
+    assert 'objectName: "chartHoverReadout"' in source
+    assert "chartCanvas.updateHover(mouse.x, mouse.y)" in source
+    assert "root.hoverPreviousClose" in source
+    assert all(label in source for label in ('text: "开 "', 'text: "高 "', 'text: "低 "', 'text: "收 "', 'text: "量 "'))
+    assert 'text: "涨跌 "' in source

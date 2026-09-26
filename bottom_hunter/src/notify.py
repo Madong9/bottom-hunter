@@ -3,6 +3,7 @@
 Configuration lives in config/notify.yaml:
 
     enabled: true
+    daily_summary: true       # 无新增机会时也发送一次每日扫描回执
     channels:
       serverchan:            # Server酱：推送到微信「方糖」服务号
         sendkey: SCTxxxxxxxx
@@ -30,8 +31,10 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -69,6 +72,7 @@ STATE_LABELS = {
 @dataclass(frozen=True)
 class NotifyConfig:
     enabled: bool = False
+    daily_summary: bool = False
     serverchan_sendkey: str = ""
     wecom_webhook: str = ""
     wecom_corpid: str = ""
@@ -113,6 +117,7 @@ def load_notify_config(config_dir: Path | None = None) -> NotifyConfig:
     wxpusher = channels.get("wxpusher", {}) or {}
     return NotifyConfig(
         enabled=bool(payload.get("enabled")),
+        daily_summary=bool(payload.get("daily_summary")),
         serverchan_sendkey=str(channels.get("serverchan", {}).get("sendkey") or ""),
         wecom_webhook=str(channels.get("wecom", {}).get("webhook") or ""),
         wecom_corpid=str(wecom_app.get("corpid") or ""),
@@ -314,17 +319,42 @@ def format_digest(alerts: list[Alert], signals: list[StockSignal]) -> tuple[str,
 _format = format_digest
 
 
+def _daily_receipt_path() -> Path:
+    run_date = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
+    return PROJECT_DIR / "state" / "notification_receipts" / f"{run_date}.sent"
+
+
+def _mark_daily_receipt(path: Path) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(), encoding="utf-8")
+        temporary.replace(path)
+    except OSError as exc:
+        LOGGER.warning("记录每日推送回执失败：%s", exc)
+
+
 def push(
     alerts: list[Alert],
     signals: list[StockSignal],
     config: NotifyConfig,
     timeout: int = 8,
+    *,
+    allow_daily_summary: bool = True,
 ) -> list[str]:
     """Push a digest; returns a list of error strings (empty means success)."""
     if not config.enabled or not config.has_channel:
         return []
     selected = [alert for alert in alerts if alert.alert_type in config.alert_types]
-    if not selected:
+    daily_receipt = _daily_receipt_path() if config.daily_summary else None
+    is_daily_summary = (
+        not selected
+        and config.daily_summary
+        and allow_daily_summary
+        and daily_receipt is not None
+        and not daily_receipt.exists()
+    )
+    if not selected and not is_daily_summary:
         return []
     title, body = format_digest(selected, signals)
     errors: list[str] = []
@@ -365,6 +395,10 @@ def push(
             errors.append(f"Telegram: {exc}")
     if errors:
         LOGGER.warning("推送失败：%s", "; ".join(errors))
+    elif is_daily_summary:
+        LOGGER.info("已推送每日扫描回执（无新增提醒）")
     else:
         LOGGER.info("已推送 %d 条提醒", max(1, len(selected)))
+    if not errors and daily_receipt is not None:
+        _mark_daily_receipt(daily_receipt)
     return errors

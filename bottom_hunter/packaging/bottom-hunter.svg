@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8fbff"/>
+      <stop offset="0.48" stop-color="#b9e7df"/>
+      <stop offset="1" stop-color="#68cfa4"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a7153"/>
+      <stop offset="1" stop-color="#064936"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#123c35" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="132" fill="url(#glass)" filter="url(#shadow)"/>
+  <rect x="48" y="48" width="416" height="416" rx="116" fill="none" stroke="#fff" stroke-width="12" stroke-opacity=".72"/>
+  <path d="M155 132h112c69 0 108 27 108 81 0 34-18 58-48 70 41 11 63 39 63 79 0 65-49 101-130 101H155V132zm91 128c43 0 64-13 64-40 0-26-20-38-61-38h-29v78h26zm9 151c47 0 69-16 69-47 0-30-23-45-70-45h-34v92h35z" fill="url(#ink)"/>
+  <ellipse cx="178" cy="105" rx="76" ry="29" fill="#fff" opacity=".32" transform="rotate(-18 178 105)"/>
+</svg>

@@ -17,6 +17,9 @@
 #    需要发给客户时，可直接转发 reports/digest_YYYYMMDD.txt 精简文本，
 #    或使用企业微信「群发助手」生成任务后手动确认。
 enabled: false
+# true 时，即使当天没有新增高优先级机会，也会发送一条扫描完成回执。
+# 每个报告日期只发送一次，不影响信号事件去重。
+daily_summary: false
 
 channels:
   serverchan:

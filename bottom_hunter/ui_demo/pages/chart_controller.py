@@ -51,6 +51,11 @@ class ChartController(QObject):
     def request(self, canonical_id: str, timeframe: str, limit: int) -> None:
         request = (str(canonical_id), str(timeframe), max(30, min(int(limit), 500)))
         if self._thread is not None:
+            # Automatic refreshes must not build an endless queue behind an
+            # identical in-flight request.  A genuinely changed request (new
+            # asset/timeframe/limit) still replaces the pending one.
+            if request == self._active or request == self._pending:
+                return
             self._pending = request
             return
         self._start(request)

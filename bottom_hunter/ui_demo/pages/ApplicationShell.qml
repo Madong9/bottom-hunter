@@ -19,11 +19,11 @@ Item {
     readonly property vector2d rainMaskTextureSize: rainSurface.rainMaskTextureSize
 
     readonly property var pageIds: [
-        "overview", "watchlist", "research", "report",
+        "overview", "watchlist", "research", "research_assistant", "report",
         "import", "status", "chart"
     ]
     readonly property var pageTitles: [
-        "总览", "自选", "研究", "报告", "导入", "状态", "K线"
+        "总览", "自选", "研究", "投研助手", "报告", "导入", "状态", "K线"
     ]
     readonly property string currentPage: {
         const requested = (typeof navController !== "undefined" && navController !== null)
@@ -36,6 +36,7 @@ Item {
         case "overview": return overviewPageLoader.item !== null
         case "watchlist": return watchlistPageLoader.item !== null
         case "research": return researchPageLoader.item !== null
+        case "research_assistant": return researchAssistantPageLoader.item !== null
         case "report": return reportPageLoader.item !== null
         case "import": return importPageLoader.item !== null
         case "status": return statusPageLoader.item !== null
@@ -93,6 +94,13 @@ Item {
                 anchors.fill: parent
                 active: root.currentPage === "research"
                 source: active ? Qt.resolvedUrl("research/Research.qml") : ""
+            }
+            Loader {
+                id: researchAssistantPageLoader
+                objectName: "research_assistantPageLoader"
+                anchors.fill: parent
+                active: root.currentPage === "research_assistant"
+                source: active ? Qt.resolvedUrl("research_assistant/ResearchAssistant.qml") : ""
             }
             Loader {
                 id: reportPageLoader

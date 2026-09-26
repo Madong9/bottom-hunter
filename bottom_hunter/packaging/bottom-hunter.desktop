@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Bottom Hunter
+Name[zh_CN]=Bottom Hunter 板块狩猎
+Comment=跨市场超跌反弹扫描与研究工作台
+Exec=bottom-hunter
+Icon=bottom-hunter
+Terminal=false
+Categories=Office;Finance;
+StartupNotify=true
+StartupWMClass=bottom-hunter
+Keywords=Stock;Market;Research;K-Line;

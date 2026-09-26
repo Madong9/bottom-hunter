@@ -9,6 +9,23 @@ and health-check data, which are already produced by the frozen backend.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
+
+
+def _metric_number(metrics: dict[str, Any], key: str, digits: int = 2) -> str:
+    value = metrics.get(key)
+    try:
+        return f"{float(value):.{digits}f}"
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _metric_percent(metrics: dict[str, Any], key: str) -> str:
+    value = metrics.get(key)
+    try:
+        return f"{float(value):+.2%}"
+    except (TypeError, ValueError):
+        return "N/A"
 
 
 @dataclass(frozen=True)
@@ -48,6 +65,7 @@ class ReportDTO:
 
 @dataclass(frozen=True)
 class ReportSignalDTO:
+    chart_key: str = ""
     symbol: str = "--"
     name: str = "--"
     market: str = "--"
@@ -57,9 +75,16 @@ class ReportSignalDTO:
     level: str = "--"
     stage: str = "--"
     data_quality: str = "--"
+    provider: str = "--"
+    data_timestamp: str = "--"
+    score_parts: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    metric_items: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    reasons: tuple[str, ...] = field(default_factory=tuple)
+    risks: tuple[str, ...] = field(default_factory=tuple)
 
     def as_dict(self) -> dict:
         return {
+            "chart_key": self.chart_key,
             "symbol": self.symbol,
             "name": self.name,
             "market": self.market,
@@ -70,6 +95,16 @@ class ReportSignalDTO:
             "level": self.level,
             "stage": self.stage,
             "data_quality": self.data_quality,
+            "provider": self.provider,
+            "data_timestamp": self.data_timestamp,
+            "score_parts": [
+                {"label": label, "value": value} for label, value in self.score_parts
+            ],
+            "metric_items": [
+                {"label": label, "value": value} for label, value in self.metric_items
+            ],
+            "reasons": list(self.reasons),
+            "risks": list(self.risks),
         }
 
 
@@ -120,8 +155,20 @@ def build_report_dto() -> ReportDTO | None:
     signals = []
     for raw in summary.signals:
         score = raw.get("score") or {}
+        metrics = raw.get("metrics") or {}
+
+        score_labels = (
+            ("oversold", "超跌"),
+            ("capitulation", "恐慌量价"),
+            ("rejection", "止跌反转"),
+            ("breadth", "板块宽度"),
+            ("fundamental", "基本面"),
+            ("timing", "时机"),
+            ("support", "支撑位"),
+        )
         signals.append(
             ReportSignalDTO(
+                chart_key=str(raw.get("canonical_id") or raw.get("symbol") or ""),
                 symbol=str(raw.get("symbol") or "--"),
                 name=str(raw.get("name") or "--"),
                 market=str(raw.get("market") or "--"),
@@ -131,6 +178,29 @@ def build_report_dto() -> ReportDTO | None:
                 level=str(raw.get("signal_level") or "--"),
                 stage=str(raw.get("entry_stage") or raw.get("state") or "--"),
                 data_quality=str(raw.get("data_quality") or "--"),
+                provider=str(raw.get("provider") or "--"),
+                data_timestamp=str(raw.get("data_timestamp") or "--"),
+                score_parts=tuple(
+                    (
+                        label,
+                        "N/A" if score.get(key) is None else str(score.get(key, 0)),
+                    )
+                    for key, label in score_labels
+                ),
+                metric_items=(
+                    ("收盘价", _metric_number(metrics, "close", 4)),
+                    ("1日涨跌", _metric_percent(metrics, "return_1d")),
+                    ("5日涨跌", _metric_percent(metrics, "return_5d")),
+                    ("60日回撤", _metric_percent(metrics, "drawdown_60")),
+                    ("RSI14", _metric_number(metrics, "rsi14", 1)),
+                    ("相对MA20", _metric_percent(metrics, "ma20_distance")),
+                    ("量比", _metric_number(metrics, "volume_ratio", 2)),
+                    ("支撑位", _metric_number(metrics, "support_level", 4)),
+                    ("压力位", _metric_number(metrics, "resistance_level", 4)),
+                    ("时机环境", str(metrics.get("timing_context") or "N/A")),
+                ),
+                reasons=tuple(str(item) for item in (raw.get("reasons") or ())),
+                risks=tuple(str(item) for item in (raw.get("risks") or ())),
             )
         )
     sectors = []

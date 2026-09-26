@@ -24,9 +24,9 @@ Text {
     opacity: 1.0
     font.pixelSize: root.sizeHint
     font.family: "Noto Sans CJK SC"
-    font.weight: root.tone === "primary" || root.sizeHint >= 20
+    font.weight: root.tone === "primary" || root.sizeHint >= 20 || root.sizeHint <= 12
                  ? Font.DemiBold : Font.Medium
-    font.letterSpacing: root.sizeHint >= 20 ? -0.25 : 0.0
+    font.letterSpacing: root.sizeHint >= 20 ? -0.25 : root.sizeHint <= 12 ? 0.08 : 0.0
     font.hintingPreference: Font.PreferFullHinting
     style: Text.Raised
     styleColor: GlassTokens.textHighlight

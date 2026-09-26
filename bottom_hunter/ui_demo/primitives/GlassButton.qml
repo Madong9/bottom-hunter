@@ -5,9 +5,8 @@
 // a thin emerald optical edge — matching the frozen GlassNavRail active pill
 // rather than redesigning it.
 import QtQuick
-import QtQuick.Controls.Basic
 
-Rectangle {
+GlassSurface {
     id: root
 
     property string label: ""
@@ -15,37 +14,17 @@ Rectangle {
     property bool active: false
     property color activeTint: Qt.rgba(0.169, 0.835, 0.463, 0.09)
 
-    radius: GlassTokens.capsuleRadius(height)
-    color: active ? activeTint
-                  : hover.hovered ? Qt.rgba(1, 1, 1, 0.22)
-                                  : Qt.rgba(1, 1, 1, 0.07)
-    border.width: 1
-    border.color: active ? Qt.rgba(0.169, 0.835, 0.463, 0.32)
-                         : Qt.rgba(1, 1, 1, hover.hovered ? 0.46 : 0.22)
+    surfaceRadius: GlassTokens.capsuleRadius(height)
+    tint: active ? "#CFF4E0" : "#EEF7FD"
+    tintAlpha: active ? 0.38 : hover.hovered ? 0.32 : 0.22
+    accentTint: active ? "#67D9A4" : "#D8E9F8"
+    accentStrength: active ? 0.26 : hover.hovered ? 0.14 : 0.05
+    edgeContrast: active ? 0.42 : hover.hovered ? 0.36 : 0.25
+    depthStrength: hover.hovered ? 1.16 : 1.0
+    reactive: enabled
+    pointerCursor: enabled
     scale: tap.pressed ? 0.965 : hover.hovered ? 1.025 : 1.0
     transformOrigin: Item.Center
-
-    Rectangle {
-        anchors { top: parent.top; left: parent.left; right: parent.right }
-        anchors.margins: 1
-        height: Math.max(1, parent.height * 0.42)
-        radius: root.radius - 1
-        color: Qt.rgba(1, 1, 1, hover.hovered ? 0.16 : 0.08)
-    }
-
-
-    Rectangle {
-        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-        anchors.margins: 2
-        width: 1
-        color: Qt.rgba(0.30, 0.82, 1.0, hover.hovered ? 0.34 : 0.14)
-    }
-    Rectangle {
-        anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-        anchors.margins: 2
-        width: 1
-        color: Qt.rgba(0.82, 0.46, 1.0, hover.hovered ? 0.25 : 0.09)
-    }
 
     GlassText {
         anchors.centerIn: parent
@@ -55,7 +34,7 @@ Rectangle {
         font.weight: Font.DemiBold
     }
 
-    HoverHandler { id: hover }
+    HoverHandler { id: hover; enabled: root.enabled }
     TapHandler { id: tap; onTapped: root.clicked() }
 
     Behavior on scale {

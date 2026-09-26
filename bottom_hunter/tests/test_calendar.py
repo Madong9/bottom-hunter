@@ -20,3 +20,13 @@ def test_quarter_end_window_is_only_one_point() -> None:
     window = service.timing_window("US", date(2024, 3, 28), config.defaults["timing"])
     assert window.quarter_end is True
     assert window.score == 1
+
+
+def test_market_instruments_filters_complete_fetch_universe() -> None:
+    config = AppConfig.load()
+
+    for market, settings in config.markets.items():
+        instruments = config.market_instruments(market)
+        assert instruments
+        assert all(instrument.market == market for instrument in instruments)
+        assert str(settings["benchmark"]) in {instrument.symbol for instrument in instruments}

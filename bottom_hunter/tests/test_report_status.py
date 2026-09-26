@@ -22,14 +22,43 @@ def test_report_viewmodel_defaults() -> None:
 
 
 def test_report_viewmodel_apply() -> None:
-    from bottom_hunter.ui_demo.pages.contracts import ReportDTO
+    from bottom_hunter.ui_demo.pages.contracts import ReportDTO, ReportSignalDTO
     from bottom_hunter.ui_demo.pages.report_status import ReportViewModel
 
     vm = ReportViewModel()
-    vm.apply(ReportDTO(report_date="2026-08-13", signal_count=5, opportunity_count=27, sector_count=3, error_count=0))
+    vm.apply(
+        ReportDTO(
+            report_date="2026-08-13",
+            signal_count=5,
+            opportunity_count=27,
+            sector_count=3,
+            error_count=0,
+            signals=(
+                ReportSignalDTO(
+                    chart_key="crypto:ADA",
+                    symbol="ADA-USDT",
+                    name="Cardano",
+                    score=5,
+                    available_max=8,
+                    score_parts=(("超跌", "2"),),
+                    reasons=("RSI 进入超卖区",),
+                ),
+            ),
+        )
+    )
     assert vm.property("reportDate") == "2026-08-13"
     assert vm.property("opportunityCount") == 27
     assert vm.property("loaded") is True
+
+    requested = []
+    vm.chartRequested.connect(requested.append)
+    vm.selectSignal(0)
+    assert vm.property("hasSelectedSignal") is True
+    assert vm.property("selectedSignal")["score_parts"][0]["label"] == "超跌"
+    vm.openSelectedChart()
+    assert requested == ["crypto:ADA"]
+    vm.clearSelectedSignal()
+    assert vm.property("hasSelectedSignal") is False
 
 
 def test_report_adapter_reads_backend() -> None:
