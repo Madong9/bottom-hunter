@@ -68,7 +68,16 @@ function percent(value: number | null | undefined, digits = 1) {
   return value == null ? "—" : `${number(value, digits)}%`;
 }
 
-function StockCard({ stock }: { stock: StockData }) {
+function stockSourceIds(stock: StockData) {
+  return [`quote:${stock.company.symbol}`, `financial:${stock.company.symbol}`];
+}
+
+function factSourceIds(factIds: string[], facts: ResearchResult["analysis"]["facts"]) {
+  const ids = new Set(factIds);
+  return [...new Set(facts.filter((fact) => ids.has(fact.fact_id)).flatMap((fact) => fact.source_ids))];
+}
+
+function StockCard({ stock, sources }: { stock: StockData; sources: SourceReference[] }) {
   const up = stock.quote.change_percent != null && stock.quote.change_percent >= 0;
   return (
     <article className="stock-card">
@@ -93,6 +102,7 @@ function StockCard({ stock }: { stock: StockData }) {
         <div><span>ROE</span><strong>{percent(stock.financial.roe_percent)}</strong></div>
       </div>
       <div className="data-time">数据截至 {new Date(stock.quote.as_of).toLocaleDateString("zh-CN")}</div>
+      <SourceTags sourceIds={stockSourceIds(stock)} sources={sources} />
     </article>
   );
 }
@@ -113,7 +123,7 @@ function NewsRow({ item }: { item: NewsItem }) {
       <summary>
         <div className={`sentiment-dot sentiment-dot--${item.sentiment}`} />
         <div className="news-copy">
-          <div className="news-title-line"><strong>{readableText(item.title)}</strong></div>
+          <div className="news-title-line"><strong><a className="inline-news-source" href={item.url} target="_blank" rel="noreferrer">{readableText(item.title)} <ExternalLink size={11} /></a></strong></div>
           <div className="news-meta">
             <span>{readableText(item.source)}</span><span>{item.event_type}</span>
             <span className={`sentiment-text sentiment-text--${item.sentiment}`}>{sentimentText}</span>
@@ -162,26 +172,29 @@ function NewsFunnel({ result }: { result: ResearchResult }) {
   );
 }
 
-function ComparisonTable({ rows }: { rows: CompanyComparison[] }) {
-  const tableRows: Array<[string, (item: CompanyComparison) => string]> = [
-    ["上市市场", (item) => item.market || "—"],
-    ["所属行业", (item) => item.industry || "—"],
-    ["当前价格", (item) => item.price == null ? "—" : `${item.currency || ""} ${number(item.price, 2)}`.trim()],
-    ["营收增速", (item) => percent(item.revenue_growth_percent)],
-    ["净利润增速", (item) => percent(item.net_profit_growth_percent)],
-    ["ROE", (item) => percent(item.roe_percent)],
-    ["PE (TTM)", (item) => item.pe_ttm == null ? "—" : `${number(item.pe_ttm)}x`],
-    ["当前主要积极因素", (item) => item.positive_factor],
-    ["当前主要风险", (item) => item.main_risk],
-    ["商业特征", (item) => item.business_characteristics],
+function ComparisonTable({ rows, sources }: { rows: CompanyComparison[]; sources: SourceReference[] }) {
+  const tableRows: Array<[string, (item: CompanyComparison) => string, "quote" | "financial"]> = [
+    ["上市市场", (item) => item.market || "—", "financial"],
+    ["所属行业", (item) => item.industry || "—", "financial"],
+    ["当前价格", (item) => item.price == null ? "—" : `${item.currency || ""} ${number(item.price, 2)}`.trim(), "quote"],
+    ["营收增速", (item) => percent(item.revenue_growth_percent), "financial"],
+    ["净利润增速", (item) => percent(item.net_profit_growth_percent), "financial"],
+    ["ROE", (item) => percent(item.roe_percent), "financial"],
+    ["PE (TTM)", (item) => item.pe_ttm == null ? "—" : `${number(item.pe_ttm)}x`, "quote"],
+    ["当前主要积极因素", (item) => item.positive_factor, "financial"],
+    ["当前主要风险", (item) => item.main_risk, "financial"],
+    ["商业特征", (item) => item.business_characteristics, "financial"],
   ];
   return (
     <div className="comparison-wrap">
       <table className="comparison-table">
         <thead><tr><th>比较维度</th>{rows.map((item) => <th key={item.symbol}>{item.company_name}<span>{item.symbol}</span></th>)}</tr></thead>
         <tbody>
-          {tableRows.map(([label, render]) => (
-            <tr key={label}><th>{label}</th>{rows.map((item) => <td key={item.symbol}>{render(item)}</td>)}</tr>
+          {tableRows.map(([label, render, sourceKind]) => (
+            <tr key={label}><th>{label}</th>{rows.map((item) => <td key={item.symbol}>
+              <span>{render(item)}</span>
+              <SourceTags sourceIds={[`${sourceKind}:${item.symbol}`]} sources={sources} />
+            </td>)}</tr>
           ))}
         </tbody>
       </table>
@@ -189,7 +202,7 @@ function ComparisonTable({ rows }: { rows: CompanyComparison[] }) {
   );
 }
 
-function ValuationPanel({ stocks }: { stocks: StockData[] }) {
+function ValuationPanel({ stocks, sources }: { stocks: StockData[]; sources: SourceReference[] }) {
   return (
     <div className="valuation-grid">
       {stocks.map((stock) => {
@@ -209,6 +222,7 @@ function ValuationPanel({ stocks }: { stocks: StockData[] }) {
               <div><dt>净利增速</dt><dd>{percent(stock.financial.net_profit_growth_percent)}</dd></div>
             </dl>
             <p>{interpretation}</p>
+            <SourceTags sourceIds={stockSourceIds(stock)} sources={sources} />
           </article>
         );
       })}
@@ -217,15 +231,18 @@ function ValuationPanel({ stocks }: { stocks: StockData[] }) {
 }
 
 function SourceTags({ sourceIds, sources }: { sourceIds: string[]; sources: SourceReference[] }) {
+  const visibleSources = sourceIds
+    .filter((sourceId, index) => sourceIds.indexOf(sourceId) === index)
+    .map((sourceId) => sources.find((item) => item.source_id === sourceId))
+    .filter((source): source is SourceReference => source !== undefined);
+  if (!visibleSources.length) return null;
   return (
-    <div className="fact-sources">
-      {sourceIds.map((sourceId) => {
-        const source = sources.find((item) => item.source_id === sourceId);
-        if (!source) return null;
+    <div className="fact-sources" aria-label="本段内容的资料来源">
+      {visibleSources.map((source) => {
         return source.url ? (
-          <a href={source.url} target="_blank" rel="noreferrer" key={sourceId}><BookOpen size={10} />{readableText(source.name)}</a>
+          <a href={source.url} target="_blank" rel="noreferrer" key={source.source_id} title={`打开来源：${readableText(source.name)}`}><BookOpen size={10} />{readableText(source.name)}<ExternalLink size={10} /></a>
         ) : (
-          <span key={sourceId}><BookOpen size={10} />{readableText(source.name)}</span>
+          <span key={source.source_id} title="该来源未提供可打开的网址"><BookOpen size={10} />{readableText(source.name)}</span>
         );
       })}
     </div>
@@ -253,7 +270,6 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
     show("analysis") && "analysis",
     show("future_watch") && "future",
     (show("risk") || show("risk_review")) && "risk",
-    show("sources") && "sources",
   ].filter(Boolean) as string[];
   const sectionNumber = (key: string) => String(sectionKeys.indexOf(key) + 1).padStart(2, "0");
   const coreTitle = show("valuation") ? "估值与财务基础" : show("financial_snapshot") && !show("company_profile") ? "财务表现" : "公司当前画像";
@@ -269,6 +285,18 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
     ? result.analysis.facts.filter((fact) => allowedFactPrefixes.some((prefix) => fact.fact_id.startsWith(prefix)))
     : result.analysis.facts;
   const visibleFacts = allowedFactPrefixes ? filteredFacts : result.analysis.facts;
+  const allVisibleFactIds = visibleFacts.map((fact) => fact.fact_id);
+  const allVisibleSourceIds = factSourceIds(allVisibleFactIds, result.analysis.facts);
+  const tocItems = [
+    ...(show("investor_guide") ? [{ id: "investor-guide", label: guideTitle }] : []),
+    ...(isComparison && show("comparison") && result.analysis.comparison.length > 1 ? [{ id: "intent-focus", label: "同行对比核心结果" }] : []),
+    ...(isRiskAnalysis && show("risk") ? [{ id: "intent-focus", label: "风险扫描核心结果" }] : []),
+    ...(hasCoreSection ? [{ id: "report-core", label: coreTitle }] : []),
+    ...((show("facts") || show("news")) ? [{ id: "report-evidence", label: show("news") && !show("facts") ? "新闻证据" : "当前已确认事实" }] : []),
+    ...(show("analysis") ? [{ id: "report-analysis", label: "AI 分析" }] : []),
+    ...(show("future_watch") ? [{ id: "report-future", label: "后续观察与情景" }] : []),
+    ...((show("risk") || show("risk_review")) ? [{ id: "report-risk", label: "风险因素与审核" }] : []),
+  ];
   return (
     <div className="report">
       <div className="answer-header">
@@ -306,20 +334,30 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
         <strong>本次报告模块</strong>
         <div>{[...modules].map((module) => <span key={module}>{moduleLabels[module]}</span>)}</div>
       </div>
-      <p className="executive-summary">{result.analysis.summary}</p>
+      {tocItems.length > 0 && <nav className="report-toc" aria-label="报告目录">
+        <div><BookOpen size={15} /><strong>报告目录</strong><span>点击跳转到对应内容</span></div>
+        <ol>{tocItems.map((item, index) => <li key={`${item.id}-${index}`}><a href={`#${item.id}`}><span>{String(index + 1).padStart(2, "0")}</span>{item.label}<ArrowRight size={12} /></a></li>)}</ol>
+      </nav>}
+      <div className="executive-summary">{result.analysis.summary}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></div>
+      {result.analysis.citations.length > 0 && <section className="source-index" aria-label="报告资料来源">
+        <div className="subsection-heading"><BookOpen size={14} /><strong>资料来源</strong><span>来源链接会同时标在对应内容旁</span></div>
+        <div className="source-index-links">{result.analysis.citations.map((source) => source.url
+          ? <a href={source.url} target="_blank" rel="noreferrer" key={source.source_id}><BookOpen size={11} />{readableText(source.name)}<ExternalLink size={10} /></a>
+          : <span key={source.source_id}><BookOpen size={11} />{readableText(source.name)} · 未提供链接</span>)}</div>
+      </section>}
       {show("comparison") && isComparison && result.analysis.comparison.length > 1 && (
-        <section className="intent-focus-panel intent-focus-panel--comparison">
+        <section id="intent-focus" className="intent-focus-panel intent-focus-panel--comparison">
           <div className="intent-focus-heading"><Scale size={17} /><div><strong>同行对比核心结果</strong><span>增长 · 盈利能力 · 估值 · 业务差异 · 各自风险</span></div></div>
-          <ComparisonTable rows={result.analysis.comparison} />
+          <ComparisonTable rows={result.analysis.comparison} sources={result.analysis.citations} />
           <div className="comparison-notice"><AlertTriangle size={14} />{result.analysis.comparison_notice}</div>
         </section>
       )}
       {show("risk") && isRiskAnalysis && (
-        <section className="intent-focus-panel intent-focus-panel--risk">
+        <section id="intent-focus" className="intent-focus-panel intent-focus-panel--risk">
           <div className="intent-focus-heading"><ShieldAlert size={17} /><div><strong>风险扫描核心结果</strong><span>先看下行因素，再看哪些信息仍需验证</span></div></div>
           <div className="risk-priority-grid">
-            <div><strong>已识别风险</strong>{result.analysis.negative_factors.map((item) => <p key={item}><AlertTriangle size={12} />{item}</p>)}</div>
-            <div><strong>待验证事项</strong>{result.analysis.pending_verification.map((item) => <p key={item}><CircleHelp size={12} />{item}</p>)}</div>
+            <div><strong>已识别风险</strong>{result.analysis.negative_factors.map((item) => <p key={item}><AlertTriangle size={12} /><span>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></span></p>)}</div>
+            <div><strong>待验证事项</strong>{result.analysis.pending_verification.map((item) => <p key={item}><CircleHelp size={12} /><span>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></span></p>)}</div>
           </div>
         </section>
       )}
@@ -330,7 +368,7 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
         <div className="analysis-warning" key={warning}><AlertTriangle size={13} />{warning}</div>
       ))}
 
-      {show("investor_guide") && <section className="investor-guide">
+      {show("investor_guide") && <section id="investor-guide" className="investor-guide">
         <div className="guide-heading"><GraduationCap size={19} /><div><strong>{guideTitle}</strong><span>{guideSubtitle}</span></div></div>
         <div className="guide-grid">
           {result.analysis.investor_focus.map((guide) => (
@@ -343,7 +381,7 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
         <p>这里只列出值得关注的问题，不对公司价值或股价方向作出结论。</p>
       </section>}
 
-      {hasCoreSection && <section className="report-section">
+      {hasCoreSection && <section id="report-core" className="report-section">
         <div className="section-title"><span className="section-number">{sectionNumber("core")}</span><h3>{coreTitle}</h3></div>
         {show("company_profile") && <div className="portrait-grid">
           {result.analysis.company_portraits.map((portrait) => (
@@ -355,11 +393,12 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
                 <div><dt>所属行业</dt><dd>{portrait.industry}</dd></div>
                 <div><dt>商业特点</dt><dd>{portrait.business_characteristics}</dd></div>
               </dl>
+              <SourceTags sourceIds={[`quote:${portrait.symbol}`, `financial:${portrait.symbol}`]} sources={result.analysis.citations} />
             </article>
           ))}
         </div>}
-        {show("financial_snapshot") && <div className="stock-grid portrait-stocks">{result.data.stocks.map((stock) => <StockCard stock={stock} key={stock.company.symbol} />)}</div>}
-        {show("valuation") && <ValuationPanel stocks={result.data.stocks} />}
+        {show("financial_snapshot") && <div className="stock-grid portrait-stocks">{result.data.stocks.map((stock) => <StockCard stock={stock} sources={result.analysis.citations} key={stock.company.symbol} />)}</div>}
+        {show("valuation") && <ValuationPanel stocks={result.data.stocks} sources={result.analysis.citations} />}
 
         {show("glossary") && <div className="glossary">
           <div className="subsection-heading"><BookOpen size={14} /><strong>小白指标词典</strong><span>不改变原始数据，只增加解释</span></div>
@@ -376,13 +415,13 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
         {show("comparison") && !isComparison && result.analysis.comparison.length > 1 && (
           <div className="comparison-section">
             <div className="subsection-heading"><Scale size={14} /><strong>结构化横向比较</strong></div>
-            <ComparisonTable rows={result.analysis.comparison} />
+            <ComparisonTable rows={result.analysis.comparison} sources={result.analysis.citations} />
             <div className="comparison-notice"><AlertTriangle size={14} />{result.analysis.comparison_notice}</div>
           </div>
         )}
       </section>}
 
-      {(show("facts") || show("news")) && <section className="report-section evidence-report">
+      {(show("facts") || show("news")) && <section id="report-evidence" className="report-section evidence-report">
         <div className="section-title"><span className="section-number">{sectionNumber("evidence")}</span><h3>{show("news") && !show("facts") ? "新闻证据" : "当前已确认事实 Fact"}</h3><span className="section-count">每条均可追溯</span></div>
         {show("facts") && <div className="report-layer fact-layer">
           <div className="layer-heading"><div><FileCheck2 size={17} /></div><span><strong>已确认事实 Fact</strong><small>仅包含可由行情、财务或新闻直接支持的内容</small></span></div>
@@ -398,35 +437,35 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
         </div>}
       </section>}
 
-      {show("analysis") && <section className="report-section evidence-report">
+      {show("analysis") && <section id="report-analysis" className="report-section evidence-report">
         <div className="section-title"><span className="section-number">{sectionNumber("analysis")}</span><h3>这些事实意味着什么 AI Analysis</h3></div>
         <div className="report-layer analysis-layer">
           <div className="layer-heading"><div><BrainCircuit size={17} /></div><span><strong>AI 分析 Analysis</strong><small>这是模型根据事实形成的解释，不是事实或投资建议</small></span><em>AI 分析</em></div>
-          <div className="layer-items">{result.analysis.ai_analysis.map((item, index) => <p key={index}>{item.content}</p>)}</div>
+          <div className="layer-items">{result.analysis.ai_analysis.map((item, index) => <div className="sourced-report-item" key={index}><p>{item.content}</p><SourceTags sourceIds={factSourceIds(item.based_on_fact_ids, result.analysis.facts)} sources={result.analysis.citations} /></div>)}</div>
         </div>
         <div className="evidence-structure">
-          <div className="evidence-column evidence-column--positive"><h3><ArrowUpRight size={15} />积极因素</h3><ul>{result.analysis.positive_factors.map((item) => <li key={item}>{item}</li>)}</ul></div>
-          <div className="evidence-column evidence-column--negative"><h3><ArrowDownRight size={15} />负面因素</h3><ul>{result.analysis.negative_factors.map((item) => <li key={item}>{item}</li>)}</ul></div>
-          <div className="evidence-column evidence-column--pending"><h3><CircleHelp size={15} />待验证因素</h3><ul>{result.analysis.pending_verification.map((item) => <li key={item}>{item}</li>)}</ul></div>
+          <div className="evidence-column evidence-column--positive"><h3><ArrowUpRight size={15} />积极因素</h3><ul>{result.analysis.positive_factors.map((item) => <li key={item}>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></li>)}</ul></div>
+          <div className="evidence-column evidence-column--negative"><h3><ArrowDownRight size={15} />负面因素</h3><ul>{result.analysis.negative_factors.map((item) => <li key={item}>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></li>)}</ul></div>
+          <div className="evidence-column evidence-column--pending"><h3><CircleHelp size={15} />待验证因素</h3><ul>{result.analysis.pending_verification.map((item) => <li key={item}>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></li>)}</ul></div>
         </div>
       </section>}
 
-      {show("future_watch") && <section className="report-section evidence-report">
+      {show("future_watch") && <section id="report-future" className="report-section evidence-report">
         <div className="section-title"><span className="section-number">{sectionNumber("future")}</span><h3>未来需要关注什么 Future Watch</h3><span className="section-count">不是涨跌预测</span></div>
-        <div className="future-watch-list">{result.analysis.future_watch.map((item, index) => <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><p>{item}</p></div>)}</div>
+        <div className="future-watch-list">{result.analysis.future_watch.map((item, index) => <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><div><p>{item}</p><SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></div></div>)}</div>
         <div className="report-layer scenario-layer">
           <div className="layer-heading"><div><Sparkles size={17} /></div><span><strong>未来情景 Scenario</strong><small>条件式推演，用于理解关键变量，不预测股价</small></span></div>
-          <div className="scenario-grid">{result.analysis.scenarios.map((item, index) => <article key={index}><strong>{item.condition}</strong><ArrowRight size={14} /><p>{item.possible_outcome}</p></article>)}</div>
+          <div className="scenario-grid">{result.analysis.scenarios.map((item, index) => <article key={index}><strong>{item.condition}</strong><ArrowRight size={14} /><p>{item.possible_outcome}</p><SourceTags sourceIds={factSourceIds(item.based_on_fact_ids, result.analysis.facts)} sources={result.analysis.citations} /></article>)}</div>
         </div>
         <div className="report-layer uncertainty-layer">
           <div className="layer-heading"><div><CircleHelp size={17} /></div><span><strong>主要不确定性 Uncertainty</strong><small>当前数据无法确认的因素</small></span></div>
-          <ul>{result.analysis.uncertainties.map((item) => <li key={item}>{item}</li>)}</ul>
+          <ul>{result.analysis.uncertainties.map((item) => <li key={item}>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></li>)}</ul>
         </div>
       </section>}
 
-      {(show("risk") || show("risk_review")) && <section className="report-section">
+      {(show("risk") || show("risk_review")) && <section id="report-risk" className="report-section">
         <div className="section-title"><span className="section-number">{sectionNumber("risk")}</span><h3>{show("risk") ? "风险因素与审核" : "风险审核"}</h3></div>
-        {show("risk") && !isRiskAnalysis && <div className="risk-factor-list">{result.analysis.negative_factors.map((item) => <div key={item}><AlertTriangle size={13} /><span>{item}</span></div>)}</div>}
+        {show("risk") && !isRiskAnalysis && <div className="risk-factor-list">{result.analysis.negative_factors.map((item) => <div key={item}><AlertTriangle size={13} /><span>{item}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></span></div>)}</div>}
         {show("risk_review") &&
         <div className={`risk-review ${approved ? "risk-review--approved" : "risk-review--rejected"}`}>
           <div className="risk-icon">{approved ? <BadgeCheck size={21} /> : <ShieldAlert size={21} />}</div>
@@ -442,11 +481,6 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
             <div className="coverage-note">证据覆盖率仅表示事实来源的完整程度，不代表投资判断正确率或投资成功概率。</div>
           </div>
         </div>}
-      </section>}
-
-      {show("sources") && <section className="report-section source-section">
-        <div className="section-title"><span className="section-number">{sectionNumber("sources")}</span><h3>数据来源</h3><span className="section-count">共 {result.analysis.citations.length} 项</span></div>
-        <div className="source-list">{result.analysis.citations.map((source) => <div key={source.source_id}><BookOpen size={13} /><span><strong>{readableText(source.name)}</strong><small>{source.source_type} · 获取于 {new Date(source.retrieved_at).toLocaleString("zh-CN")}</small></span>{source.url && <a href={source.url} target="_blank" rel="noreferrer"><ExternalLink size={13} /></a>}</div>)}</div>
       </section>}
 
       <section className="follow-up">
