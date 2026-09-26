@@ -60,6 +60,7 @@ class QuestionUnderstandingAgent(
             ],
             Intent.RISK_ANALYSIS: ["financial", "news", "risk", "uncertainty"],
             Intent.NEWS_IMPACT: ["news", "event_impact", "source_quality", "risk"],
+            Intent.BOTTOM_ANALYSIS: ["technical_oversold", "capitulation", "reversal_confirmation", "risk"],
         }
         dimensions = dimensions_by_intent[intent]
         if intent == Intent.NEWS_IMPACT:

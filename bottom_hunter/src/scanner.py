@@ -35,6 +35,7 @@ from .models import BottomState, DataResult, Instrument, SignalLevel, StockSigna
 from .notify import format_digest, load_notify_config, push
 from .paper import record_stage_fills, update_valuations
 from .report import generate_reports
+from .research_assistant_bridge import analyze_daily_bottom_signals, format_daily_bottom_analysis
 from .research import CachedResearchFundamentalProvider
 from .research_storage import ResearchStore
 from .scoring import score_stock
@@ -368,11 +369,26 @@ def run_scan(
                 paper_summary["positions"],
                 paper_summary["weighted_return"] * 100,
             )
-        # Only newly persisted alerts may leave the process. Re-running the same
-        # report date must not send the same notification again.
-        notify_errors = push(new_alerts, signals, load_notify_config())
+        try:
+            bottom_analysis = analyze_daily_bottom_signals(signals, report_date.isoformat())
+        except Exception as exc:
+            LOGGER.warning("投研助手底部分析未完成：%s", exc)
+            errors["bottom_analysis"] = str(exc)
+            bottom_analysis = []
+        appended_analysis = format_daily_bottom_analysis(bottom_analysis)
+        # Only newly persisted alerts may leave the process. The bottom-analysis
+        # digest also respects the daily receipt to avoid duplicate report pushes.
+        notify_errors = push(
+            new_alerts,
+            signals,
+            load_notify_config(),
+            appended_analysis=appended_analysis,
+        )
         if notify_errors:
             errors["notify"] = "; ".join(notify_errors)
+        digest_title, digest_body = format_digest(new_alerts, signals, appended_analysis)
+        digest_path = reports_dir / f"digest_{report_date:%Y%m%d}.txt"
+        digest_path.write_text(f"{digest_title}\n\n{digest_body}", encoding="utf-8")
         markdown_path, json_path = generate_reports(
             report_date,
             market_sessions,
@@ -388,10 +404,8 @@ def run_scan(
             store,
             int(config.defaults["report"]["chart_score"]),
             int(config.defaults["report"]["chart_lookback"]),
+            bottom_analysis,
         )
-        digest_title, digest_body = format_digest(new_alerts, signals)
-        digest_path = reports_dir / f"digest_{report_date:%Y%m%d}.txt"
-        digest_path.write_text(f"{digest_title}\n\n{digest_body}", encoding="utf-8")
         store.finish_run(run_id, "partial" if errors else "success", errors)
         return ScanOutput(report_date, markdown_path, json_path, signals, errors)
     except KeyboardInterrupt:

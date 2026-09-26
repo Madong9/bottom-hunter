@@ -35,10 +35,16 @@ ROUTE_CONFIG: dict[Intent, dict[str, object]] = {
         "keywords": ("新闻", "消息", "舆情", "事件", "公告", "发生了什么", "影响"),
         "requirements": ["事件事实", "来源与时效", "影响链路", "后续观察"],
     },
+    Intent.BOTTOM_ANALYSIS: {
+        "category": "底部分析",
+        "keywords": ("底部分析", "底部结构", "底部信号", "反弹底部", "超跌反弹", "是否见底", "筑底", "抄底信号"),
+        "requirements": ["超跌与恐慌释放证据", "拒绝新低及反转确认", "成交量与市场宽度", "失效条件与待验证事项"],
+    },
 }
 
 # A specific task instruction should win over a generic company-analysis request.
 ROUTE_PRIORITY = (
+    Intent.BOTTOM_ANALYSIS,
     Intent.STOCK_COMPARISON,
     Intent.RISK_ANALYSIS,
     Intent.NEWS_IMPACT,

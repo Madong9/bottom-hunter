@@ -39,6 +39,7 @@ const moduleLabels: Record<ReportModule, string> = {
   analysis: "AI 分析",
   future_watch: "后续观察",
   risk: "风险因素",
+  bottom_analysis: "底部结构分析",
   risk_review: "风险审核",
   glossary: "指标词典",
   sources: "数据来源",
@@ -52,6 +53,7 @@ const legacyModulesByIntent: Record<string, ReportModule[]> = {
   valuation_analysis: ["investor_guide", "financial_snapshot", "valuation", "facts", "analysis", "future_watch", "risk", "risk_review", "glossary", "sources"],
   risk_analysis: ["investor_guide", "news", "facts", "analysis", "future_watch", "risk", "risk_review", "sources"],
   news_impact: ["news", "facts", "analysis", "future_watch", "risk", "risk_review", "sources"],
+  bottom_analysis: ["investor_guide", "facts", "analysis", "future_watch", "risk", "risk_review", "sources"],
 };
 
 function number(value: number | null | undefined, digits = 1) {
@@ -289,6 +291,7 @@ interface ResearchReportProps {
 export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
   const isComparison = result.understanding.intent === "stock_comparison";
   const isRiskAnalysis = result.understanding.intent === "risk_analysis";
+  const isBottomAnalysis = result.understanding.intent === "bottom_analysis";
   const guideTitle = isComparison ? "比较这些公司时看什么？" : isRiskAnalysis ? "这家公司的风险重点是什么？" : "这家公司当前需要了解什么？";
   const guideSubtitle = isComparison ? "使用统一口径观察差异，不用单项指标排名" : isRiskAnalysis ? "聚焦下行因素、触发条件和待验证事项" : "作为普通投资者，可以先从这些问题建立理解框架";
   const fallbackModules = legacyModulesByIntent[result.understanding.intent] ?? legacyModules;
@@ -322,6 +325,7 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
     ...(show("investor_guide") ? [{ id: "investor-guide", label: guideTitle }] : []),
     ...(isComparison && show("comparison") && result.analysis.comparison.length > 1 ? [{ id: "intent-focus", label: "同行对比核心结果" }] : []),
     ...(isRiskAnalysis && show("risk") ? [{ id: "intent-focus", label: "风险扫描核心结果" }] : []),
+    ...(isBottomAnalysis && show("analysis") ? [{ id: "intent-focus", label: "底部结构与反转确认" }] : []),
     ...(hasCoreSection ? [{ id: "report-core", label: coreTitle }] : []),
     ...((show("facts") || show("news")) ? [{ id: "report-evidence", label: show("news") && !show("facts") ? "新闻证据" : "当前已确认事实" }] : []),
     ...(show("analysis") ? [{ id: "report-analysis", label: "AI 分析" }] : []),
@@ -394,6 +398,15 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
           <div className="risk-priority-grid">
             <div><strong>已识别风险</strong>{result.analysis.negative_factors.map((item) => <p key={item}><AlertTriangle size={12} /><span><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></span></p>)}</div>
             <div><strong>待验证事项</strong>{result.analysis.pending_verification.map((item) => <p key={item}><CircleHelp size={12} /><span><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></span></p>)}</div>
+          </div>
+        </section>
+      )}
+      {show("analysis") && isBottomAnalysis && (
+        <section id="intent-focus" className="intent-focus-panel">
+          <div className="intent-focus-heading"><ArrowDownRight size={17} /><div><strong>底部结构与反转确认</strong><span>超跌释放 · 反转证据 · 失效条件</span></div></div>
+          <div className="risk-priority-grid">
+            <div><strong>支持因素</strong>{result.analysis.positive_factors.map((item) => <p key={item}><ArrowUpRight size={12} /><span><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></span></p>)}</div>
+            <div><strong>风险与待验证</strong>{[...result.analysis.negative_factors, ...result.analysis.pending_verification].map((item) => <p key={item}><AlertTriangle size={12} /><span><SourcedStatement text={item} result={result} fallbackSourceIds={allVisibleSourceIds} /></span></p>)}</div>
           </div>
         </section>
       )}

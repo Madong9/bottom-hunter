@@ -35,6 +35,7 @@ REPORT_CONFIG = {
     ),
     Intent.RISK_ANALYSIS: ("风险分析报告", "经营、财务、行业监管风险和待验证事项"),
     Intent.NEWS_IMPACT: ("新闻解读报告", "事件事实、来源时效、影响链路和后续观察"),
+    Intent.BOTTOM_ANALYSIS: ("底部分析报告", "超跌与恐慌释放、反转确认、市场宽度和失效条件"),
 }
 
 MODULE_ORDER = (
@@ -46,6 +47,7 @@ MODULE_ORDER = (
     "news",
     "facts",
     "analysis",
+    "bottom_analysis",
     "future_watch",
     "risk",
     "risk_review",
@@ -111,6 +113,16 @@ MODULES_BY_INTENT = {
     },
     Intent.NEWS_IMPACT: {
         "news",
+        "facts",
+        "analysis",
+        "future_watch",
+        "risk",
+        "risk_review",
+        "sources",
+    },
+    Intent.BOTTOM_ANALYSIS: {
+        "investor_guide",
+        "bottom_analysis",
         "facts",
         "analysis",
         "future_watch",
@@ -371,6 +383,13 @@ class AnalysisAgent(BaseAgent[AnalysisInput, AnalysisOutput]):
                     "适合使用什么同行或历史口径作为参照？",
                     "哪些经营变化可能使当前估值逻辑失效？",
                 ]
+            elif agent_input.understanding.intent == Intent.BOTTOM_ANALYSIS:
+                focus_questions = [
+                    "当前超跌、恐慌释放或支撑区域证据是否充分？",
+                    "拒绝创新低、成交量和市场宽度是否确认反转？",
+                    "哪些价位或结构变化会使底部判断失效？",
+                    "哪些条件尚未满足，仍需等待后续交易日验证？",
+                ]
             investor_focus.append(
                 InvestorFocusGuide(company_name=company_name, questions=focus_questions)
             )
@@ -519,6 +538,20 @@ class AnalysisAgent(BaseAgent[AnalysisInput, AnalysisOutput]):
                     f"{company_name}当前 PE(TTM) 为 {pe_text}。"
                     "估值不能脱离增长、盈利质量、行业参照和历史区间；"
                     f"当前需留意：{main_risk}。"
+                )
+            elif agent_input.understanding.intent == Intent.BOTTOM_ANALYSIS:
+                scan_context = ""
+                if "底部狩猎扫描日期" in agent_input.question:
+                    scan_context = (
+                        agent_input.question.split("底部狩猎扫描日期", 1)[1]
+                        .split("请结合", 1)[0]
+                        .strip("，。； ")
+                    )
+                analysis_text = (
+                    (f"本次扫描记录：{scan_context}。" if scan_context else "")
+                    + f"{company_name}的底部分析需区分超跌后的修复与趋势反转；"
+                    "当前公司财务和估值数据不能单独证明股价已见底。"
+                    f"需结合近期低点、成交量、市场宽度和后续收盘确认，并留意{main_risk}。"
                 )
             else:
                 analysis_text = (
@@ -757,6 +790,17 @@ class AnalysisAgent(BaseAgent[AnalysisInput, AnalysisOutput]):
                     label="查找公告确认", query=f"查找{names}对近期新闻的正式公告"
                 ),
             ]
+        elif intent == Intent.BOTTOM_ANALYSIS:
+            follow_up_questions = [
+                FollowUpQuestion(label="检查反转确认", query=f"分析{names}的反转确认和成交量变化"),
+                FollowUpQuestion(label="列出失效条件", query=f"分析{names}底部判断的失效条件和风险"),
+                FollowUpQuestion(label="继续跟踪", query=f"持续跟踪{names}后续交易日的底部结构"),
+            ]
+            future_watch = [
+                "是否持续守住近期低点与关键支撑区域",
+                "反弹是否伴随成交量改善、拒绝创新低和市场宽度确认",
+                "后续收盘是否确认反转，避免把单日波动当作底部",
+            ]
 
         if intent == Intent.RISK_ANALYSIS:
             summary = (
@@ -785,6 +829,12 @@ class AnalysisAgent(BaseAgent[AnalysisInput, AnalysisOutput]):
                 f"从 {agent_input.news.stats.candidate_count} 条候选信息中保留 "
                 f"{agent_input.news.stats.selected_count} 条，重点展示事件事实、"
                 "来源时效、可能的经营影响链和后续验证点。"
+            )
+        elif intent == Intent.BOTTOM_ANALYSIS:
+            summary = (
+                f"本次以{names}的底部结构为主体，重点检查超跌与恐慌释放、"
+                "拒绝创新低、成交量及市场宽度等反转证据，并列明失效条件。"
+                "底部判断需要后续交易日确认，不代表买卖建议。"
             )
         else:
             summary = (

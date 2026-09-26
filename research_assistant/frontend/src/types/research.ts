@@ -250,6 +250,7 @@ export type ReportModule =
   | "analysis"
   | "future_watch"
   | "risk"
+  | "bottom_analysis"
   | "risk_review"
   | "glossary"
   | "sources";

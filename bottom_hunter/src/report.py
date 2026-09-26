@@ -60,6 +60,7 @@ def report_payload(
     alerts: list[Alert],
     errors: Mapping[str, str],
     research: Mapping[str, Any] | None = None,
+    bottom_analysis: list[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return _json_safe(
         {
@@ -74,6 +75,7 @@ def report_payload(
             "alerts": [alert.to_dict() for alert in alerts],
             "data_errors": dict(errors),
             "research": dict(research or {}),
+            "bottom_analysis": list(bottom_analysis or []),
         }
     )
 
@@ -224,6 +226,29 @@ def write_markdown(
         lines.extend(
             f"- [{ALERT_LABELS.get(item['type'], item['type'])}] {item['message']}" for item in payload["alerts"]
         )
+    bottom_analysis = payload.get("bottom_analysis") or []
+    if bottom_analysis:
+        lines += ["", "## 投研助手底部分析", ""]
+        for item in bottom_analysis:
+            name = item.get("name", item.get("symbol", "标的"))
+            symbol = item.get("symbol", "")
+            lines.append(f"### {name}（{symbol}）")
+            if item.get("status") != "completed":
+                lines.append(f"- 分析暂不可用：{item.get('error', '未知错误')}")
+                lines.append("")
+                continue
+            lines.append(f"- {item.get('summary', '')}")
+            lines.extend(f"- {text}" for text in item.get("analysis", []))
+            if item.get("watch"):
+                lines.append("- 后续观察：" + "；".join(item["watch"]))
+            if item.get("uncertainties"):
+                lines.append("- 不确定性：" + "；".join(item["uncertainties"]))
+            for source in item.get("sources", []):
+                source_name = source.get("name") or "资料来源"
+                source_url = source.get("url")
+                lines.append(f"- 来源：[{source_name}]({source_url})" if source_url else f"- 来源：{source_name}")
+            lines.append("")
+        lines.append("以上为基于可用公开数据的辅助研究内容，仅供观察，不构成投资建议。")
     research = payload.get("research") or {}
     research_assets = research.get("assets") or {}
     macro_items = research.get("macro") or []
@@ -376,6 +401,7 @@ def generate_reports(
     store: StateStore,
     chart_score: int = 7,
     chart_lookback: int = 120,
+    bottom_analysis: list[Mapping[str, Any]] | None = None,
 ) -> tuple[Path, Path]:
     chart_paths: dict[str, Path] = {}
     chart_dir = output_dir / "charts" / f"{report_date:%Y%m%d}"
@@ -405,6 +431,7 @@ def generate_reports(
         ResearchStore(store.path).report_summary(
             [signal.symbol for signal in signals if signal.score.total >= chart_score]
         ),
+        bottom_analysis,
     )
     try:
         payload["validation_30d"] = store.outcome_summary(window_days=30, horizon=5)

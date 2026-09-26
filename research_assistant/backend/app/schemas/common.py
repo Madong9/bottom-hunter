@@ -15,6 +15,7 @@ class Intent(str, Enum):
     NEWS_IMPACT = "news_impact"
     RISK_ANALYSIS = "risk_analysis"
     STOCK_COMPARISON = "stock_comparison"
+    BOTTOM_ANALYSIS = "bottom_analysis"
 
 
 class AgentStatus(str, Enum):

@@ -247,10 +247,14 @@ def _telegram(token: str, chat_id: str, title: str, body: str, timeout: int) -> 
     return None
 
 
-def format_digest(alerts: list[Alert], signals: list[StockSignal]) -> tuple[str, str]:
+def format_digest(
+    alerts: list[Alert], signals: list[StockSignal], appended_analysis: str = ""
+) -> tuple[str, str]:
     """Mobile-first Chinese digest containing only newly alerted entities."""
     if not alerts:
-        return "Bottom Hunter｜今日无新增提醒", "今日无新增高优先级提醒。"
+        title = "Bottom Hunter｜今日底部分析" if appended_analysis else "Bottom Hunter｜今日无新增提醒"
+        body = "今日无新增高优先级提醒。"
+        return title, f"{body}\n\n{appended_analysis}".strip() if appended_analysis else body
     alert_entities = {alert.entity for alert in alerts}
     signal_map = {signal.symbol: signal for signal in signals if signal.symbol in alert_entities}
     signal_map.update(
@@ -313,7 +317,10 @@ def format_digest(alerts: list[Alert], signals: list[StockSignal]) -> tuple[str,
         )
         lines.append("")
     lines.append("风险：当前策略仍在滚动验证，仅供研究观察，不构成投资建议。")
-    return title, "\n".join(lines).strip()
+    body = "\n".join(lines).strip()
+    if appended_analysis:
+        body = f"{body}\n\n{appended_analysis}"
+    return title, body
 
 
 _format = format_digest
@@ -341,12 +348,13 @@ def push(
     timeout: int = 8,
     *,
     allow_daily_summary: bool = True,
+    appended_analysis: str = "",
 ) -> list[str]:
     """Push a digest; returns a list of error strings (empty means success)."""
     if not config.enabled or not config.has_channel:
         return []
     selected = [alert for alert in alerts if alert.alert_type in config.alert_types]
-    daily_receipt = _daily_receipt_path() if config.daily_summary else None
+    daily_receipt = _daily_receipt_path() if config.daily_summary or appended_analysis else None
     is_daily_summary = (
         not selected
         and config.daily_summary
@@ -354,9 +362,16 @@ def push(
         and daily_receipt is not None
         and not daily_receipt.exists()
     )
-    if not selected and not is_daily_summary:
+    is_daily_analysis = (
+        not selected
+        and bool(appended_analysis)
+        and allow_daily_summary
+        and daily_receipt is not None
+        and not daily_receipt.exists()
+    )
+    if not selected and not is_daily_summary and not is_daily_analysis:
         return []
-    title, body = format_digest(selected, signals)
+    title, body = format_digest(selected, signals, appended_analysis)
     errors: list[str] = []
     if config.serverchan_sendkey:
         try:
@@ -397,6 +412,8 @@ def push(
         LOGGER.warning("推送失败：%s", "; ".join(errors))
     elif is_daily_summary:
         LOGGER.info("已推送每日扫描回执（无新增提醒）")
+    elif is_daily_analysis:
+        LOGGER.info("已推送每日投研助手底部分析")
     else:
         LOGGER.info("已推送 %d 条提醒", max(1, len(selected)))
     if not errors and daily_receipt is not None:
