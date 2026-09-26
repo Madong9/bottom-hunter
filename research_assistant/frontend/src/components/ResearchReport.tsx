@@ -77,6 +77,10 @@ function factSourceIds(factIds: string[], facts: ResearchResult["analysis"]["fac
   return [...new Set(facts.filter((fact) => ids.has(fact.fact_id)).flatMap((fact) => fact.source_ids))];
 }
 
+function sourceAnchorId(sourceId: string) {
+  return `source-reference-${sourceId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
 function StockCard({ stock, sources }: { stock: StockData; sources: SourceReference[] }) {
   const up = stock.quote.change_percent != null && stock.quote.change_percent >= 0;
   return (
@@ -242,7 +246,7 @@ function SourceTags({ sourceIds, sources }: { sourceIds: string[]; sources: Sour
         return source.url ? (
           <a href={source.url} target="_blank" rel="noreferrer" key={source.source_id} title={`打开来源：${readableText(source.name)}`}><BookOpen size={10} />{readableText(source.name)}<ExternalLink size={10} /></a>
         ) : (
-          <span key={source.source_id} title="该来源未提供可打开的网址"><BookOpen size={10} />{readableText(source.name)}</span>
+          <a href={`#${sourceAnchorId(source.source_id)}`} key={source.source_id} title="跳转查看来源详情"><BookOpen size={10} />{readableText(source.name)}<ArrowRight size={10} /></a>
         );
       })}
     </div>
@@ -341,9 +345,14 @@ export function ResearchReport({ result, onFollowUp }: ResearchReportProps) {
       <div className="executive-summary">{result.analysis.summary}<SourceTags sourceIds={allVisibleSourceIds} sources={result.analysis.citations} /></div>
       {result.analysis.citations.length > 0 && <section className="source-index" aria-label="报告资料来源">
         <div className="subsection-heading"><BookOpen size={14} /><strong>资料来源</strong><span>来源链接会同时标在对应内容旁</span></div>
-        <div className="source-index-links">{result.analysis.citations.map((source) => source.url
-          ? <a href={source.url} target="_blank" rel="noreferrer" key={source.source_id}><BookOpen size={11} />{readableText(source.name)}<ExternalLink size={10} /></a>
-          : <span key={source.source_id}><BookOpen size={11} />{readableText(source.name)} · 未提供链接</span>)}</div>
+        <div className="source-index-links">{result.analysis.citations.map((source) => (
+          <article id={sourceAnchorId(source.source_id)} key={source.source_id}>
+            <div><BookOpen size={11} /><span><strong>{readableText(source.name)}</strong><small>{source.source_type} · 获取于 {new Date(source.retrieved_at).toLocaleString("zh-CN")}</small></span></div>
+            {source.url
+              ? <a href={source.url} target="_blank" rel="noreferrer">打开原文 <ExternalLink size={10} /></a>
+              : <span className="source-no-url">未提供原文链接</span>}
+          </article>
+        ))}</div>
       </section>}
       {show("comparison") && isComparison && result.analysis.comparison.length > 1 && (
         <section id="intent-focus" className="intent-focus-panel intent-focus-panel--comparison">

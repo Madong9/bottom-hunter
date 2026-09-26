@@ -190,9 +190,16 @@ button { color: inherit; }
 .report-toc li a svg { opacity: .58; }
 .source-index { margin-top: 13px; padding: 2px 12px 11px; border: 1px solid rgba(107, 145, 173, .16); border-radius: 12px; background: rgba(255,255,255,.4); }
 .source-index .subsection-heading { margin: 10px 0 8px; }
-.source-index-links { display: flex; flex-wrap: wrap; gap: 6px; }
-.source-index-links a, .source-index-links span { display: inline-flex; align-items: center; gap: 4px; padding: 5px 7px; border: 1px solid rgba(120, 164, 148, .16); border-radius: 7px; color: #46745f; background: rgba(238,247,243,.74); font-size: 9px; text-decoration: none; }
-.source-index-links a:hover { color: #176f53; background: #e3f5ec; }
+.source-index-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 6px; }
+.source-index-links article { display: flex; align-items: center; justify-content: space-between; gap: 7px; min-width: 0; padding: 7px 8px; border: 1px solid rgba(120, 164, 148, .16); border-radius: 7px; color: #46745f; background: rgba(238,247,243,.74); scroll-margin-top: 78px; }
+.source-index-links article > div { display: flex; align-items: flex-start; gap: 5px; min-width: 0; }
+.source-index-links article > div > svg { flex: 0 0 auto; margin-top: 1px; }
+.source-index-links article > div > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.source-index-links strong { overflow: hidden; color: #46745f; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.source-index-links small { color: #7a9187; font-size: 8px; }
+.source-index-links a, .source-index-links .source-no-url { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 3px; color: #39765e; font-size: 8px; text-decoration: none; }
+.source-index-links a:hover { color: #176f53; text-decoration: underline; }
+.source-index-links .source-no-url { color: #8b927d; }
 .report-section[id], .investor-guide[id], .intent-focus-panel[id] { scroll-margin-top: 78px; }
 .intent-focus-panel { margin-top: 14px; padding: 15px; border: 1px solid var(--glass-edge); border-radius: 17px; box-shadow: var(--glass-shadow-soft); -webkit-backdrop-filter: var(--glass-blur-soft); backdrop-filter: var(--glass-blur-soft); }
 .intent-focus-panel--comparison { background: linear-gradient(145deg, rgba(239, 237, 255, .68), rgba(229, 244, 250, .52)); }
