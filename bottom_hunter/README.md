@@ -127,7 +127,7 @@ python gui.py
 bottom-hunter-gui
 ```
 
-操作台使用类似微信的三栏桌面布局：左侧深色功能导航、中间上下文列表、右侧工作区。界面使用 Qt 矢量绘制和高清中文字体，支持系统缩放，包含八个页面：
+操作台使用类似微信的三栏桌面布局：左侧深色功能导航、中间上下文列表、右侧工作区。界面使用 Qt 矢量绘制和高清中文字体，支持系统缩放，包含九个页面：
 
 - **总览**：聚焦今日机会、数据健康、滚动验证和模拟组合四项核心信息；双击信号可查看中文分项、触发依据、关键价位与失效条件。
 - **我的自选**：查看加密货币、美港股、A 股、跨来源重合和链上股票标识，按类别/行业过滤，也可人工修正股票行业。
@@ -137,6 +137,7 @@ bottom-hunter-gui
 - **自选导入**：同花顺、币安和欧易统一通过文件或手动添加维护，不需要平台 API Key；长桥认证行情作为独立的可选数据源保留。
 - **系统状态**：检查组件、配置、SQLite、日报和各市场实际数据源，显示行情日、完整信号数、异常数及中文批次状态。
 - **K线与画线**：查看自选标的的分钟、小时、日、周、月 K 线，支持自动刷新、十字光标、常用技术指标、成交量、缩放、平移、趋势线和水平线。
+- **因子策略**：独立研究页面，使用本地日K缓存进行横截面因子 Rank IC、按时间切分的 Ridge 机器学习评估和 Q-learning 策略模拟；同页提供价格/涨跌幅盘中自定义预警。只做研究与提醒，不连接交易或下单。
 
 界面始终复用 `scanner.py` 和 `backtest.py` 子进程，不会在窗口线程里复制或简化评分逻辑。关闭正在运行的窗口或点击“停止任务”时，程序先发送安全中断，超时后再终止进程组。
 
@@ -158,7 +159,7 @@ bottom-hunter-qml
 python -m bottom_hunter.ui_demo.pages.application_shell_launcher
 ```
 
-该入口通过 `build_production_flow()` 统一注入总览、自选、研究、投研助手、报告、导入、状态和 K 线八个路由的 ViewModel/运行时控制器。总览可在后台启动扫描/回测并显示实时日志；导入页支持异步事务文件导入、手动添加和来源维护；研究页只读聚合日报与 SQLite 已有财务/资讯缓存；投研助手页托管 Web 应用生命周期，并通过 Qt WebEngine 直接嵌入当前 QML 工作区；K 线页支持后台加载、定时刷新、周期切换、MA/BOLL/MACD/RSI/KDJ、Ctrl+滚轮缩放，并按“标的 + 周期”持久化趋势线/水平线。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
+该入口通过 `build_production_flow()` 统一注入九个页面的 ViewModel/运行时控制器。总览可在后台启动扫描/回测并显示实时日志；导入页支持异步事务文件导入、手动添加和来源维护；研究页只读聚合日报与 SQLite 已有财务/资讯缓存；投研助手页托管 Web 应用生命周期，并通过 Qt WebEngine 直接嵌入当前 QML 工作区；K 线页支持后台加载、定时刷新、周期切换、MA/BOLL/MACD/RSI/KDJ、Ctrl+滚轮缩放，并按“标的 + 周期”持久化趋势线/水平线；因子策略页后台运行研究评估，并持续检查已启用的价格与涨跌幅预警规则。原 `bottom-hunter-gui` 与 `python gui.py` 保持不变。完整边界说明见 [docs/architecture/final_architecture.md](docs/architecture/final_architecture.md)。
 
 投研助手的安装、配置和独立启动方式见仓库根目录
 [research_assistant/README.md](../research_assistant/README.md)。

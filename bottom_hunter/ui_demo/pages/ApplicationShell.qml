@@ -15,15 +15,16 @@ Item {
     height: 900
 
     property bool rainEnabled: true
+    property string alertNotice: ""
     readonly property vector2d rainCaptureTextureSize: rainSurface.captureTextureSize
     readonly property vector2d rainMaskTextureSize: rainSurface.rainMaskTextureSize
 
     readonly property var pageIds: [
-        "overview", "watchlist", "research", "research_assistant", "report",
+        "overview", "watchlist", "research", "strategy", "research_assistant", "report",
         "import", "status", "chart"
     ]
     readonly property var pageTitles: [
-        "总览", "自选", "研究", "投研助手", "报告", "导入", "状态", "K线"
+        "总览", "自选", "研究", "因子策略", "投研助手", "报告", "导入", "状态", "K线"
     ]
     readonly property string currentPage: {
         const requested = (typeof navController !== "undefined" && navController !== null)
@@ -36,6 +37,7 @@ Item {
         case "overview": return overviewPageLoader.item !== null
         case "watchlist": return watchlistPageLoader.item !== null
         case "research": return researchPageLoader.item !== null
+        case "strategy": return strategyPageLoader.item !== null
         case "research_assistant": return researchAssistantPageLoader.item !== null
         case "report": return reportPageLoader.item !== null
         case "import": return importPageLoader.item !== null
@@ -96,6 +98,13 @@ Item {
                 source: active ? Qt.resolvedUrl("research/Research.qml") : ""
             }
             Loader {
+                id: strategyPageLoader
+                objectName: "strategyPageLoader"
+                anchors.fill: parent
+                active: root.currentPage === "strategy"
+                source: active ? Qt.resolvedUrl("strategy/Strategy.qml") : ""
+            }
+            Loader {
                 id: researchAssistantPageLoader
                 objectName: "research_assistantPageLoader"
                 anchors.fill: parent
@@ -151,6 +160,43 @@ Item {
                     font.family: "Noto Sans CJK SC"
                 }
             }
+        }
+
+        GlassSurface {
+            id: alertToast
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.rightMargin: 28
+            anchors.topMargin: 28
+            width: Math.min(520, parent.width * 0.48)
+            height: 62
+            visible: root.alertNotice !== ""
+            z: 20
+            tintAlpha: 0.84
+            surfaceRadius: GlassTokens.containerRadius
+            accentTint: "#D9F3E4"
+            accentStrength: 0.24
+            GlassText {
+                anchors.fill: parent
+                anchors.margins: 14
+                verticalAlignment: Text.AlignVCenter
+                wrapMode: Text.WordWrap
+                text: root.alertNotice
+                tone: "primary"
+                sizeHint: 13
+            }
+        }
+        Connections {
+            target: (typeof priceAlertVm !== "undefined") ? priceAlertVm : null
+            function onAlertTriggered(message) {
+                root.alertNotice = message
+                toastTimer.restart()
+            }
+        }
+        Timer {
+            id: toastTimer
+            interval: 9000
+            onTriggered: root.alertNotice = ""
         }
     }
 

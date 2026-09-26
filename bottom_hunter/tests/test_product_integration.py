@@ -125,6 +125,8 @@ def test_build_production_flow_exposes_all_context_positions(tmp_path: Path) -> 
         "statusVm",
         "taskVm",
         "chartVm",
+        "strategyVm",
+        "priceAlertVm",
     }
     assert flow.navigation.currentPage == "overview"
     assert flow.watchlist_view_model.lifecycle == "EMPTY"
@@ -161,7 +163,7 @@ def test_product_flow_uses_fallback_states_when_snapshots_are_missing(tmp_path: 
     assert flow.status_view_model.lifecycle == "EMPTY"
 
 
-def test_application_shell_loads_all_eight_product_routes(monkeypatch, tmp_path: Path) -> None:
+def test_application_shell_loads_all_nine_product_routes(monkeypatch, tmp_path: Path) -> None:
     _software_env(monkeypatch)
     app = QGuiApplication.instance() or QGuiApplication([])
     flow = _product_flow(tmp_path)
@@ -175,6 +177,7 @@ def test_application_shell_loads_all_eight_product_routes(monkeypatch, tmp_path:
             "overview",
             "watchlist",
             "research",
+            "strategy",
             "research_assistant",
             "report",
             "import",

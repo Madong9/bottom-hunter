@@ -1,4 +1,4 @@
-"""Composition root for the eight-page QML product shell."""
+"""Composition root for the nine-page QML product shell."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from .chart_adapter import DRAWINGS_PATH, ChartDrawingAdapter, ChartReadAdapter
 from .chart_contracts import ChartAssetDTO
 from .chart_controller import ChartController, ChartReadPort
 from .chart_viewmodel import ChartViewModel
+from .alert_adapter import PriceAlertAdapter
 from .contracts import ReportDTO, build_report_dto
 from .import_backend_adapter import ProductionImportFlow, build_production_import_flow
 from .import_runtime_adapter import RealRuntimeActivityPort, RuntimeStatusDTO
@@ -21,10 +22,14 @@ from .research_adapter import build_research_dto
 from .research_assistant_runtime import ResearchAssistantRuntime
 from .research_contracts import ResearchDTO
 from .research_viewmodel import ResearchViewModel
+from .price_alert_controller import PriceAlertController
+from .price_alert_viewmodel import PriceAlertViewModel
 from .routing import NavigationController
 from .status_adapter import build_status_dto
 from .status_contracts import StatusDTO
 from .status_viewmodel import StatusViewModel
+from .strategy_controller import StrategyController
+from .strategy_viewmodel import StrategyViewModel
 from .task_adapter import TaskCommandAdapter
 from .task_controller import TaskController
 from .task_viewmodel import TaskViewModel
@@ -83,6 +88,10 @@ class ProductFlow:
     chart_view_model: ChartViewModel
     chart_controller: ChartController
     chart_drawing_adapter: ChartDrawingAdapter
+    strategy_view_model: StrategyViewModel
+    strategy_controller: StrategyController
+    price_alert_view_model: PriceAlertViewModel
+    price_alert_controller: PriceAlertController
     coordinator: ProductCoordinator
 
     def context_properties(self) -> dict[str, object]:
@@ -99,6 +108,8 @@ class ProductFlow:
             "statusVm": self.status_view_model,
             "taskVm": self.task_view_model,
             "chartVm": self.chart_view_model,
+            "strategyVm": self.strategy_view_model,
+            "priceAlertVm": self.price_alert_view_model,
         }
 
     def install_context(self, engine: object) -> None:
@@ -154,6 +165,8 @@ def build_production_flow(
     assistant_runtime = research_assistant_runtime or ResearchAssistantRuntime()
     report_vm = ReportViewModel()
     status_vm = StatusViewModel()
+    strategy_vm = StrategyViewModel()
+    price_alert_vm = PriceAlertViewModel()
     task_vm = TaskViewModel()
     _load_read_only(watchlist_vm, watchlist_provider, WatchlistDTO())
     _load_read_only(research_vm, research_provider, ResearchDTO())
@@ -202,6 +215,21 @@ def build_production_flow(
         )
     )
     chart_vm.requestDrawings()
+    strategy_controller = StrategyController(str(project_dir or ""), str(state_dir or ""))
+    strategy_vm.runRequested.connect(strategy_controller.run)
+    strategy_controller.succeeded.connect(strategy_vm.apply)
+    strategy_controller.failed.connect(strategy_vm.applyError)
+
+    alert_adapter = PriceAlertAdapter(state_dir=state_dir)
+    price_alert_controller = PriceAlertController(alert_adapter)
+    price_alert_vm.addRequested.connect(price_alert_controller.addRule)
+    price_alert_vm.removeRequested.connect(price_alert_controller.removeRule)
+    price_alert_vm.setEnabledRequested.connect(price_alert_controller.setRuleEnabled)
+    price_alert_controller.snapshotChanged.connect(price_alert_vm.applySnapshot)
+    price_alert_controller.errorChanged.connect(price_alert_vm.applyError)
+    price_alert_controller.alertTriggered.connect(price_alert_vm.announce)
+    price_alert_vm.applySnapshot(alert_adapter.snapshot())
+    price_alert_controller.start()
     coordinator = ProductCoordinator(navigation, chart_vm)
     watchlist_vm.chartRequested.connect(coordinator.openChart)
     report_vm.chartRequested.connect(coordinator.openChart)
@@ -262,5 +290,9 @@ def build_production_flow(
         chart_view_model=chart_vm,
         chart_controller=chart_controller,
         chart_drawing_adapter=drawing_adapter,
+        strategy_view_model=strategy_vm,
+        strategy_controller=strategy_controller,
+        price_alert_view_model=price_alert_vm,
+        price_alert_controller=price_alert_controller,
         coordinator=coordinator,
     )

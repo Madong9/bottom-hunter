@@ -16,7 +16,7 @@ REPO = Path(__file__).resolve().parent.parent.parent
 PACKAGE = REPO / "bottom_hunter"
 UI = PACKAGE / "ui_demo"
 PAGES = UI / "pages"
-PHASE5_BASE = os.environ.get("BH_PHASE5_BASE", "39379b0")
+PHASE5_BASE = os.environ.get("BH_PHASE5_BASE", "bbb5d6f")
 DESKTOP_ALPHA_SHADER = {
     "bottom_hunter/ui_demo/overview_shell/effects/StaticRainUI.frag",
     "bottom_hunter/ui_demo/overview_shell/effects/StaticRainUI.qsb",
@@ -30,6 +30,8 @@ DTO_MODULES = (
     "bottom_hunter.ui_demo.pages.import_contracts",
     "bottom_hunter.ui_demo.pages.status_contracts",
     "bottom_hunter.ui_demo.pages.chart_contracts",
+    "bottom_hunter.ui_demo.pages.strategy_contracts",
+    "bottom_hunter.ui_demo.pages.alert_contracts",
     "bottom_hunter.ui_demo.pages.task_contracts",
 )
 
@@ -42,6 +44,8 @@ SANCTIONED_BACKEND_ADAPTERS = {
     PAGES / "status_adapter.py",
     PAGES / "chart_adapter.py",
     PAGES / "research_adapter.py",
+    PAGES / "strategy_adapter.py",
+    PAGES / "alert_adapter.py",
     PAGES / "task_adapter.py",
 }
 
@@ -52,6 +56,7 @@ def test_all_product_routes_have_page_loader_and_qml() -> None:
         "overview": "overview/Overview.qml",
         "watchlist": "watchlist/Watchlist.qml",
         "research": "research/Research.qml",
+        "strategy": "strategy/Strategy.qml",
         "research_assistant": "research_assistant/ResearchAssistant.qml",
         "report": "report/Report.qml",
         "import": "import/Import.qml",

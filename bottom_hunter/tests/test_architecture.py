@@ -51,6 +51,8 @@ SANCTIONED_ADAPTERS = {
     "chart_adapter.py",
     "research_adapter.py",
     "task_adapter.py",
+    "strategy_adapter.py",
+    "alert_adapter.py",
 }
 
 
@@ -107,6 +109,8 @@ def test_dto_contracts_are_pure() -> None:
         UI_DEMO / "pages" / "contracts.py",
         UI_DEMO / "pages" / "import_contracts.py",
         UI_DEMO / "pages" / "task_contracts.py",
+        UI_DEMO / "pages" / "strategy_contracts.py",
+        UI_DEMO / "pages" / "alert_contracts.py",
     ]
     forbidden = re.compile(r"PySide6|QtQuick|QObject", re.I)
     for path in contract_files:
@@ -123,9 +127,9 @@ def test_page_registry_integrity() -> None:
     from bottom_hunter.ui_demo.pages import PAGES
 
     ids = [pid for pid, _t, _g in PAGES]
-    assert len(ids) == len(set(ids)) == 8, "page ids must be unique"
+    assert len(ids) == len(set(ids)) == 9, "page ids must be unique"
     glyphs = [g for _i, _t, g in PAGES]
-    assert len(set(glyphs)) == 8, "page glyphs must be unique"
+    assert len(set(glyphs)) == 9, "page glyphs must be unique"
 
 
 # ---- 6. shader/qsb freeze (git-based, skip when git unavailable) ------------

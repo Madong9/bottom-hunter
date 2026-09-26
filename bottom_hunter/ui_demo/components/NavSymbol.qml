@@ -73,6 +73,10 @@ Canvas {
             line(ctx, [[12, 3.5], [12, 15]])
             line(ctx, [[7.8, 11], [12, 15.2], [16.2, 11]])
             line(ctx, [[5, 17], [5, 20], [19, 20], [19, 17]])
+        } else if (symbol === "strategy") {
+            ctx.beginPath(); ctx.arc(12, 12, 8, 0, Math.PI * 2); ctx.stroke()
+            line(ctx, [[12, 17.5], [12, 12], [16, 8]])
+            ctx.beginPath(); ctx.arc(12, 12, 1.3, 0, Math.PI * 2); ctx.fill()
         } else if (symbol === "status") {
             ctx.beginPath(); ctx.arc(12, 12, 8.5, 0, Math.PI * 2); ctx.stroke()
             line(ctx, [[7, 12.5], [10, 12.5], [11.5, 8.5], [14, 16], [15.5, 12.5], [18, 12.5]])

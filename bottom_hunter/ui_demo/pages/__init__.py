@@ -29,11 +29,13 @@ PAGE_REPORT = "report"
 PAGE_IMPORT = "import"
 PAGE_STATUS = "status"
 PAGE_CHART = "chart"
+PAGE_STRATEGY = "strategy"
 
 PAGES = (
     (PAGE_OVERVIEW, "总览", "⌂"),
     (PAGE_WATCHLIST, "自选", "◆"),
     (PAGE_RESEARCH, "研究", "◎"),
+    (PAGE_STRATEGY, "因子策略", "⌁"),
     (PAGE_RESEARCH_ASSISTANT, "投研助手", "✦"),
     (PAGE_REPORT, "报告", "▤"),
     (PAGE_IMPORT, "导入", "✚"),
@@ -108,6 +110,7 @@ __all__ = [
     "PAGE_IMPORT",
     "PAGE_STATUS",
     "PAGE_CHART",
+    "PAGE_STRATEGY",
     "PageViewModel",
     "PlaceholderViewModel",
     "build_page_viewmodels",

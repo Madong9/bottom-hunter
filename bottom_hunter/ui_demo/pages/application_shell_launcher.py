@@ -60,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     app.aboutToQuit.connect(flow.task_controller.shutdown)
     app.aboutToQuit.connect(flow.research_assistant_runtime.shutdown)
+    app.aboutToQuit.connect(flow.price_alert_controller.shutdown)
+    app.aboutToQuit.connect(flow.strategy_controller.shutdown)
     view = QQuickView()
     surface_format = view.format()
     surface_format.setAlphaBufferSize(8)
