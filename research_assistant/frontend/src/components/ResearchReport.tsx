@@ -6,6 +6,7 @@ import {
   BookOpen,
   BrainCircuit,
   Building2,
+  Check,
   CircleHelp,
   ExternalLink,
   FileCheck2,
